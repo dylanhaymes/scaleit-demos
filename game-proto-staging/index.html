@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#ffe9b8">
+<meta name="description" content="Clearbloom: drag bright blocks onto the 8x8 tray, clear rows and columns, chain combos, earn gold stars.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Clearbloom</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<!-- Fonts are embedded in style.css as base64 data URIs (Baloo 2 + Fredoka,
+     SIL Open Font License 1.1, listed in CREDITS.md) — no font files, no
+     network fetch, so the game works offline and never waits on fonts. -->
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <header id="hud">
+    <div class="hud-box"><span class="label" id="best-label">BEST</span><span id="best">0</span></div>
+    <div class="hud-score"><span id="score">0</span><span id="combo" class="combo"></span></div>
+    <div class="hud-actions">
+      <button id="btn-settings" class="icon-btn" aria-label="Settings"><img alt="" data-icon="gear"></button>
+      <button id="btn-menu" class="icon-btn" aria-label="Menu"><img alt="" data-icon="menu"></button>
+    </div>
+  </header>
+  <div id="level-row"><span id="level-label">LEVEL 1</span><div class="xp-pill"><div id="level-fill"></div></div></div>
+  <div id="timerbar"><div id="timer-fill"></div><span id="timer-text">2:00</span></div>
+  <div id="countdown" class="hidden">20</div>
+  <div id="stage"><div id="board-glow"></div><canvas id="cv-board"></canvas><canvas id="cv"></canvas></div>
+  <div id="powerups">
+    <button class="pu" data-pu="bomb" aria-label="Boom Bomb"><span class="pu-ring"><img alt="" data-icon="bomb"></span><span class="pu-name">Bomb</span><span class="pu-count">0</span><span class="pu-progress">0/10</span></button>
+    <button class="pu" data-pu="sweep" aria-label="Eraser Sweep"><span class="pu-ring"><img alt="" data-icon="eraser"></span><span class="pu-name">Sweep</span><span class="pu-count">0</span><span class="pu-progress">0/10</span></button>
+    <button class="pu" data-pu="reshuffle" aria-label="Shuffle Tray"><span class="pu-ring"><img alt="" data-icon="shuffle"></span><span class="pu-name">Tray</span><span class="pu-count">0</span><span class="pu-progress">0/10</span></button>
+    <button class="pu" data-pu="star" aria-label="Time Star"><span class="pu-ring"><img alt="" data-icon="clock"></span><span class="pu-name">+15s</span><span class="pu-count">0</span><span class="pu-progress">0/10</span></button>
+  </div>
+  <div id="pu-target" class="hidden">
+    <span id="pu-hint"></span>
+    <span id="pu-mode" class="hidden"><button id="pu-mode-row-btn">Row</button><button id="pu-mode-col-btn">Column</button></span>
+    <button id="pu-cancel">✕ Cancel</button>
+  </div>
+</div>
+
+<!-- Big-moment banner + edge flash + fly layer (juice, DOM) -->
+<div id="banner" class="hidden"><span id="banner-text"></span></div>
+<div id="edge-flash"></div>
+<div id="fly-layer"></div>
+
+<!-- Title screen -->
+<div id="title" class="overlay show">
+  <div class="panel">
+    <div class="logo">Clear<span>bloom</span></div>
+    <p class="tag">Drag bright blocks. Fill rows. Earn gold stars.</p>
+    <div id="player-card">
+      <span class="player-star"><img alt="" data-icon="star"></span>
+      <div class="player-info">
+        <span id="player-level-label">Player Level 1</span>
+        <div class="xp-pill"><div id="player-xp-fill"></div></div>
+        <span id="player-next-reward" class="small"></span>
+      </div>
+    </div>
+    <button id="btn-play" class="btn big">Play</button>
+    <button id="btn-new" class="btn ghost hidden">New game</button>
+    <button id="btn-daily" class="btn daily"><img alt="" data-icon="star"> Daily challenge <small id="daily-date"></small></button>
+    <button id="btn-how" class="btn ghost">How difficulty works</button>
+    <button id="btn-title-settings" class="btn ghost">Settings</button>
+    <p class="small">Best: <b id="title-best">0</b> · Today's daily best: <b id="title-daily-best">0</b></p>
+  </div>
+</div>
+
+<!-- Revive offer (opt-in) -->
+<div id="revive" class="overlay">
+  <div class="panel">
+    <h2 id="rv-title">No space left!</h2>
+    <p>Score <b id="rv-score">0</b></p>
+    <p class="small" id="rv-why">Optional: watch a short ad to clear your 3 fullest rows and get a fresh tray. One revive per game.</p>
+    <div class="ring"><span id="rv-count">6</span></div>
+    <button id="btn-revive" class="btn big">▶ Watch ad to continue</button>
+    <button id="btn-norevive" class="btn ghost">No thanks</button>
+  </div>
+</div>
+
+<!-- Game over -->
+<div id="over" class="overlay">
+  <div class="panel">
+    <div id="ov-stars"><span><img alt="" data-icon="star"></span><span><img alt="" data-icon="star"></span><span><img alt="" data-icon="star"></span></div>
+    <h2>Game over</h2>
+    <div id="ov-new" class="badge hidden">New best!</div>
+    <div class="final"><span class="label">SCORE</span><span id="ov-score">0</span></div>
+    <p>Best <b id="ov-best">0</b> · Lines <b id="ov-lines">0</b> · Max combo <b id="ov-combo">0</b></p>
+    <p id="ov-xp" class="small"></p>
+    <button id="btn-again" class="btn big">Play again</button>
+    <button id="btn-home" class="btn ghost">Home</button>
+  </div>
+</div>
+
+<!-- Menu / how it works -->
+<div id="menu" class="overlay">
+  <div class="panel scroll">
+    <h2>How difficulty works</h2>
+    <div id="rules"></div>
+    <p class="small">Your score is exactly what you earned. Ads never change the board, the pieces, or your score.</p>
+    <button id="btn-resume" class="btn big">Back</button>
+    <button id="btn-restart" class="btn ghost">Restart game</button>
+    <button id="btn-log" class="btn ghost">Show analytics log</button>
+    <pre id="log" class="hidden"></pre>
+  </div>
+</div>
+
+<!-- Settings -->
+<div id="settings" class="overlay">
+  <div class="panel">
+    <h2>Settings</h2>
+    <label class="toggle"><span>Music <small>(bouncy 120 BPM)</small></span><input type="checkbox" id="set-music"></label>
+    <label class="toggle"><span>Sound effects</span><input type="checkbox" id="set-sfx"></label>
+    <label class="toggle"><span>Vibration</span><input type="checkbox" id="set-haptics"></label>
+    <label class="toggle"><span>Reduce motion</span><input type="checkbox" id="set-motion"></label>
+    <button id="btn-tut-again" class="btn ghost">Show tutorial again</button>
+    <button id="btn-set-rules" class="btn ghost">How difficulty works</button>
+    <button id="btn-set-close" class="btn big">Done</button>
+  </div>
+</div>
+
+<!-- First-time power-up explainer card -->
+<div id="pu-first" class="overlay">
+  <div class="panel">
+    <div class="pu-first-star"><img alt="" data-icon="star"></div>
+    <h2>Power-ups!</h2>
+    <p>Clear 3 lines at once or every 10 lines to earn power-ups. Power-ups last 30 seconds, so use them fast! If you run out of moves, a held power-up saves you automatically.</p>
+    <button id="btn-pu-first" class="btn big">Got it!</button>
+  </div>
+</div>
+
+<!-- First-game tutorial (3 steps, once, skippable). Pointer events pass through except the card. -->
+<div id="tut" class="tut">
+  <div id="tut-hand" class="tut-hand"><img alt="" data-icon="tap"></div>
+  <div class="tut-card">
+    <div class="tut-dots"><i></i><i></i><i></i></div>
+    <div id="tut-text"></div>
+    <div id="tut-demo" class="tut-demo"></div>
+    <div class="tut-row">
+      <button id="tut-skip" class="btn ghost">Skip</button>
+      <button id="tut-next" class="btn">Next</button>
+    </div>
+  </div>
+</div>
+
+<!-- Mock ad overlay (replaced by a real provider later) -->
+<div id="ad" class="overlay ad">
+  <div class="ad-box">
+    <div class="ad-tag">Ad</div>
+    <div class="ad-kind" id="ad-kind">Rewarded</div>
+    <div class="ad-body">Mock ad placeholder<br><small>AdMob / AdSense for Games plugs in via js/ads.js</small></div>
+    <div class="ad-count" id="ad-count">5</div>
+    <button id="ad-close" class="btn ghost">Close</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
