@@ -1,4 +1,4 @@
-# Gridbloom (prototype)
+# Clearbloom (prototype)
 A fair, ad-funded 8×8 block puzzle. It runs as static HTML and JS, with no build step.
 
 - Run locally: `python3 -m http.server` in this folder, then open http://localhost:8000/

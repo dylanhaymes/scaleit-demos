@@ -1,5 +1,5 @@
 /*
- * Gridbloom difficulty module. These rules are the whole story; they are also
+ * Clearbloom difficulty module. These rules are the whole story; they are also
  * shown to players in the "How difficulty works" screen (RULES_TEXT below).
  *
  * INPUTS this module is allowed to see:
@@ -26,6 +26,11 @@
  *    one piece is swapped for a "helper" piece that fits and completes a row or
  *    column if any such piece exists. It is marked with a ✦ in the tray and
  *    logged as helper_piece_dealt. It is never taken away or tied to ads.
+ * 6. Daily challenge: same rules 1-3 and the same scoring, but pieces come from
+ *    a seeded generator whose seed is only the local date (YYYY-MM-DD). Same
+ *    date + same moves = same pieces for everyone. The comeback helper (rule 4)
+ *    is off in the daily so every player faces the identical deal. The daily
+ *    has its own best score per date; it does not count toward rule 4 history.
  * 5. Score is never adjusted: points come only from the scoring table in
  *    main.js. High score is the exact highest final score.
  */
@@ -50,6 +55,7 @@ export const RULES_TEXT = [
   'Higher levels shift the random mix toward bigger, more awkward pieces and away from tiny ones.',
   `Fair deal: if none of a new tray's 3 pieces fits anywhere, the tray is re-rolled (up to ${FAIR_REROLLS} tries).`,
   `Comeback helper: after ${HELPER.lossesNeeded} games in a row under half your best, your next game gets one helper piece (marked ✦) that fits and clears a line when the board gets crowded. Once per game.`,
+  'Daily challenge: same rules and scoring, but the pieces come from a generator seeded only by today\'s date, so everyone gets the same deal for the same moves. No helper piece in the daily. It keeps its own best score per day.',
   'Ads never touch difficulty, pieces, or score. Watching an ad only ever gives the revive you chose.',
 ];
 

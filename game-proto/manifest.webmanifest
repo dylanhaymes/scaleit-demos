@@ -1,6 +1,6 @@
 {
-  "name": "Gridbloom",
-  "short_name": "Gridbloom",
+  "name": "Clearbloom",
+  "short_name": "Clearbloom",
   "description": "Drag blocks onto the 8x8 garden, clear rows and columns, chain combos.",
   "start_url": "./",
   "scope": "./",

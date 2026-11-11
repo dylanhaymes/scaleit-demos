@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#120f2b">
-<meta name="description" content="Gridbloom: drag blocks onto the 8x8 garden, clear rows and columns, chain combos.">
+<meta name="description" content="Clearbloom: drag blocks onto the 8x8 garden, clear rows and columns, chain combos.">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Gridbloom</title>
+<title>Clearbloom</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -16,10 +16,10 @@
 <body>
 <div id="app">
   <header id="hud">
-    <div class="hud-box"><span class="label">BEST</span><span id="best">0</span></div>
+    <div class="hud-box"><span class="label" id="best-label">BEST</span><span id="best">0</span></div>
     <div class="hud-score"><span id="score">0</span><span id="combo" class="combo"></span></div>
     <div class="hud-actions">
-      <button id="btn-sound" class="icon-btn" aria-label="Toggle sound">🔊</button>
+      <button id="btn-settings" class="icon-btn" aria-label="Settings">⚙</button>
       <button id="btn-menu" class="icon-btn" aria-label="Menu">☰</button>
     </div>
   </header>
@@ -29,11 +29,13 @@
 <!-- Title screen -->
 <div id="title" class="overlay show">
   <div class="panel">
-    <div class="logo">Grid<span>bloom</span></div>
+    <div class="logo">Clear<span>bloom</span></div>
     <p class="tag">Drag blocks. Fill rows. Watch them bloom.</p>
     <button id="btn-play" class="btn big">Play</button>
+    <button id="btn-new" class="btn ghost hidden">New game</button>
+    <button id="btn-daily" class="btn daily">☀ Daily challenge <small id="daily-date"></small></button>
     <button id="btn-how" class="btn ghost">How difficulty works</button>
-    <p class="small">Best: <b id="title-best">0</b></p>
+    <p class="small">Best: <b id="title-best">0</b> · Today's daily best: <b id="title-daily-best">0</b></p>
   </div>
 </div>
 
@@ -71,6 +73,33 @@
     <button id="btn-restart" class="btn ghost">Restart game</button>
     <button id="btn-log" class="btn ghost">Show analytics log</button>
     <pre id="log" class="hidden"></pre>
+  </div>
+</div>
+
+<!-- Settings -->
+<div id="settings" class="overlay">
+  <div class="panel">
+    <h2>Settings</h2>
+    <label class="toggle"><span>Music <small>(soft ambient)</small></span><input type="checkbox" id="set-music"></label>
+    <label class="toggle"><span>Sound effects</span><input type="checkbox" id="set-sfx"></label>
+    <label class="toggle"><span>Vibration</span><input type="checkbox" id="set-haptics"></label>
+    <button id="btn-tut-again" class="btn ghost">Show tutorial again</button>
+    <button id="btn-set-rules" class="btn ghost">How difficulty works</button>
+    <button id="btn-set-close" class="btn big">Done</button>
+  </div>
+</div>
+
+<!-- First-game tutorial (3 steps, once, skippable). Pointer events pass through except the card. -->
+<div id="tut" class="tut">
+  <div id="tut-hand" class="tut-hand">👆</div>
+  <div class="tut-card">
+    <div class="tut-dots"><i></i><i></i><i></i></div>
+    <div id="tut-text"></div>
+    <div id="tut-demo" class="tut-demo"></div>
+    <div class="tut-row">
+      <button id="tut-skip" class="btn ghost">Skip</button>
+      <button id="tut-next" class="btn">Next</button>
+    </div>
   </div>
 </div>
 

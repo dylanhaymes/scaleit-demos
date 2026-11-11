@@ -1,6 +1,9 @@
 // All sounds are synthesized with WebAudio (no audio assets).
 let ctx = null, master = null;
-let muted = localStorage.getItem('gb_muted') === '1';
+// SFX on by default (legacy gb_muted honored). Music off by default.
+let muted = localStorage.getItem('gb_sfx') ? localStorage.getItem('gb_sfx') === '0' : localStorage.getItem('gb_muted') === '1';
+let musicOn = localStorage.getItem('gb_music') === '1';
+let musicBus = null, musicTimer = null, musicStep = 0;
 
 function ac() {
   if (!ctx) {
@@ -46,9 +49,10 @@ function noise(dur, vol = 0.2, delay = 0, hp = 1200) {
 const PENTA = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.5, 1568, 1760];
 
 export const Sfx = {
-  unlock() { ac(); },
+  unlock() { ac(); if (musicOn) Music.start(); },
   get muted() { return muted; },
-  toggle() { muted = !muted; localStorage.setItem('gb_muted', muted ? '1' : '0'); return muted; },
+  setOn(on) { muted = !on; localStorage.setItem('gb_sfx', on ? '1' : '0'); return !muted; },
+  toggle() { this.setOn(muted); return muted; },
   pick() { tone(660, 0.07, { type: 'triangle', vol: 0.15, slide: 1.4 }); },
   place() { tone(180, 0.12, { type: 'sine', vol: 0.4, slide: 0.6 }); noise(0.05, 0.08, 0, 2500); },
   invalid() { tone(220, 0.1, { type: 'square', vol: 0.06, slide: 0.8 }); },
@@ -64,4 +68,43 @@ export const Sfx = {
   over() { [392, 349.2, 311.1, 261.6].forEach((f, i) => tone(f, 0.35, { type: 'triangle', vol: 0.2, delay: i * 0.16 })); },
   revive() { [261.6, 392, 523.25, 784].forEach((f, i) => tone(f, 0.25, { type: 'sine', vol: 0.25, delay: i * 0.07 })); },
   best() { [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f, i) => tone(f, 0.3, { type: 'triangle', vol: 0.18, delay: i * 0.09 })); },
+};
+
+// ---- Music: a very quiet, slow ambient pad (synthesized, no assets). Off by default. ----
+// Chords: Cmaj7 - Am7 - Fmaj7 - G6, one every 6 s, soft attack, low-passed.
+const CHORDS = [[261.63, 329.63, 392, 493.88], [220, 261.63, 329.63, 392], [174.61, 220, 261.63, 329.63], [196, 246.94, 293.66, 329.63]];
+const CHORD_SECS = 6;
+function padChord(freqs, t) {
+  const c = ctx;
+  for (const f of freqs) {
+    for (const det of [-4, 4]) {
+      const o = c.createOscillator(), g = c.createGain();
+      o.type = 'sine'; o.frequency.value = f / 2; o.detune.value = det;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(0.05, t + 2);
+      g.gain.linearRampToValueAtTime(0.0001, t + CHORD_SECS + 1.5);
+      o.connect(g); g.connect(musicBus); o.start(t); o.stop(t + CHORD_SECS + 1.6);
+    }
+  }
+}
+export const Music = {
+  get on() { return musicOn; },
+  set(on) { musicOn = !!on; localStorage.setItem('gb_music', musicOn ? '1' : '0'); musicOn ? this.start() : this.stop(); return musicOn; },
+  start() {
+    const c = ac(); if (!c || musicTimer) return;
+    if (!musicBus) {
+      const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900;
+      musicBus = c.createGain(); musicBus.gain.value = 0.35;
+      musicBus.connect(lp); lp.connect(master);
+    }
+    musicBus.gain.setTargetAtTime(0.35, c.currentTime, 0.5);
+    const tick = () => { padChord(CHORDS[musicStep++ % CHORDS.length], ctx.currentTime + 0.05); };
+    tick(); musicTimer = setInterval(tick, CHORD_SECS * 1000);
+  },
+  stop() {
+    clearInterval(musicTimer); musicTimer = null;
+    if (musicBus && ctx) musicBus.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.4);
+  },
+  pause() { if (musicTimer) { this.stop(); this._paused = true; } },
+  resume() { if (this._paused && musicOn) { this._paused = false; this.start(); } },
 };
