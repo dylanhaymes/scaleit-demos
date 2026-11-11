@@ -85,6 +85,19 @@ async function dragPiece(page, slot, r, c) {
   await page.mouse.up();
   await sleep(200);
 }
+// Like dragPiece, but drops the piece's centre on an exact canvas point
+// (px, py in canvas coordinates) instead of a cell centre.
+async function dragToPoint(page, slot, px, py) {
+  const box = await page.locator('#cv').boundingBox();
+  const L = await page.evaluate(() => window.__gb.layout());
+  const from = { x: box.x + L.slotW * (slot + 0.5), y: box.y + L.trayY + L.trayH / 2 };
+  const to = { x: box.x + px, y: box.y + py };
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  for (let i = 1; i <= 8; i++) await page.mouse.move(from.x + ((to.x - from.x) * i) / 8, from.y + ((to.y - from.y) * i) / 8);
+  await page.mouse.up();
+  await sleep(200);
+}
 
 // ---------- tests ----------
 let p1;
@@ -135,6 +148,24 @@ await test('timer: +6s per single line (real drag)', async () => {
   const st = await page.evaluate(() => window.__gb.state());
   eq(st.lines, 1, 'one line cleared');
   approx(st.timeLeft - t0, 6, 1.2, 'time bonus for 1 line');
+  await page.close();
+});
+
+await test('dropCell: piece dropped exactly on a cell-centre boundary lands in the intended cell', async () => {
+  const { page } = await newPage();
+  await startClassic(page);
+  // '##' (shape id 1) on an empty board. Drag its centre exactly onto the
+  // centre of cell (row 0, col 3): the piece's top-left quotient is then
+  // exactly 2.5 in column, so it must round UP to col 3 (cells 3-4). Float
+  // noise reading 2.4999999 would silently land it on cols 2-3 instead.
+  await setupBoard(page, EMPTY, [1, 0, 0]);
+  const L = await page.evaluate(() => window.__gb.layout());
+  await dragToPoint(page, 0, L.bx + 3.5 * L.cell, L.by + 0.5 * L.cell);
+  const st = await page.evaluate(() => window.__gb.state());
+  eq(st.placed, 1, 'piece placed');
+  eq(st.board[0][2], false, 'col 2 stays empty');
+  eq(st.board[0][3], true, 'col 3 filled');
+  eq(st.board[0][4], true, 'col 4 filled');
   await page.close();
 });
 

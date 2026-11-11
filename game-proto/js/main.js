@@ -95,7 +95,13 @@ function dropCell() {
   if (!drag) return null;
   const s = L.cell, p = drag.piece.shape;
   const px = drag.x - (p.w * s) / 2, py = drag.y - (p.h * s) / 2;
-  const c = Math.round((px - L.bx) / s), r = Math.round((py - L.by) / s);
+  // +1e-9 epsilon: float noise can make an exact .5 quotient read as e.g.
+  // 2.4999999, which Math.round would send to the wrong cell. The epsilon is
+  // far above float64 noise (~1e-15 at these magnitudes) and far below a
+  // meaningful offset, so it only rescues the exact-boundary case. It keeps
+  // Math.round's .5-rounds-up behaviour for a piece dropped exactly on a
+  // cell-centre boundary.
+  const c = Math.round((px - L.bx) / s + 1e-9), r = Math.round((py - L.by) / s + 1e-9);
   return { r, c, ok: fits(S.board, p, r, c) };
 }
 function wouldClear(shape, r, c) {
