@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#120f2b">
+<meta name="description" content="Gridbloom: drag blocks onto the 8x8 garden, clear rows and columns, chain combos.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Gridbloom</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <header id="hud">
+    <div class="hud-box"><span class="label">BEST</span><span id="best">0</span></div>
+    <div class="hud-score"><span id="score">0</span><span id="combo" class="combo"></span></div>
+    <div class="hud-actions">
+      <button id="btn-sound" class="icon-btn" aria-label="Toggle sound">🔊</button>
+      <button id="btn-menu" class="icon-btn" aria-label="Menu">☰</button>
+    </div>
+  </header>
+  <div id="stage"><canvas id="cv"></canvas></div>
+</div>
+
+<!-- Title screen -->
+<div id="title" class="overlay show">
+  <div class="panel">
+    <div class="logo">Grid<span>bloom</span></div>
+    <p class="tag">Drag blocks. Fill rows. Watch them bloom.</p>
+    <button id="btn-play" class="btn big">Play</button>
+    <button id="btn-how" class="btn ghost">How difficulty works</button>
+    <p class="small">Best: <b id="title-best">0</b></p>
+  </div>
+</div>
+
+<!-- Revive offer (opt-in) -->
+<div id="revive" class="overlay">
+  <div class="panel">
+    <h2>No space left!</h2>
+    <p>Score <b id="rv-score">0</b></p>
+    <p class="small">Optional: watch a short ad to clear your 3 fullest rows and get a fresh tray. One revive per game.</p>
+    <div class="ring"><span id="rv-count">6</span></div>
+    <button id="btn-revive" class="btn big">▶ Watch ad to continue</button>
+    <button id="btn-norevive" class="btn ghost">No thanks</button>
+  </div>
+</div>
+
+<!-- Game over -->
+<div id="over" class="overlay">
+  <div class="panel">
+    <h2>Game over</h2>
+    <div id="ov-new" class="badge hidden">New best!</div>
+    <div class="final"><span class="label">SCORE</span><span id="ov-score">0</span></div>
+    <p>Best <b id="ov-best">0</b> · Lines <b id="ov-lines">0</b> · Max combo <b id="ov-combo">0</b></p>
+    <button id="btn-again" class="btn big">Play again</button>
+    <button id="btn-home" class="btn ghost">Home</button>
+  </div>
+</div>
+
+<!-- Menu / how it works -->
+<div id="menu" class="overlay">
+  <div class="panel scroll">
+    <h2>How difficulty works</h2>
+    <div id="rules"></div>
+    <p class="small">Your score is exactly what you earned. Ads never change the board, the pieces, or your score.</p>
+    <button id="btn-resume" class="btn big">Back</button>
+    <button id="btn-restart" class="btn ghost">Restart game</button>
+    <button id="btn-log" class="btn ghost">Show analytics log</button>
+    <pre id="log" class="hidden"></pre>
+  </div>
+</div>
+
+<!-- Mock ad overlay (replaced by a real provider later) -->
+<div id="ad" class="overlay ad">
+  <div class="ad-box">
+    <div class="ad-tag">Ad</div>
+    <div class="ad-kind" id="ad-kind">Rewarded</div>
+    <div class="ad-body">Mock ad placeholder<br><small>AdMob / AdSense for Games plugs in via js/ads.js</small></div>
+    <div class="ad-count" id="ad-count">5</div>
+    <button id="ad-close" class="btn ghost">Close</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

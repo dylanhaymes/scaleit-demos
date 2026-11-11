@@ -1,0 +1,48 @@
+:root{--bg:#120f2b;--bg2:#1d1846;--ink:#f5f1ff;--muted:#a59fd0;--accent:#ff7ab6;--accent2:#7cf0c9;--gold:#ffd166}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:radial-gradient(120% 80% at 50% 0%,#2a2163 0%,var(--bg) 60%);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+#app{position:fixed;inset:0;display:flex;flex-direction:column;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+#hud{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 0;gap:8px}
+.hud-box{display:flex;flex-direction:column;align-items:flex-start;min-width:72px}
+.label{font-size:11px;letter-spacing:.14em;color:var(--muted);font-weight:700}
+#best{font-size:18px;font-weight:800;color:var(--gold)}
+.hud-score{display:flex;flex-direction:column;align-items:center}
+#score{font-size:44px;font-weight:900;line-height:1;text-shadow:0 4px 0 rgba(0,0,0,.25);transition:transform .12s}
+#score.bump{transform:scale(1.18)}
+.combo{font-size:13px;font-weight:800;color:var(--accent);min-height:16px}
+.hud-actions{display:flex;gap:6px;min-width:72px;justify-content:flex-end}
+.icon-btn{background:rgba(255,255,255,.08);border:0;color:var(--ink);width:38px;height:38px;border-radius:12px;font-size:18px}
+#stage{flex:1;position:relative}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block}
+.overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(10,8,30,.72);backdrop-filter:blur(6px);z-index:10;padding:20px}
+.overlay.show{display:flex;animation:fade .25s ease}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.panel{background:linear-gradient(180deg,#2b2470,#1b1648);border-radius:24px;padding:26px 22px;width:min(360px,100%);text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.12);animation:pop .3s cubic-bezier(.2,1.6,.4,1)}
+.panel.scroll{max-height:88vh;overflow:auto;text-align:left}
+@keyframes pop{from{transform:scale(.85)}to{transform:scale(1)}}
+.logo{font-size:48px;font-weight:900;letter-spacing:-.02em}
+.logo span{color:var(--accent);}
+.tag{color:var(--muted);margin:6px 0 22px}
+h2{margin:0 0 10px;font-size:26px}
+.btn{display:block;width:100%;border:0;border-radius:16px;padding:14px;margin-top:10px;font-size:17px;font-weight:800;color:#1a1440;background:linear-gradient(180deg,#9dfbd9,#4fd6a8);box-shadow:0 5px 0 #2a9a76}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 #2a9a76}
+.btn.big{font-size:20px;padding:16px}
+.btn.ghost{background:rgba(255,255,255,.08);color:var(--ink);box-shadow:none;font-weight:700}
+.small{font-size:13px;color:var(--muted)}
+.final{display:flex;flex-direction:column;margin:10px 0}
+#ov-score{font-size:56px;font-weight:900}
+.badge{display:inline-block;background:var(--gold);color:#3a2600;padding:4px 12px;border-radius:999px;font-weight:900;animation:pop .4s cubic-bezier(.2,1.8,.4,1)}
+.hidden{display:none!important}
+.ring{width:64px;height:64px;margin:10px auto;border-radius:50%;border:5px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900}
+#rules ol{padding-left:20px;margin:0}#rules li{margin:0 0 10px;font-size:14px;line-height:1.4}
+#log{font-size:10px;background:#0c0a22;padding:8px;border-radius:8px;max-height:200px;overflow:auto;white-space:pre-wrap}
+.ad{background:#000;z-index:50}
+.ad-box{position:relative;width:min(380px,100%);height:min(640px,90vh);background:repeating-linear-gradient(45deg,#222 0 20px,#2a2a2a 20px 40px);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:20px}
+.ad-tag{position:absolute;top:10px;left:10px;background:#ffd166;color:#000;font-weight:900;padding:2px 8px;border-radius:4px;font-size:12px}
+.ad-kind{color:#aaa;font-size:13px;text-transform:uppercase;letter-spacing:.2em}
+.ad-body{font-size:22px;font-weight:800}
+.ad-body small{font-size:12px;color:#aaa;font-weight:500}
+.ad-count{font-size:40px;font-weight:900;color:#ffd166}
+#ad-close{width:auto;padding:10px 22px}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:rgba(0,0,0,.7);padding:8px 14px;border-radius:999px;font-size:13px;opacity:0;transition:opacity .3s;z-index:60;pointer-events:none}
+#toast.show{opacity:1}
