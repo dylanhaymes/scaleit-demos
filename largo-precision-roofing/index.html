@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="en">
+  <head><meta name="robots" content="noindex,nofollow">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>Largo Precision Roofing — Roofing Contractor in Largo, FL</title>
+    <meta name="description" content="Largo Precision Roofing: licensed & insured roof replacement, repair, and storm restoration in Largo and Pinellas County. Free same-day estimates. Call (727) 287-5817." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+      :root{
+        --bg:#f7f5f2; --surface:#ffffff; --surface2:#efece7;
+        --ink:#1c2126; --ink2:#4c565f; --line:#ddd7cd;
+        --brand:#b3401e; --brand-dark:#8f3215; --brand-soft:#fbe9e2;
+        --steel:#232a30; --steel2:#2f383f;
+        --accent:#e8a33d;
+        --ok:#1e7a46;
+        --radius:14px;
+        --shadow:0 10px 30px rgba(28,33,38,.10);
+      }
+      @media (prefers-color-scheme: dark){
+        :root{
+          --bg:#14181b; --surface:#1d2328; --surface2:#252d33;
+          --ink:#f0ede8; --ink2:#b6bec4; --line:#39424a;
+          --brand:#e0603a; --brand-dark:#c94e2a; --brand-soft:#3a241c;
+          --steel:#0f1316; --steel2:#1a2126;
+          --accent:#e8a33d;
+          --shadow:0 10px 30px rgba(0,0,0,.4);
+        }
+      }
+      *{box-sizing:border-box}
+      html{scroll-behavior:smooth}
+      body{margin:0;font-family:"Barlow",system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55;font-size:17px}
+      h1,h2,h3{font-family:"Barlow Condensed","Barlow",sans-serif;line-height:1.05;margin:0;text-transform:uppercase;letter-spacing:.01em}
+      p{margin:0}
+      a{color:var(--brand)}
+      img{max-width:100%;display:block}
+      .wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+      button,[role="button"],select,summary,input:not([type="checkbox"],[type="radio"]),textarea{ min-height:2.75rem; }
+
+      /* top bar */
+      .topbar{background:var(--steel);color:#f3f1ec;position:sticky;top:0;z-index:50;box-shadow:0 2px 12px rgba(0,0,0,.25)}
+      .topbar-in{display:flex;align-items:center;gap:14px;padding:10px 0;flex-wrap:wrap}
+      .logo{display:flex;align-items:center;gap:11px;text-decoration:none;color:#fff}
+      .logo-mark{width:42px;height:42px;flex:none;background:var(--brand);border-radius:9px;display:grid;place-items:center}
+      .logo-mark svg{width:26px;height:26px}
+      .logo-name{font-family:"Barlow Condensed",sans-serif;font-size:1.35rem;font-weight:700;line-height:1;text-transform:uppercase;letter-spacing:.02em}
+      .logo-sub{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:#c9cfd4}
+      .topbar nav{margin-left:auto;display:flex;gap:4px;flex-wrap:wrap}
+      .topbar nav a{color:#e8e6e0;text-decoration:none;font-weight:600;font-size:.95rem;padding:10px 12px;border-radius:8px}
+      .topbar nav a:hover{background:var(--steel2)}
+      .callbtn{background:var(--brand);color:#fff !important;text-decoration:none;font-weight:700;padding:11px 18px;border-radius:9px;display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+      .callbtn:hover{background:var(--brand-dark)}
+      .claimbtn{background:var(--accent);color:#231a05 !important;text-decoration:none;font-weight:800;padding:11px 18px;border-radius:9px;display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+      .claimbtn:hover{filter:brightness(1.07)}
+      .claim-bottom{margin-top:26px;background:var(--steel2);border:1px solid #3d474f;border-radius:var(--radius);padding:22px;text-align:center}
+      .claim-bottom p{color:#c6ccd1;margin:0 0 14px;font-size:.98rem}
+      .claim-bottom p b{color:#fff}
+      .claim-bottom .claimbtn{font-size:1.05rem;padding:14px 28px}
+      @media(max-width:760px){ .topbar nav{display:none} .callbtn{margin-left:auto} }
+      @media(max-width:520px){ .topbar-in{gap:8px} .callbtn,.claimbtn{padding:10px 12px;font-size:.92rem} }
+
+      /* hero */
+      .hero{position:relative;color:#fff;background:var(--steel)}
+      .hero-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.5}
+      .hero-shade{position:absolute;inset:0;background:linear-gradient(100deg,rgba(15,19,22,.92) 30%,rgba(15,19,22,.45) 75%)}
+      .hero-in{position:relative;padding:64px 0 56px;max-width:680px}
+      .hero-tag{display:inline-block;background:var(--accent);color:#231a05;font-weight:700;font-size:.8rem;letter-spacing:.12em;text-transform:uppercase;padding:6px 12px;border-radius:6px;margin-bottom:18px}
+      .hero h1{font-size:clamp(2.6rem,6.5vw,4.3rem);font-weight:700}
+      .hero h1 em{font-style:normal;color:var(--accent)}
+      .hero p.lede{margin-top:16px;font-size:1.15rem;color:#e6e3dc;max-width:56ch}
+      .hero-ctas{display:flex;gap:12px;flex-wrap:wrap;margin-top:26px}
+      .btn{display:inline-flex;align-items:center;gap:9px;text-decoration:none;font-weight:700;padding:14px 24px;border-radius:10px;font-size:1.02rem;min-height:3rem}
+      .btn-brand{background:var(--brand);color:#fff}
+      .btn-brand:hover{background:var(--brand-dark)}
+      .btn-ghost{background:rgba(255,255,255,.1);color:#fff;border:1.5px solid rgba(255,255,255,.55)}
+      .btn-ghost:hover{background:rgba(255,255,255,.22)}
+      .hero-facts{display:flex;gap:10px;flex-wrap:wrap;margin-top:30px}
+      .hero-facts span{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);padding:8px 13px;border-radius:999px;font-size:.9rem;font-weight:600}
+
+      /* trust strip */
+      .trust{background:var(--surface);border-bottom:1px solid var(--line)}
+      .trust-in{display:grid;grid-template-columns:repeat(4,1fr);gap:0}
+      .trust-item{padding:20px 18px;text-align:center;border-left:1px solid var(--line)}
+      .trust-item:first-child{border-left:none}
+      .trust-num{font-family:"Barlow Condensed",sans-serif;font-size:1.7rem;font-weight:700;color:var(--brand);line-height:1}
+      .trust-lbl{font-size:.88rem;color:var(--ink2);font-weight:600;margin-top:4px}
+      @media(max-width:760px){.trust-in{grid-template-columns:1fr 1fr}.trust-item{border-top:1px solid var(--line)}.trust-item:nth-child(-n+2){border-top:none}.trust-item:nth-child(odd){border-left:none}}
+
+      section{padding:58px 0}
+      .sec-head{max-width:720px;margin-bottom:30px}
+      .sec-head h2{font-size:clamp(1.9rem,4vw,2.6rem);font-weight:700}
+      .sec-head p{margin-top:10px;color:var(--ink2);font-size:1.05rem}
+
+      /* services */
+      .svc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+      @media(max-width:900px){.svc-grid{grid-template-columns:1fr 1fr}}
+      @media(max-width:560px){.svc-grid{grid-template-columns:1fr}}
+      .svc{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow)}
+      .svc-icon{width:46px;height:46px;border-radius:10px;background:var(--brand-soft);display:grid;place-items:center;margin-bottom:14px}
+      .svc-icon svg{width:25px;height:25px;stroke:var(--brand)}
+      .svc h3{font-size:1.3rem;font-weight:600;margin-bottom:8px}
+      .svc p{color:var(--ink2);font-size:.98rem}
+
+      /* split */
+      .split{display:grid;grid-template-columns:1fr 1fr;gap:34px;align-items:center}
+      @media(max-width:860px){.split{grid-template-columns:1fr}}
+      .split img{border-radius:var(--radius);box-shadow:var(--shadow);width:100%;height:100%;object-fit:cover;min-height:280px}
+      .checklist{list-style:none;margin:18px 0 0;padding:0;display:grid;gap:11px}
+      .checklist li{display:flex;gap:11px;align-items:flex-start}
+      .checklist svg{flex:none;width:22px;height:22px;margin-top:2px}
+      .checklist b{font-weight:700}
+      .alt{background:var(--surface2)}
+
+      /* materials table */
+      .mat-table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+      .mat-table th,.mat-table td{padding:14px 18px;text-align:left}
+      .mat-table th{background:var(--steel);color:#fff;font-family:"Barlow Condensed",sans-serif;text-transform:uppercase;letter-spacing:.05em;font-size:1rem}
+      .mat-table tr+tr td{border-top:1px solid var(--line)}
+      .mat-table td.yrs{font-weight:700;color:var(--brand);white-space:nowrap}
+      .mat-note{margin-top:12px;color:var(--ink2);font-size:.93rem}
+
+      /* process */
+      .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+      @media(max-width:900px){.steps{grid-template-columns:1fr 1fr}}
+      @media(max-width:520px){.steps{grid-template-columns:1fr}}
+      .step{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:22px}
+      .step-n{font-family:"Barlow Condensed",sans-serif;font-size:2rem;font-weight:700;color:var(--accent);line-height:1}
+      .step h3{font-size:1.2rem;font-weight:600;margin:8px 0 6px}
+      .step p{color:var(--ink2);font-size:.96rem}
+
+      /* areas */
+      .areas{display:flex;flex-wrap:wrap;gap:9px}
+      .areas span{background:var(--surface);border:1px solid var(--line);padding:9px 15px;border-radius:999px;font-weight:600;font-size:.95rem}
+
+      /* faq */
+      .faq details{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);margin-bottom:12px;overflow:hidden}
+      .faq summary{cursor:pointer;font-weight:700;font-size:1.05rem;padding:18px 20px;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:12px}
+      .faq summary::-webkit-details-marker{display:none}
+      .faq summary::after{content:"+";font-size:1.5rem;color:var(--brand);font-weight:700;line-height:1}
+      .faq details[open ] summary::after{content:"–"}
+      .faq .faq-body{padding:0 20px 20px;color:var(--ink2)}
+
+      /* estimate */
+      .estimate{background:var(--steel);color:#f2f0eb}
+      .estimate .sec-head p{color:#c6ccd1}
+      .est-grid{display:grid;grid-template-columns:1fr 1.25fr;gap:34px;align-items:start}
+      @media(max-width:860px){.est-grid{grid-template-columns:1fr}}
+      .est-contact{display:grid;gap:14px}
+      .est-card{background:var(--steel2);border:1px solid #3d474f;border-radius:var(--radius);padding:20px}
+      .est-card h3{font-size:1.15rem;margin-bottom:6px;color:var(--accent)}
+      .est-card a{color:#fff;font-weight:700;text-decoration:none}
+      .est-card p{color:#c6ccd1;font-size:.97rem}
+      form{background:var(--surface);color:var(--ink);border-radius:var(--radius);padding:26px;box-shadow:var(--shadow)}
+      .f-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+      @media(max-width:560px){.f-row{grid-template-columns:1fr}}
+      label{display:block;font-weight:600;font-size:.92rem;margin-bottom:14px}
+      label span{display:block;margin-bottom:6px}
+      input,select,textarea{width:100%;font:inherit;padding:11px 13px;border:1.5px solid var(--line);border-radius:9px;background:var(--bg);color:var(--ink)}
+      input:focus,select:focus,textarea:focus{outline:2px solid var(--brand);outline-offset:1px;border-color:var(--brand)}
+      textarea{resize:vertical;min-height:96px}
+      .submit{width:100%;background:var(--brand);color:#fff;border:none;font:inherit;font-weight:700;font-size:1.05rem;padding:15px;border-radius:10px;cursor:pointer;min-height:3.2rem}
+      .submit:hover{background:var(--brand-dark)}
+      .form-note{margin-top:12px;font-size:.88rem;color:var(--ink2);text-align:center}
+      .form-ok{display:none;background:#e5f4ec;border:1px solid var(--ok);color:#14532d;border-radius:10px;padding:14px 16px;margin-top:14px;font-weight:600}
+      @media (prefers-color-scheme: dark){.form-ok{background:#17301f;color:#a7e8c3}}
+
+      footer{background:var(--steel);color:#b9c0c6;border-top:1px solid #333c43;padding:34px 0 40px;font-size:.94rem}
+      footer .cols{display:grid;grid-template-columns:2fr 1fr 1fr;gap:26px}
+      @media(max-width:760px){footer .cols{grid-template-columns:1fr}}
+      footer h3{color:#fff;font-size:1.1rem;margin-bottom:10px}
+      footer a{color:#e8e6e0}
+      .demo-note{margin-top:26px;border-top:1px solid #333c43;padding-top:18px;color:#9aa3ab;font-size:.88rem}
+    </style>
+  </head>
+  <body>
+
+    <header class="topbar">
+      <div class="wrap topbar-in">
+        <a class="logo" href="#top" aria-label="Largo Precision Roofing — home">
+          <span class="logo-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12 12 3l10 9"/><path d="M5 10v10h14V10"/><path d="M9.5 20v-5h5v5"/></svg>
+          </span>
+          <span>
+            <span class="logo-name">Largo Precision Roofing</span><br />
+            <span class="logo-sub">Largo · Pinellas County, FL</span>
+          </span>
+        </a>
+        <nav aria-label="Site">
+          <a href="#services">Services</a>
+          <a href="#materials">Materials</a>
+          <a href="#process">Our Process</a>
+          <a href="#faq">FAQ</a>
+        </nav>
+        <a class="callbtn" href="tel:+17272875817">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.13.96.36 1.9.7 2.8a2 2 0 0 1-.45 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.45c.9.34 1.84.57 2.8.7A2 2 0 0 1 22 16.9z"/></svg>
+          (727) 287-5817
+        </a>
+        <a class="claimbtn" href="https://square.link/u/cz1GGRh0" target="_blank" rel="noopener">Claim this site — $70</a>
+      </div>
+    </header>
+
+    <main id="top">
+      <!-- HERO -->
+      <div class="hero">
+        <img class="hero-img" src="assets/hero.png" alt="Roofing crew installing new asphalt shingles on a Florida home" />
+        <div class="hero-shade"></div>
+        <div class="wrap">
+          <div class="hero-in">
+            <span class="hero-tag">Free same-day estimates</span>
+            <h1>A roof built for Florida weather. <em>Priced in writing, up front.</em></h1>
+            <p class="lede">Largo Precision Roofing has installed, replaced, and repaired roofs across Largo and Pinellas County for over 20 years — fully licensed and insured, with warranties on both labor and materials.</p>
+            <div class="hero-ctas">
+              <a class="btn btn-brand" href="#estimate">Get my free estimate</a>
+              <a class="btn btn-ghost" href="tel:+17272875817">Call (727) 287-5817</a>
+            </div>
+            <div class="hero-facts">
+              <span>20+ years in Largo</span>
+              <span>Licensed &amp; insured</span>
+              <span>Residential &amp; commercial</span>
+              <span>No hidden fees</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TRUST STRIP -->
+      <div class="trust">
+        <div class="wrap trust-in">
+          <div class="trust-item"><div class="trust-num">20+</div><div class="trust-lbl">Years serving Pinellas County</div></div>
+          <div class="trust-item"><div class="trust-num">Same-Day</div><div class="trust-lbl">Free estimates, no obligation</div></div>
+          <div class="trust-item"><div class="trust-num">4 Systems</div><div class="trust-lbl">Shingle · metal · tile · flat / TPO</div></div>
+          <div class="trust-item"><div class="trust-num">2 Warranties</div><div class="trust-lbl">Labor and materials, in writing</div></div>
+        </div>
+      </div>
+
+      <!-- SERVICES -->
+      <section id="services">
+        <div class="wrap">
+          <div class="sec-head">
+            <h2>Roofing services</h2>
+            <p>Homes, townhouses, and commercial buildings — every property gets assessed individually and matched with the right system for its needs and budget. No one-size-fits-all.</p>
+          </div>
+          <div class="svc-grid">
+            <div class="svc">
+              <div class="svc-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12 12 3l10 9"/><path d="M5 10v10h14V10"/></svg></div>
+              <h3>Roof Replacement</h3>
+              <p>Full tear-off and replacement with a clear, upfront cost breakdown before work begins. What we quote is what you pay — permits pulled, old roofing disposed of, everything to code.</p>
+            </div>
+            <div class="svc">
+              <div class="svc-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4.5 4.5 0 0 0-6 6L3 18l3 3 5.7-5.7a4.5 4.5 0 0 0 6-6L14 13l-3-3 3.7-3.7z"/></svg></div>
+              <h3>Roof Repair</h3>
+              <p>Leaks, missing or curling shingles, lifted flashing, granule loss — targeted repairs that fix the actual problem instead of selling you a roof you don't need yet.</p>
+            </div>
+            <div class="svc">
+              <div class="svc-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M18.4 5.6l-2.1 2.1M21 12h-3M5.6 5.6l2.1 2.1M3 12h3"/><path d="M20 16.6A5 5 0 0 0 18 7a7 7 0 0 0-13.4 2A4.5 4.5 0 0 0 6 18h12"/></svg></div>
+              <h3>Storm Damage Restoration</h3>
+              <p>Florida storms don't wait, and neither do we. Prompt inspections after heavy wind and rain to catch visible and hidden damage before water gets into decking and framing.</p>
+            </div>
+            <div class="svc">
+              <div class="svc-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="1"/><path d="M3 7l2.5-4h13L21 7"/></svg></div>
+              <h3>New Roof Installation</h3>
+              <p>New construction and additions, installed with materials from trusted manufacturers known for durability in Florida's heat, humidity, and UV exposure.</p>
+            </div>
+            <div class="svc">
+              <div class="svc-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="1"/><path d="M2 10h20M2 15h20"/></svg></div>
+              <h3>Commercial &amp; Flat Roofing</h3>
+              <p>Low-slope and flat systems — TPO, EPDM, and modified bitumen — for retail, office, and industrial properties, with drainage designed for Largo's heavy rain season.</p>
+            </div>
+            <div class="svc">
+              <div class="svc-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></div>
+              <h3>Inspections &amp; Maintenance</h3>
+              <p>Annual inspections and routine maintenance that catch small issues early — the most reliable way to get the full life out of any roofing system in Pinellas County.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- WHY / SPLIT -->
+      <section class="alt">
+        <div class="wrap split">
+          <div>
+            <div class="sec-head" style="margin-bottom:0">
+              <h2>Local roofers, not a call center</h2>
+              <p>We've worked in Largo for over two decades. We know the building codes, the permit process, and exactly what Florida's heat, humidity, and storm season do to a roof — because we fix it every week.</p>
+            </div>
+            <ul class="checklist">
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="#1e7a46" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><p><b>Fully licensed &amp; insured.</b> You're protected against unexpected liabilities from the first day to the last.</p></li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="#1e7a46" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><p><b>Transparent pricing.</b> A clear cost breakdown before any work begins. No hidden fees, no surprises mid-job.</p></li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="#1e7a46" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><p><b>Warranties on labor and materials.</b> If an issue shows up after the job, we come back and make it right.</p></li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="#1e7a46" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><p><b>Nothing moves without your approval.</b> We work with you from the first estimate through completion, step by step.</p></li>
+            </ul>
+          </div>
+          <img src="assets/inspect.jpg" alt="Roofing professional inspecting a tile roof" loading="lazy" />
+        </div>
+      </section>
+
+      <!-- MATERIALS -->
+      <section id="materials">
+        <div class="wrap">
+          <div class="sec-head">
+            <h2>The right material for this climate</h2>
+            <p>Largo gets high UV, humid air, afternoon thunderstorms, and the occasional tropical storm. Here's how the systems we install hold up — and how long they realistically last in Florida.</p>
+          </div>
+          <div class="split" style="align-items:start">
+            <div>
+              <table class="mat-table">
+                <thead><tr><th>Material</th><th>Best for</th><th>Lifespan in FL</th></tr></thead>
+                <tbody>
+                  <tr><td><b>Asphalt shingles</b></td><td>Most homes; best value up front</td><td class="yrs">15–25 yrs</td></tr>
+                  <tr><td><b>Metal</b></td><td>Wind resistance &amp; lower cooling costs</td><td class="yrs">40–70 yrs</td></tr>
+                  <tr><td><b>Concrete tile</b></td><td>Heat &amp; UV durability, classic FL look</td><td class="yrs">30–50 yrs</td></tr>
+                  <tr><td><b>Clay tile</b></td><td>Maximum longevity</td><td class="yrs">50+ yrs</td></tr>
+                  <tr><td><b>TPO / flat</b></td><td>Commercial &amp; low-slope roofs</td><td class="yrs">15–30 yrs</td></tr>
+                </tbody>
+              </table>
+              <p class="mat-note">A replacement on a 1,500 sq ft Florida home generally runs $8,000–$18,000 depending on material, pitch, and existing damage. Your free estimate gives you the exact number for your roof — in writing.</p>
+            </div>
+            <img src="assets/metal.webp" alt="Florida home with a new dark metal roof among palm trees" style="aspect-ratio:16/10" />
+          </div>
+        </div>
+      </section>
+
+      <!-- PROCESS -->
+      <section id="process" class="alt">
+        <div class="wrap">
+          <div class="sec-head">
+            <h2>How it works</h2>
+            <p>Four steps, no pressure at any of them.</p>
+          </div>
+          <div class="steps">
+            <div class="step"><div class="step-n">01</div><h3>Free same-day estimate</h3><p>Call or send the form. We inspect your roof and give you a clear, upfront cost breakdown — no obligation.</p></div>
+            <div class="step"><div class="step-n">02</div><h3>Pick your system</h3><p>We walk you through material options for your building, budget, and maintenance appetite. You approve before anything starts.</p></div>
+            <div class="step"><div class="step-n">03</div><h3>Install, to code</h3><p>Permits pulled, strict safety protocols on site, and quality materials from trusted manufacturers.</p></div>
+            <div class="step"><div class="step-n">04</div><h3>Backed in writing</h3><p>Your roof is covered by warranties on both labor and materials. If something's not right, we return and fix it.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- AREAS -->
+      <section>
+        <div class="wrap">
+          <div class="sec-head">
+            <h2>Areas we serve</h2>
+            <p>Based at 1350 Starkey Rd in Largo, serving homeowners and property managers across Pinellas County and beyond.</p>
+          </div>
+          <div class="areas">
+            <span>Largo</span><span>Clearwater</span><span>Belleair</span><span>Safety Harbor</span><span>Palm Harbor</span><span>Oldsmar</span><span>Dunedin</span><span>Tarpon Springs</span><span>East Lake</span><span>Countryside</span><span>Feather Sound</span><span>Crystal Beach</span><span>Ozona</span><span>Westchase</span><span>Wesley Chapel</span><span>Odessa</span><span>Trinity</span><span>Land O' Lakes</span><span>Lutz</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- FAQ -->
+      <section id="faq" class="alt">
+        <div class="wrap">
+          <div class="sec-head">
+            <h2>Questions homeowners ask us</h2>
+          </div>
+          <div class="faq">
+            <details>
+              <summary>How much does a roof replacement cost in Largo?</summary>
+              <div class="faq-body">For a 1,500 sq ft Florida home, generally $8,000–$18,000. Shingle replacements land on the lower end; metal and tile cost more. Pitch, roof complexity, damaged decking, tear-off, and Pinellas County permit fees all factor in. Your free estimate breaks down your exact price before any work begins — no hidden fees.</div>
+            </details>
+            <details>
+              <summary>How do I know if storm damage needs an inspection?</summary>
+              <div class="faq-body">Look for missing, cracked, or curling shingles, granules collecting in gutters, water stains on ceilings or walls, sagging spots on the deck, or lifted flashing around vents and skylights. After a named storm — or if you spot any of those signs — schedule an inspection promptly. Water intrusion causes secondary damage to insulation, decking, and framing the longer it waits.</div>
+            </details>
+            <details>
+              <summary>Which roofing material lasts longest in Florida?</summary>
+              <div class="faq-body">Metal (40–70 years) and clay tile (50+ years) lead on lifespan. Metal also resists wind uplift, sheds rain well, and reflects heat to help cooling costs. Concrete tile runs 30–50 years, asphalt shingles 15–25, and TPO flat systems 15–30. Annual inspections and keeping gutters and the roof surface clear help any system reach its full life.</div>
+            </details>
+            <details>
+              <summary>Are you licensed and insured?</summary>
+              <div class="faq-body">Yes — fully licensed and insured, including general liability and workers' compensation, as Florida requires for roofing contractors. Permits are pulled for every replacement, and we provide full documentation before a project starts. Every job is backed by warranties on both materials and workmanship.</div>
+            </details>
+            <details>
+              <summary>How fast can I get an estimate?</summary>
+              <div class="faq-body">Estimates are free and same-day, with no obligation. Call (727) 287-5817 or send the form below and we'll set it up. We're open seven days a week, 9 AM to 5 PM.</div>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <!-- ESTIMATE -->
+      <section id="estimate" class="estimate">
+        <div class="wrap">
+          <div class="sec-head">
+            <h2>Get your free estimate</h2>
+            <p>Same-day, no obligation, no hidden fees. Tell us about your roof and we'll take it from there.</p>
+          </div>
+          <div class="est-grid">
+            <div class="est-contact">
+              <div class="est-card">
+                <h3>Call or text</h3>
+                <p><a href="tel:+17272875817">(727) 287-5817</a><br />Open 7 days a week, 9 AM – 5 PM</p>
+              </div>
+              <div class="est-card">
+                <h3>Email</h3>
+                <p><a href="mailto:info@largoflroofing.com">info@largoflroofing.com</a></p>
+              </div>
+              <div class="est-card">
+                <h3>Visit</h3>
+                <p>1350 Starkey Rd<br />Largo, FL 33771</p>
+              </div>
+            </div>
+            <form id="estimateForm" novalidate>
+              <div class="f-row">
+                <label><span>Your name *</span><input type="text" name="name" required autocomplete="name" placeholder="Full name" /></label>
+                <label><span>Phone *</span><input type="tel" name="phone" required autocomplete="tel" placeholder="(727) 555-0123" /></label>
+              </div>
+              <div class="f-row">
+                <label><span>Email</span><input type="email" name="email" autocomplete="email" placeholder="you@email.com" /></label>
+                <label><span>Property address</span><input type="text" name="address" autocomplete="street-address" placeholder="Street, city, ZIP" /></label>
+              </div>
+              <div class="f-row">
+                <label><span>What do you need?</span>
+                  <select name="service">
+                    <option>Roof replacement</option>
+                    <option>Roof repair / leak</option>
+                    <option>Storm damage inspection</option>
+                    <option>New roof installation</option>
+                    <option>Commercial / flat roofing</option>
+                    <option>Inspection &amp; maintenance</option>
+                    <option>Not sure — just an estimate</option>
+                  </select>
+                </label>
+                <label><span>Property type</span>
+                  <select name="ptype">
+                    <option>Single-family home</option>
+                    <option>Townhouse / multi-unit</option>
+                    <option>Commercial building</option>
+                  </select>
+                </label>
+              </div>
+              <label><span>Tell us about the roof</span><textarea name="details" placeholder="Age of roof, leaks, storm damage, timeline — anything that helps."></textarea></label>
+              <button class="submit" type="submit">Request my free estimate</button>
+              <p class="form-note">Submitting opens a pre-filled email with your details — just press send in your mail app.</p>
+              <div class="form-ok" id="formOk" role="status">Your email app should open with your estimate request ready to send. If it doesn't, call us at (727) 287-5817.</div>
+              <div class="form-ok" id="formErr" role="alert" style="background:#fdecec;border-color:#b3401e;color:#7c2410">Please add your name and phone number so we can reach you about your estimate.</div>
+            </form>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <div class="cols">
+          <div>
+            <h3>Largo Precision Roofing</h3>
+            <p>Licensed &amp; insured residential and commercial roofing contractor serving Largo, FL and the greater Pinellas County area for over 20 years — installation, replacement, repair, and storm restoration.</p>
+          </div>
+          <div>
+            <h3>Contact</h3>
+            <p>1350 Starkey Rd<br />Largo, FL 33771<br /><a href="tel:+17272875817">(727) 287-5817</a><br /><a href="mailto:info@largoflroofing.com">info@largoflroofing.com</a></p>
+          </div>
+          <div>
+            <h3>Hours</h3>
+            <p>Monday – Sunday<br />9:00 AM – 5:00 PM<br />Free same-day estimates</p>
+          </div>
+        </div>
+        <div class="claim-bottom">
+          <p><b>Like this site? Make it yours.</b> $70 one-time — first year of hosting included, then $5/mo. It moves to your own domain when you buy.</p>
+          <a class="claimbtn" href="https://square.link/u/cz1GGRh0" target="_blank" rel="noopener">Claim this site — $70</a>
+        </div>
+        <p class="demo-note">Demo website built for Largo Precision Roofing. When you buy, it moves to your own domain — the $70 launch price includes the first year of hosting, then $5/month. Estimate requests from this demo are routed to Scale It at scaleitdesigns@gmail.com.</p>
+      </div>
+    </footer>
+
+    <script>
+      document.getElementById('estimateForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        var f = e.target;
+        var name = f.name.value.trim();
+        var phone = f.phone.value.trim();
+        if (!name || !phone) {
+          document.getElementById('formErr').style.display = 'block';
+          (!name ? f.name : f.phone).focus();
+          return;
+        }
+        document.getElementById('formErr').style.display = 'none';
+        var lines = [
+          'New estimate request — Largo Precision Roofing website',
+          '',
+          'Name: ' + name,
+          'Phone: ' + phone,
+          'Email: ' + (f.email.value.trim() || '—'),
+          'Property address: ' + (f.address.value.trim() || '—'),
+          'Service needed: ' + f.service.value,
+          'Property type: ' + f.ptype.value,
+          '',
+          'Details:',
+          f.details.value.trim() || '—'
+        ];
+        var href = 'mailto:scaleitdesigns@gmail.com'
+          + '?subject=' + encodeURIComponent('Estimate request — ' + name + ' (Largo Precision Roofing)')
+          + '&body=' + encodeURIComponent(lines.join('\n'));
+        window.location.href = href;
+        document.getElementById('formOk').style.display = 'block';
+      });
+    </script>
+  </body>
+</html>

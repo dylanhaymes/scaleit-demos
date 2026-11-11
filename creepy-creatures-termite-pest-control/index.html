@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="en">
+<head><meta name="robots" content="noindex,nofollow">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="data:,">
+<title>Creepy Creatures Termite &amp; Pest Control — Palm Harbor, FL | Demo</title>
+<meta name="description" content="Demo redesign for Creepy Creatures Termite & Pest Control, Palm Harbor. Free 21-point inspection, 110% NO BULL guarantee, 290+ five-star reviews. Call 727-488-5657.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f6f0; --surface:#ffffff; --surface2:#e9ede1; --ink:#17251c; --muted:#526155;
+  --line:#d5dcc9; --green:#173d28; --green2:#1f5236; --lime:#b8d430; --lime-dark:#7a9410;
+  --amber:#f2b705; --red:#b42318; --dark:#12241a; --dark2:#1a3325; --on-dark:#eef3e6; --on-dark-muted:#b9c8ae;
+  --radius:14px;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#101812; --surface:#1a261e; --surface2:#223128; --ink:#eef3e6; --muted:#a9bba2; --line:#33473a; --green:#b8d430; --green2:#223128; }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:"Barlow",system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55;font-size:17px}
+h1,h2,h3,.cond{font-family:"Barlow Condensed","Barlow",sans-serif;line-height:1.02;letter-spacing:.01em;text-transform:uppercase}
+img{max-width:100%;display:block}
+a{color:inherit}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:12px 22px;border-radius:10px;font-weight:700;text-decoration:none;border:2px solid transparent;cursor:pointer;font-size:16px}
+.btn-lime{background:var(--lime);color:#14240f}
+.btn-lime:hover{background:#c9e34a}
+.btn-claim{background:var(--amber);color:#1c1600}
+.btn-claim:hover{background:#ffc61a}
+.claim-bottom{border:1px solid #2f4d3a;background:var(--dark2);border-radius:14px;padding:22px;text-align:center;margin-bottom:30px}
+.claim-bottom h3{font-size:30px;margin:0 0 8px}
+.claim-bottom p{margin:0 auto 16px;max-width:52ch;color:var(--on-dark-muted)}
+.btn-outline{border-color:rgba(255,255,255,.7);color:#fff;background:transparent}
+.btn-dark{background:var(--green);color:#fff}
+.btn-ghost{border-color:var(--line);background:var(--surface);color:var(--ink)}
+.demo-bar{background:#0d1a12;color:#dbe7cf;font-size:14px;text-align:center;padding:9px 16px}
+.demo-bar strong{color:var(--lime)}
+.demo-bar a{color:#fff;font-weight:700}
+header.site{position:sticky;top:0;z-index:20;background:var(--dark);color:#fff;border-bottom:3px solid var(--lime)}
+.header-in{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 0}
+.logo{font-family:"Barlow Condensed",sans-serif;font-size:28px;font-weight:700;line-height:.95;text-transform:uppercase;text-decoration:none;color:#fff}
+.logo span{color:var(--lime);display:block;font-size:15px;letter-spacing:.14em;font-weight:600}
+nav.main{display:none;gap:22px}
+nav.main a{color:#dbe7cf;text-decoration:none;font-weight:600;font-size:15px;padding:10px 4px}
+.header-call{display:flex;gap:10px;align-items:center}
+.phone-chip{color:#fff;text-decoration:none;font-weight:700;font-size:17px;padding:10px 6px;white-space:nowrap}
+.hero{background:var(--dark);color:var(--on-dark);padding:44px 0 0;overflow:hidden}
+.hero-grid{display:grid;gap:32px}
+.kicker{display:inline-block;background:var(--amber);color:#1c1600;font-weight:700;font-size:13px;letter-spacing:.12em;text-transform:uppercase;padding:6px 12px;border-radius:999px}
+.hero h1{font-size:clamp(44px,8vw,78px);margin:16px 0 14px;color:#fff}
+.hero h1 em{font-style:normal;color:var(--lime)}
+.hero p.lede{font-size:19px;color:var(--on-dark-muted);max-width:56ch;margin:0 0 22px}
+.hero p.lede strong{color:#fff}
+.hero-ctas{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:22px}
+.trust-row{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:14.5px;font-weight:600;color:#fff;padding-bottom:28px}
+.trust-row span::before{content:"★ ";color:var(--amber)}
+.hero-img{border-radius:16px 16px 0 0;overflow:hidden;border:1px solid #2c4a37;border-bottom:none}
+.hero-img img{width:100%;height:100%;object-fit:cover;object-position:78% center;aspect-ratio:4/3}
+@media(max-width:759px){
+  .header-in{flex-wrap:wrap;gap:8px}
+  .logo{font-size:23px}
+  .logo span{font-size:12.5px}
+  .header-call .btn{display:none}
+  .header-call .btn-claim{display:inline-flex;min-height:44px;padding:9px 14px;font-size:15px}
+  .phone-chip{font-size:16px}
+}
+.stats{background:var(--lime);color:#14240f}
+.stats-in{display:grid;grid-template-columns:repeat(2,1fr);gap:0}
+.stat{padding:18px 14px;text-align:center;border-right:1px solid rgba(20,36,15,.18)}
+.stat:last-child{border-right:none}
+.stat b{font-family:"Barlow Condensed",sans-serif;font-size:34px;display:block;line-height:1}
+.stat small{font-weight:600;font-size:13.5px;text-transform:uppercase;letter-spacing:.06em}
+section{padding:56px 0}
+.sec-head{max-width:720px;margin-bottom:28px}
+.sec-head h2{font-size:clamp(32px,5vw,48px);margin:0 0 10px}
+.sec-head p{color:var(--muted);margin:0;font-size:18px}
+.services{display:grid;gap:14px}
+.svc{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px}
+.svc h3{font-size:23px;margin:0 0 6px}
+.svc p{margin:0;color:var(--muted);font-size:16px}
+.tag{display:inline-block;margin-top:10px;font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:var(--surface2);color:var(--green);padding:4px 9px;border-radius:999px}
+@media (prefers-color-scheme: dark){.tag{color:var(--lime)}}
+.guarantee{background:var(--dark);color:var(--on-dark)}
+.guarantee h2{color:#fff;font-size:clamp(34px,5.5vw,54px);margin:0 0 8px}
+.guarantee .sub{color:var(--on-dark-muted);font-size:18px;max-width:60ch}
+.steps{display:grid;gap:14px;margin-top:28px}
+.step{background:var(--dark2);border:1px solid #2f4d3a;border-radius:var(--radius);padding:22px}
+.step .num{font-family:"Barlow Condensed",sans-serif;font-size:44px;color:var(--lime);line-height:1}
+.step h3{color:#fff;font-size:24px;margin:8px 0 6px}
+.step p{color:var(--on-dark-muted);margin:0}
+.guarantee .punch{margin-top:24px;font-family:"Barlow Condensed",sans-serif;font-size:26px;letter-spacing:.08em;color:var(--amber);text-transform:uppercase}
+.guarantee .fine{color:var(--on-dark-muted);font-size:14px}
+.split{display:grid;gap:28px;align-items:center}
+.split img{border-radius:var(--radius);width:100%;object-fit:cover;aspect-ratio:4/3}
+.checks{list-style:none;padding:0;margin:18px 0 0;display:grid;gap:10px}
+.checks li{padding-left:30px;position:relative;font-weight:500}
+.checks li::before{content:"✓";position:absolute;left:0;top:0;width:22px;height:22px;background:var(--lime);color:#14240f;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:13px}
+.alert{background:#fff4d6;border:1px solid #e8c95a;color:#5c4700;border-radius:10px;padding:14px 16px;font-weight:600;margin-top:20px}
+@media (prefers-color-scheme: dark){.alert{background:#3a3312;color:#ffe9a3;border-color:#6b5d1e}}
+.mistakes{display:grid;gap:0;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:var(--surface)}
+.mistake{display:grid;grid-template-columns:52px 1fr;gap:14px;padding:18px;border-bottom:1px solid var(--line)}
+.mistake:last-child{border-bottom:none}
+.mistake .n{font-family:"Barlow Condensed",sans-serif;font-size:30px;color:var(--red);line-height:1}
+.mistake h3{font-size:21px;margin:0 0 4px;text-transform:none;font-family:"Barlow",sans-serif;letter-spacing:0}
+.mistake p{margin:0;color:var(--muted);font-size:16px}
+.reviews{display:grid;gap:14px}
+.review{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px}
+.stars{color:#e8a100;letter-spacing:2px;font-size:17px}
+.review blockquote{margin:10px 0;font-size:16.5px}
+.review figcaption{color:var(--muted);font-size:14.5px;font-weight:600}
+.review .proves{color:var(--lime-dark);font-weight:700}
+@media (prefers-color-scheme: dark){.review .proves{color:var(--lime)}}
+.inspect{background:var(--surface2)}
+.form-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:24px}
+.form-card h3{font-size:28px;margin:0 0 4px}
+.form-card p{color:var(--muted);margin:0 0 18px}
+label{display:block;font-weight:600;font-size:15px;margin:14px 0 6px}
+input,select,textarea{width:100%;min-height:48px;padding:11px 12px;border:1.5px solid var(--line);border-radius:9px;font:inherit;background:var(--surface);color:var(--ink)}
+textarea{min-height:96px;resize:vertical}
+fieldset{border:none;padding:0;margin:14px 0 0}
+legend{font-weight:600;font-size:15px;margin-bottom:8px;padding:0}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips label{margin:0;font-weight:500}
+.chips input{position:absolute;opacity:0;width:1px;height:1px}
+.chips span{display:inline-flex;align-items:center;min-height:40px;padding:8px 14px;border:1.5px solid var(--line);border-radius:999px;cursor:pointer;background:var(--surface);font-size:15px}
+.chips input:checked+span{background:var(--green);color:#fff;border-color:var(--green)}
+.chips input:focus-visible+span{outline:3px solid var(--amber);outline-offset:2px}
+.form-note{font-size:14px;color:var(--muted);margin-top:12px}
+.form-status{margin-top:14px;font-weight:600;display:none}
+.areas{display:flex;flex-wrap:wrap;gap:8px}
+.areas span{background:var(--surface);border:1px solid var(--line);padding:8px 14px;border-radius:999px;font-weight:600;font-size:15px}
+.faq details{background:var(--surface);border:1px solid var(--line);border-radius:10px;margin-bottom:10px}
+.faq summary{cursor:pointer;font-weight:700;padding:16px;min-height:48px}
+.faq details p{padding:0 16px 16px;margin:0;color:var(--muted)}
+footer{background:var(--dark);color:var(--on-dark-muted);padding:44px 0 90px}
+footer h3{color:#fff;font-size:26px;margin:0 0 10px}
+footer a{color:#fff}
+.foot-grid{display:grid;gap:26px}
+.demo-note{border-top:1px solid #2f4d3a;margin-top:30px;padding-top:20px;font-size:14.5px}
+.demo-note strong{color:var(--lime)}
+.sticky-call{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--dark);border-top:3px solid var(--lime);display:flex}
+.sticky-call a{flex:1;text-align:center;color:#fff;text-decoration:none;font-weight:700;padding:14px 8px;min-height:52px;display:flex;align-items:center;justify-content:center;gap:8px}
+.sticky-call a.primary{background:var(--lime);color:#14240f}
+@media(min-width:760px){
+  nav.main{display:flex}
+  .hero-grid{grid-template-columns:1.05fr .95fr;align-items:end}
+  .hero-img{height:100%}
+  .stats-in{grid-template-columns:repeat(4,1fr)}
+  .services{grid-template-columns:repeat(2,1fr)}
+  .steps{grid-template-columns:repeat(3,1fr)}
+  .split{grid-template-columns:1fr 1fr}
+  .reviews{grid-template-columns:repeat(3,1fr)}
+  .inspect-grid{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start}
+  .foot-grid{grid-template-columns:repeat(3,1fr)}
+  .sticky-call{display:none}
+  footer{padding-bottom:44px}
+}
+@media(min-width:1024px){.services{grid-template-columns:repeat(4,1fr)}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+
+<div class="demo-bar"><strong>Demo redesign by Scale It</strong> — a preview of a new site for Creepy Creatures. When you buy, it moves to your own domain.</div>
+
+<header class="site">
+  <div class="wrap header-in">
+    <a class="logo" href="#top">Creepy Creatures<span>Termite &amp; Pest Control · Palm Harbor</span></a>
+    <nav class="main" aria-label="Main">
+      <a href="#services">Services</a><a href="#guarantee">Guarantee</a><a href="#dusty">Meet Dusty</a><a href="#reviews">Reviews</a><a href="#estimate">Free Inspection</a>
+    </nav>
+    <div class="header-call">
+      <a class="phone-chip" href="tel:+17274885657">727-488-5657</a>
+      <a class="btn btn-claim" href="https://square.link/u/cz1GGRh0" target="_blank" rel="noopener" style="min-height:44px;padding:9px 16px">Claim This Site — $70</a>
+      <a class="btn btn-lime" href="#estimate" style="min-height:44px;padding:9px 16px">Free Inspection</a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+  <!-- HERO -->
+  <div class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <span class="kicker">Warning for Tampa Bay homeowners</span>
+        <h1>If you've got pests, you've got a <em>ticking clock.</em></h1>
+        <p class="lede">Most companies want to lock you into a contract and spray on a calendar. <strong>We do it differently.</strong> Owner Dusty Showers has spent 30+ years in the field — not behind a desk — solving pest and wildlife problems the right way, backed by our 110% “NO BULL” money-back guarantee.</p>
+        <div class="hero-ctas">
+          <a class="btn btn-lime" href="#estimate">Get My Free 21-Point Inspection</a>
+          <a class="btn btn-outline" href="tel:+17274885657">Text or Call 727-488-5657</a>
+          <a class="btn btn-claim" href="https://square.link/u/cz1GGRh0" target="_blank" rel="noopener">Claim This Site — $70</a>
+        </div>
+        <p style="font-size:14.5px;color:var(--on-dark-muted);margin:-8px 0 20px">Claim this site: $70 one-time, first year of hosting included, then $5/mo.</p>
+        <div class="trust-row">
+          <span>290+ five-star Google reviews</span><span>A+ BBB rating</span><span>Since 2009</span><span>FL License JB263438</span>
+        </div>
+      </div>
+      <div class="hero-img"><img src="assets/hero.jpg" alt="Pest control technician treating the foundation of a Florida home" fetchpriority="high"></div>
+    </div>
+  </div>
+
+  <div class="stats" aria-label="Ratings at a glance">
+    <div class="wrap stats-in">
+      <div class="stat"><b>5.0</b><small>Google rating</small></div>
+      <div class="stat"><b>290+</b><small>Five-star reviews</small></div>
+      <div class="stat"><b>4.88</b><small>HomeAdvisor rating</small></div>
+      <div class="stat"><b>30+</b><small>Years of experience</small></div>
+    </div>
+  </div>
+
+  <!-- SERVICES -->
+  <section id="services">
+    <div class="wrap">
+      <div class="sec-head">
+        <h2>Expert solutions for every pest problem</h2>
+        <p>Residential and commercial. Customized treatments. Humane wildlife removal. No cookie-cutter spraying.</p>
+      </div>
+      <div class="services">
+        <article class="svc"><h3>Rat &amp; Rodent Control</h3><p>Poison-free “Owl” trapping system. Rat-proofing, removal, and attic restoration included.</p><span class="tag">Poison-free</span></article>
+        <article class="svc"><h3>Ant Elimination</h3><p>Targeted treatment that eliminates colonies at the source. Carpenter ants, fire ants, sugar ants — gone.</p></article>
+        <article class="svc"><h3>Roach Treatment</h3><p>German roach specialists with a solid guarantee. We don't just spray — we eliminate the colony.</p><span class="tag">Guaranteed</span></article>
+        <article class="svc"><h3>Termite Control</h3><p>Termidor treatments for guaranteed termite elimination. Full inspections and treatment plans.</p></article>
+        <article class="svc"><h3>Wildlife Removal</h3><p>Humane removal of raccoons, opossums, squirrels, bats, and armadillos. Never harmed, always relocated.</p><span class="tag">Humane</span></article>
+        <article class="svc"><h3>Bees &amp; Yellow Jackets</h3><p>Safe nest removal from your home and yard. Emergency service available for immediate threats.</p></article>
+        <article class="svc"><h3>Bed Bug Treatment</h3><p>Thorough inspection and targeted elimination. We won't stop until every last one is gone.</p></article>
+        <article class="svc"><h3>Mosquito Control</h3><p>Yard treatment programs to reclaim your outdoor space year-round in the Florida climate.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <!-- GUARANTEE -->
+  <section class="guarantee" id="guarantee">
+    <div class="wrap">
+      <h2>Our 110% “NO BULL” money-back guarantee</h2>
+      <p class="sub">The only pest control guarantee in Tampa Bay that actually pays you if we mess up.</p>
+      <div class="steps">
+        <div class="step"><div class="num">1</div><h3>Not happy?</h3><p>We come back and retreat your home for free — as many times as it takes. No questions. No runaround.</p></div>
+        <div class="step"><div class="num">2</div><h3>Still not satisfied?</h3><p>We refund every penny of your money. 100% of it. No awkward conversation, no forms, no hassle.</p></div>
+        <div class="step"><div class="num">3</div><h3>We pay you $25</h3><p>On top of the full refund, we hand you $25 for your time and trouble. That's our promise.</p></div>
+      </div>
+      <p class="punch">No bull. No risk. No excuses.</p>
+      <p class="fine">The 110% NO BULL guarantee applies to our annual pest control program.</p>
+    </div>
+  </section>
+
+  <!-- DUSTY -->
+  <section id="dusty">
+    <div class="wrap split">
+      <div>
+        <div class="sec-head" style="margin-bottom:0">
+          <h2>Most companies send strangers. We send Dusty.</h2>
+          <p>Dusty Showers has been in the field since the early '90s — crawling through attics and solving problems other companies couldn't figure out. He founded Creepy Creatures in 2009 and built it into one of Tampa Bay's highest-rated pest control companies.</p>
+        </div>
+        <ul class="checks">
+          <li>30+ years hands-on in the field</li>
+          <li>Owner responds to every text and call personally</li>
+          <li>Hundreds of YouTube videos showing real pest jobs</li>
+          <li>Humane wildlife methods — relocated, never harmed</li>
+          <li>A portion of every job supports breast cancer research &amp; The Odessa Animal Sanctuary</li>
+        </ul>
+        <div class="alert">Florida's termite season is here. By the time you see swarmers, the colony has been damaging your home for months. Don't wait — <a href="#estimate">book the free inspection</a>.</div>
+      </div>
+      <img src="assets/wildlife.jpg" alt="Raccoon safely caught in a humane live trap, awaiting relocation" loading="lazy">
+    </div>
+  </section>
+
+  <!-- MISTAKES -->
+  <section style="padding-top:0">
+    <div class="wrap">
+      <div class="sec-head">
+        <h2>5 costly mistakes homeowners make hiring pest control</h2>
+        <p>Before you call anyone — including us — here's what the big national chains don't want you to find out.</p>
+      </div>
+      <div class="mistakes">
+        <div class="mistake"><div class="n">1</div><div><h3>Choosing the cheapest quote</h3><p>The cheapest company often uses the cheapest chemicals — which means they'll be back, and billing you, in 30 days. A proper treatment done right the first time costs less in the long run.</p></div></div>
+        <div class="mistake"><div class="n">2</div><div><h3>A different tech every visit</h3><p>Your home isn't a number. The person treating it should know its history, trouble spots, and quirks. We assign the same expert to your home, every visit.</p></div></div>
+        <div class="mistake"><div class="n">3</div><div><h3>Signing before an honest inspection</h3><p>Some companies “find” problems that don't exist to sell treatments you don't need. One of our five-star reviews is from a homeowner who thought they had termites — we told them they didn't.</p></div></div>
+        <div class="mistake"><div class="n">4</div><div><h3>No written guarantee</h3><p>If a company won't stand behind their work in writing, what does that tell you? We guarantee our work at 110% — and we'll pay you $25 if you're not happy.</p></div></div>
+        <div class="mistake"><div class="n">5</div><div><h3>Not asking who shows up</h3><p>Many companies subcontract the work out. At Creepy Creatures, you know exactly who you're getting — and you can watch our work on YouTube before we ever knock.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- REVIEWS -->
+  <section id="reviews" style="padding-top:0">
+    <div class="wrap">
+      <div class="sec-head">
+        <h2>What 290+ of your neighbors are saying</h2>
+        <p>Real Google and HomeAdvisor reviews from real Tampa Bay homeowners.</p>
+      </div>
+      <div class="reviews">
+        <figure class="review"><div class="stars" aria-label="5 stars">★★★★★</div><blockquote>“We thought we might have termites and didn't. Instead of ‘treating’ what didn't exist they were honest and helped point us in the direction of what we needed. Really trustworthy people.”</blockquote><figcaption>Google Review · <span class="proves">Proves: they're honest</span></figcaption></figure>
+        <figure class="review"><div class="stars" aria-label="5 stars">★★★★★</div><blockquote>“I have never met such professional and thorough people. Joe is so incredibly knowledgeable — after the first visit I never saw another ant again. I will always be a lifelong customer.”</blockquote><figcaption>Michele McKinney · Google Review · <span class="proves">Proves: one-visit results</span></figcaption></figure>
+        <figure class="review"><div class="stars" aria-label="5 stars">★★★★★</div><blockquote>“Dusty and Joe have gone out of their way the past 7 plus years to make sure we stay pest and rodent free. They service 2 of my homes. This is the way to conduct a home service business!”</blockquote><figcaption>Ron Allen · Google Review · <span class="proves">Proves: long-term loyalty</span></figcaption></figure>
+        <figure class="review"><div class="stars" aria-label="5 stars">★★★★★</div><blockquote>“We had a huge carpenter ant infestation which seemed to happen literally overnight. No one else could come out that day. Dusty came right away and whatever he did took care of the problem!”</blockquote><figcaption>Krystal S. · HomeAdvisor · <span class="proves">Proves: same-day emergencies</span></figcaption></figure>
+        <figure class="review"><div class="stars" aria-label="5 stars">★★★★★</div><blockquote>“Dusty was extremely professional and took the time to talk me through ideas on how to resolve the issue on our own. It was evident that he really knows his profession and wants to help anyone in need.”</blockquote><figcaption>Marcus Hammel · Google Review · <span class="proves">Proves: advisor, not salesman</span></figcaption></figure>
+        <figure class="review"><div class="stars" aria-label="5 stars">★★★★★</div><blockquote>“We use Dusty when we have a special problem at our commercial and industrial properties. Wouldn't think of using anyone else. Creepy Creatures is fast, thorough and economical.”</blockquote><figcaption>Don Goliher · HomeAdvisor · <span class="proves">Proves: commercial trust</span></figcaption></figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- ESTIMATE / INSPECTION -->
+  <section class="inspect" id="estimate">
+    <div class="wrap inspect-grid">
+      <div>
+        <div class="sec-head">
+          <h2>Get your free 21-point pest inspection</h2>
+          <p>A $197 value. Tell us what's bugging you — Dusty personally reads every message and responds, usually within the hour. No pressure, no obligation, no cost.</p>
+        </div>
+        <img src="assets/home.jpg" alt="Palm Harbor home with palm trees and a manicured lawn" loading="lazy" style="border-radius:14px;width:100%;aspect-ratio:16/10;object-fit:cover;margin-bottom:20px">
+        <h3 class="cond" style="font-size:24px;margin:0 0 10px">What's included</h3>
+        <ul class="checks" style="margin-top:0">
+          <li>Full exterior perimeter check for entry points</li>
+          <li>Attic and crawl space evaluation</li>
+          <li>Identification of pest type and severity</li>
+          <li>Moisture and wood damage assessment</li>
+          <li>Honest recommendation — even if it's “you don't need us”</li>
+          <li>Written report you keep regardless</li>
+        </ul>
+      </div>
+      <div class="form-card">
+        <h3>Request your free inspection</h3>
+        <p>Dusty responds personally — usually within the hour. No spam. No selling your info. Just honest pest help.</p>
+        <form id="leadForm" novalidate>
+          <label for="f-name">Your name *</label>
+          <input id="f-name" name="name" autocomplete="name" required placeholder="Jane Smith">
+          <label for="f-phone">Phone *</label>
+          <input id="f-phone" name="phone" type="tel" autocomplete="tel" required placeholder="(727) 555-0123">
+          <label for="f-email">Email</label>
+          <input id="f-email" name="email" type="email" autocomplete="email" placeholder="you@email.com">
+          <label for="f-city">City / property location</label>
+          <input id="f-city" name="city" placeholder="Palm Harbor">
+          <fieldset>
+            <legend>What type of pest? *</legend>
+            <div class="chips" id="pestChips">
+              <label><input type="radio" name="pest" value="Rats / Rodents" required><span>Rats / Rodents</span></label>
+              <label><input type="radio" name="pest" value="Roaches"><span>Roaches</span></label>
+              <label><input type="radio" name="pest" value="Ants"><span>Ants</span></label>
+              <label><input type="radio" name="pest" value="Termites"><span>Termites</span></label>
+              <label><input type="radio" name="pest" value="Wildlife (raccoons, opossums, etc.)"><span>Wildlife</span></label>
+              <label><input type="radio" name="pest" value="Bees / Yellow Jackets"><span>Bees / Yellow Jackets</span></label>
+              <label><input type="radio" name="pest" value="Bed Bugs"><span>Bed Bugs</span></label>
+              <label><input type="radio" name="pest" value="Mosquitoes"><span>Mosquitoes</span></label>
+              <label><input type="radio" name="pest" value="Other / Not Sure"><span>Other / Not Sure</span></label>
+            </div>
+          </fieldset>
+          <label for="f-timing">How soon do you need help?</label>
+          <select id="f-timing" name="timing">
+            <option>As soon as possible</option><option>This week</option><option>Within the next few weeks</option><option>Just getting an estimate</option>
+          </select>
+          <label for="f-msg">Tell us what's going on</label>
+          <textarea id="f-msg" name="message" placeholder="Where are you seeing them? How long has it been going on?"></textarea>
+          <button class="btn btn-dark" type="submit" style="width:100%;margin-top:18px">Get My Free 21-Point Inspection →</button>
+          <p class="form-note">This form opens a pre-filled email addressed to <strong>scaleitdesigns@gmail.com</strong> in your mail app — just press send there and your request is on its way. Prefer to talk? Text or call Dusty directly at <a href="tel:+17274885657">727-488-5657</a>.</p>
+          <p class="form-status" id="formStatus" role="status"></p>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- SERVICE AREA + FAQ -->
+  <section>
+    <div class="wrap">
+      <div class="sec-head"><h2>Serving all of Tampa Bay</h2><p>Based in Palm Harbor, serving Pinellas, Hillsborough, and Pasco counties.</p></div>
+      <div class="areas">
+        <span>Palm Harbor</span><span>Clearwater</span><span>Dunedin</span><span>Tampa</span><span>St. Petersburg</span><span>Oldsmar</span><span>Safety Harbor</span><span>Tarpon Springs</span><span>Trinity</span><span>New Port Richey</span>
+      </div>
+      <div class="faq" style="margin-top:40px;max-width:820px">
+        <h3 class="cond" style="font-size:28px;margin:0 0 14px">Common questions</h3>
+        <details><summary>Is the 21-point inspection really free?</summary><p>Yes — it's a $197 value, free with no obligation. You get a written report you keep regardless, and an honest recommendation, even if it's “you don't need us.”</p></details>
+        <details><summary>Do I have to sign a contract?</summary><p>No. Contract lock-in is one of the things we do differently. Our annual program is backed by the 110% NO BULL guarantee instead of fine print.</p></details>
+        <details><summary>Is your wildlife removal humane?</summary><p>Yes. Raccoons, opossums, squirrels, bats, and armadillos are trapped and relocated — never harmed. Our rodent work uses a poison-free “Owl” trapping system.</p></details>
+        <details><summary>How fast will I hear back?</summary><p>Dusty personally responds to every text and call — usually within the hour. Call or text <a href="tel:+17274885657">727-488-5657</a>.</p></details>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <h3>Creepy Creatures</h3>
+        <p>Termite &amp; Pest Control<br>2989 Bradford Circle<br>Palm Harbor, FL 34685</p>
+        <p>FL License JB263438 · In business since 2009</p>
+      </div>
+      <div>
+        <h3>Contact</h3>
+        <p>Phone / text: <a href="tel:+17274885657">727-488-5657</a><br>Email: <a href="mailto:creepycreaturesinc@gmail.com">creepycreaturesinc@gmail.com</a><br>Web: <a href="https://www.creepycreaturesinc.com" target="_blank" rel="noopener">creepycreaturesinc.com</a></p>
+        <p>Dusty responds personally, usually within the hour.</p>
+      </div>
+      <div>
+        <h3>Why homeowners call us</h3>
+        <p>290+ five-star Google reviews · A+ BBB rating · 110% NO BULL guarantee · Humane wildlife removal · A portion of all sales supports breast cancer research &amp; The Odessa Animal Sanctuary.</p>
+      </div>
+    </div>
+    <div class="claim-bottom">
+      <h3 style="color:#fff">Claim this site</h3>
+      <p>$70 one-time — first year of hosting included, then $5/mo. When you buy, it moves to your own domain.</p>
+      <a class="btn btn-claim" href="https://square.link/u/cz1GGRh0" target="_blank" rel="noopener">Claim This Site — $70</a>
+    </div>
+    <div class="demo-note">
+      <p><strong>About this demo:</strong> This is a demo redesign built by Scale It for Creepy Creatures Termite &amp; Pest Control. When you buy, it moves to your own domain. Estimate requests from the form on this demo are sent to <a href="mailto:scaleitdesigns@gmail.com">scaleitdesigns@gmail.com</a>.</p>
+      <p>© 2026 Creepy Creatures Inc. All rights reserved.</p>
+    </div>
+  </div>
+</footer>
+
+<div class="sticky-call">
+  <a href="tel:+17274885657">Call 727-488-5657</a>
+  <a class="primary" href="#estimate">Free Inspection</a>
+</div>
+
+<script>
+(function(){
+  var form = document.getElementById('leadForm');
+  var status = document.getElementById('formStatus');
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    var name = document.getElementById('f-name').value.trim();
+    var phone = document.getElementById('f-phone').value.trim();
+    var email = document.getElementById('f-email').value.trim();
+    var city = document.getElementById('f-city').value.trim();
+    var timing = document.getElementById('f-timing').value;
+    var msg = document.getElementById('f-msg').value.trim();
+    var pest = form.querySelector('input[name="pest"]:checked');
+    if(!name || !phone || !pest){
+      status.style.display='block';
+      status.style.color='#b42318';
+      status.textContent='Please add your name, phone, and what type of pest you are dealing with.';
+      return;
+    }
+    var lines = [
+      'New free inspection request — Creepy Creatures demo site',
+      '',
+      'Name: ' + name,
+      'Phone: ' + phone,
+      'Email: ' + (email || '—'),
+      'City / property: ' + (city || '—'),
+      'Pest type: ' + pest.value,
+      'Timing: ' + timing,
+      '',
+      'What is going on:',
+      msg || '—'
+    ];
+    var subject = encodeURIComponent('Free 21-Point Inspection Request — ' + pest.value + ' — ' + name);
+    var body = encodeURIComponent(lines.join('\n'));
+    status.style.display='block';
+    status.style.color='inherit';
+    status.textContent='Opening your mail app with your request addressed to scaleitdesigns@gmail.com — just press send there.';
+    window.location.href = 'mailto:scaleitdesigns@gmail.com?subject=' + subject + '&body=' + body;
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+<head><meta name="robots" content="noindex,nofollow">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="light dark" />
+<link rel="icon" href="data:," />
+<title>Raimondi Plumbing — Clearwater, FL | 24/7 Plumbing, Remodels & New Construction</title>
+<meta name="description" content="Raimondi Plumbing serves Pinellas, Pasco & Hillsborough Counties 24/7. Residential repairs, commercial service, remodels and new construction rough-ins. Free estimates — call (888) 653-8303." />
+<style>
+  :root{
+    --bg:#ffffff; --bg-soft:#eef7f8; --bg-card:#ffffff;
+    --ink:#0f2a33; --ink-2:#3d5a64; --line:#d7e6e9;
+    --brand:#0b8aa5; --brand-dark:#076b82; --brand-bright:#12a8c4;
+    --accent:#f2a81d;
+    --header-bg:rgba(255,255,255,.96);
+    --shadow:0 10px 30px rgba(7,60,75,.10);
+    --radius:14px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0a1a20; --bg-soft:#0e242c; --bg-card:#102a33;
+      --ink:#eaf4f6; --ink-2:#a9c4cb; --line:#1f3f49;
+      --brand:#1db2d1; --brand-dark:#0b8aa5; --brand-bright:#35c2de;
+      --header-bg:rgba(10,26,32,.96);
+      --shadow:0 10px 30px rgba(0,0,0,.35);
+    }
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55;-webkit-font-smoothing:antialiased}
+  img{max-width:100%;display:block}
+  a{color:var(--brand-dark)}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+  h1,h2,h3{line-height:1.15;margin:0}
+  h2{font-size:clamp(1.6rem,3.4vw,2.3rem);letter-spacing:-.02em}
+  .section{padding:64px 0}
+  .section.soft{background:var(--bg-soft)}
+  .kicker{font-size:.8rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--brand);margin:0 0 10px}
+  .lead{color:var(--ink-2);font-size:1.08rem;max-width:640px}
+
+  /* Header */
+  header{position:sticky;top:0;z-index:50;background:var(--header-bg);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+  .header-in{display:flex;align-items:center;gap:14px;padding:12px 0}
+  .logo{font-weight:800;font-size:1.3rem;letter-spacing:-.02em;color:var(--ink);text-decoration:none;line-height:1.05}
+  .logo span{color:var(--brand)}
+  .logo small{display:block;font-size:.68rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2)}
+  .header-actions{margin-left:auto;display:flex;gap:10px;align-items:center}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 20px;border-radius:10px;font-weight:700;text-decoration:none;border:0;cursor:pointer;font-size:1rem}
+  .btn-call{background:var(--brand);color:#fff}
+  .btn-call:hover{background:var(--brand-dark)}
+  .btn-outline{background:transparent;color:var(--brand-dark);border:2px solid var(--brand)}
+  .btn-gold{background:var(--accent);color:#231a00}
+  .btn-claim-light{background:#fff;color:var(--brand-dark)}
+  .btn-claim-light:hover{background:var(--bg-soft)}
+  @media (max-width:560px){ .btn-outline{display:none} .logo{font-size:1.12rem} }
+  @media (max-width:700px){ .btn-claim-header{display:none} }
+
+  /* Hero */
+  .hero{padding:52px 0 60px;background:linear-gradient(180deg,var(--bg-soft),var(--bg))}
+  .hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:36px;align-items:center}
+  @media (max-width:860px){ .hero-grid{grid-template-columns:1fr} }
+  .hero h1{font-size:clamp(2rem,5vw,3.1rem);letter-spacing:-.025em}
+  .hero h1 em{font-style:normal;color:var(--brand)}
+  .hero p.sub{font-size:1.13rem;color:var(--ink-2);margin:16px 0 24px;max-width:540px}
+  .hero-cta{display:flex;gap:12px;flex-wrap:wrap}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:26px;padding:0;list-style:none}
+  .chips li{border:1px solid var(--line);background:var(--bg-card);border-radius:999px;padding:7px 14px;font-size:.88rem;font-weight:600}
+  .hero-img{border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+  .hero-img img{width:100%;height:100%;object-fit:cover;aspect-ratio:4/3}
+  .hero-img figcaption{font-size:.8rem;color:var(--ink-2);padding:10px 14px;background:var(--bg-card)}
+
+  /* Who we help */
+  .trio{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:34px}
+  @media (max-width:860px){ .trio{grid-template-columns:1fr} }
+  .trio-card{background:var(--bg-card);border:1px solid var(--line);border-radius:var(--radius);padding:26px;box-shadow:var(--shadow)}
+  .trio-card h3{font-size:1.25rem;margin-bottom:8px}
+  .trio-card h3 span{color:var(--brand)}
+  .trio-card p{color:var(--ink-2);margin:0 0 14px}
+  .trio-card a{font-weight:700;text-decoration:none}
+
+  /* Services */
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:34px}
+  @media (max-width:960px){ .grid{grid-template-columns:repeat(2,1fr)} }
+  @media (max-width:600px){ .grid{grid-template-columns:1fr} }
+  .card{background:var(--bg-card);border:1px solid var(--line);border-radius:var(--radius);padding:24px}
+  .card .ic{width:46px;height:46px;border-radius:12px;background:var(--bg-soft);display:flex;align-items:center;justify-content:center;margin-bottom:14px}
+  .card .ic svg{width:24px;height:24px;stroke:var(--brand);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .card h3{font-size:1.12rem;margin-bottom:6px}
+  .card p{color:var(--ink-2);margin:0;font-size:.97rem}
+  .more-line{margin-top:22px;color:var(--ink-2)}
+  .more-line strong{color:var(--ink)}
+
+  /* Why */
+  .why-grid{display:grid;grid-template-columns:1fr 1fr;gap:36px;align-items:center}
+  @media (max-width:860px){ .why-grid{grid-template-columns:1fr} }
+  .why-list{list-style:none;margin:26px 0 0;padding:0;display:grid;gap:16px}
+  .why-list li{display:flex;gap:12px}
+  .why-list .tick{flex:0 0 26px;width:26px;height:26px;border-radius:50%;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:800;margin-top:2px}
+  .why-list h3{font-size:1.05rem;margin-bottom:2px}
+  .why-list p{margin:0;color:var(--ink-2);font-size:.96rem}
+  .why-img{border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+  .why-img img{width:100%;object-fit:cover;aspect-ratio:4/3}
+  .why-img figcaption{font-size:.8rem;color:var(--ink-2);padding:10px 14px;background:var(--bg-card)}
+
+  /* Area */
+  .area-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:30px}
+  @media (max-width:860px){ .area-grid{grid-template-columns:1fr} }
+  .area-card{border:1px solid var(--line);border-radius:var(--radius);padding:22px;background:var(--bg-card)}
+  .area-card h3{color:var(--brand-dark);margin-bottom:6px}
+  .area-card p{margin:0;color:var(--ink-2)}
+
+  /* Form */
+  .form-grid{display:grid;grid-template-columns:.9fr 1.1fr;gap:36px;align-items:start}
+  @media (max-width:860px){ .form-grid{grid-template-columns:1fr} }
+  form{background:var(--bg-card);border:1px solid var(--line);border-radius:var(--radius);padding:26px;box-shadow:var(--shadow)}
+  label{display:block;font-weight:600;font-size:.92rem;margin:0 0 14px}
+  input,select,textarea{width:100%;margin-top:6px;padding:12px;border:1px solid var(--line);border-radius:9px;font:inherit;background:var(--bg);color:var(--ink);min-height:44px}
+  textarea{min-height:96px;resize:vertical}
+  .form-note{font-size:.86rem;color:var(--ink-2);margin:12px 0 0}
+  .success{display:none;border:1px solid var(--brand);background:var(--bg-soft);border-radius:var(--radius);padding:26px}
+  .success h3{margin-bottom:6px}
+  .contact-lines{list-style:none;padding:0;margin:22px 0 0;display:grid;gap:12px}
+  .contact-lines li{font-size:1.02rem}
+  .contact-lines strong{display:block;font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
+
+  /* Offer */
+  .offer{background:var(--brand-dark);color:#fff;border-radius:18px;padding:38px 30px;display:grid;grid-template-columns:1.2fr .8fr;gap:28px;align-items:center}
+  @media (max-width:860px){ .offer{grid-template-columns:1fr} }
+  .offer h2{color:#fff}
+  .offer p{color:#d8eef3;margin:12px 0 0;max-width:520px}
+  .price-box{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);border-radius:14px;padding:24px;text-align:center}
+  .price-box .big{font-size:2.6rem;font-weight:800;line-height:1}
+  .price-box p{color:#eaf6f9;font-size:.95rem}
+
+  footer{border-top:1px solid var(--line);padding:36px 0 90px;background:var(--bg-soft)}
+  .foot-grid{display:flex;gap:28px;flex-wrap:wrap;justify-content:space-between}
+  footer p{color:var(--ink-2);font-size:.92rem;margin:6px 0}
+  .demo-tag{display:inline-block;margin-top:14px;font-size:.8rem;border:1px solid var(--line);border-radius:999px;padding:5px 12px;color:var(--ink-2)}
+
+  /* Sticky mobile call bar */
+  .callbar{position:fixed;left:0;right:0;bottom:0;z-index:60;display:none;gap:10px;padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:var(--header-bg);border-top:1px solid var(--line)}
+  .callbar a{flex:1}
+  @media (max-width:700px){ .callbar{display:flex} }
+  @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto} }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap header-in">
+    <a class="logo" href="#top">Raimondi <span>Plumbing</span><small>Clearwater, Florida</small></a>
+    <div class="header-actions">
+      <a class="btn btn-outline" href="#estimate">Free Estimate</a>
+      <a class="btn btn-call" href="tel:+18886538303">Call (888) 653-8303</a>
+      <a class="btn btn-gold btn-claim-header" href="https://square.link/u/cz1GGRh0" target="_blank" rel="noopener">Claim this site</a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <p class="kicker">Licensed Plumbers · 24/7 · Three Counties</p>
+        <h1>Homeowner or builder, <em>one call</em> gets your plumbing handled.</h1>
+        <p class="sub">Raimondi Plumbing does it all — leaking faucets and water heaters at home, grease traps and water lines for businesses, and full rough-ins for new construction. Serving Clearwater and all of Pinellas, Pasco &amp; Hillsborough Counties for over 20 years.</p>
+        <div class="hero-cta">
+          <a class="btn btn-call" href="tel:+18886538303">Call (888) 653-8303</a>
+          <a class="btn btn-gold" href="#estimate">Get a Free Estimate</a>
+          <a class="btn btn-gold" href="https://square.link/u/cz1GGRh0" target="_blank" rel="noopener">Claim this site — $70</a>
+        </div>
+        <ul class="chips">
+          <li>20+ years on this coast</li>
+          <li>Available 24/7</li>
+          <li>Free estimates</li>
+          <li>Clean, uniformed technicians</li>
+        </ul>
+      </div>
+      <figure class="hero-img" style="margin:0">
+        <img src="assets/hero.jpg" alt="Plumber repairing the pipes under a kitchen sink" />
+        <figcaption>Representative photo — residential repair work.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- WHO WE HELP -->
+  <section class="section" style="padding-top:20px">
+    <div class="wrap">
+      <p class="kicker">Who We Help</p>
+      <h2>Residential, commercial, and construction — side by side</h2>
+      <p class="lead">Our current site leads with construction. This demo puts all three kinds of customer on equal footing, so nobody has to hunt for the part that applies to them.</p>
+      <div class="trio">
+        <div class="trio-card">
+          <h3><span>For</span> Homeowners</h3>
+          <p>Water heater acting up, faucet leaking, toilet clogged, or pipes past their prime? Fast, reliable repairs and re-piping for homes across three counties.</p>
+          <a href="#services">See residential services →</a>
+        </div>
+        <div class="trio-card">
+          <h3><span>For</span> Businesses</h3>
+          <p>Valve installation and repair, grease traps, pipe installation, and water line repair that keeps your doors open and your building up to code.</p>
+          <a href="#services">See commercial services →</a>
+        </div>
+        <div class="trio-card">
+          <h3><span>For</span> Builders &amp; Remodels</h3>
+          <p>New construction rough-ins, kitchen and bathroom remodels, and code-compliant installations — inspection-ready, delivered with your GCs, developers, and architects.</p>
+          <a href="#services">See construction services →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SERVICES -->
+  <section class="section soft" id="services">
+    <div class="wrap">
+      <p class="kicker">Our Services</p>
+      <h2>Everything Raimondi actually does, on one page</h2>
+      <div class="grid">
+        <div class="card">
+          <div class="ic"><svg viewBox="0 0 24 24"><path d="M4 21V8l8-5 8 5v13"/><path d="M9 21v-6h6v6"/></svg></div>
+          <h3>New Construction Plumbing</h3>
+          <p>Complete new installations and rough-ins for new builds — fully integrated, Florida-code compliant, and inspection-ready.</p>
+        </div>
+        <div class="card">
+          <div class="ic"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.1-.7-.7-2.1 2.4-2.8z"/></svg></div>
+          <h3>Kitchen &amp; Bathroom Remodels</h3>
+          <p>Remodel plumbing and upgrades for homes — from rough-in to finish, coordinated with your project timeline.</p>
+        </div>
+        <div class="card">
+          <div class="ic"><svg viewBox="0 0 24 24"><path d="M12 3c3 4 6 7.2 6 10.5A6 6 0 0 1 6 13.5C6 10.2 9 7 12 3z"/></svg></div>
+          <h3>Water Heater Repair</h3>
+          <p>No hot water? We repair water heaters and get your home back to normal — fast, reliable, and affordable.</p>
+        </div>
+        <div class="card">
+          <div class="ic"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>
+          <h3>Leaks, Clogs &amp; Repairs</h3>
+          <p>Faucet leaks, toilet clogs, and everyday repairs handled by clean, uniformed, respectful technicians.</p>
+        </div>
+        <div class="card">
+          <div class="ic"><svg viewBox="0 0 24 24"><path d="M3 12h18"/><path d="M5 8h14M5 16h14"/><circle cx="12" cy="12" r="2.2"/></svg></div>
+          <h3>Re-Piping &amp; Water Lines</h3>
+          <p>Full re-piping for aging homes and water line repair for homes and businesses across the Tampa Bay area.</p>
+        </div>
+        <div class="card">
+          <div class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M3 7l3-4h12l3 4"/></svg></div>
+          <h3>Commercial Plumbing</h3>
+          <p>Valve installation and repair, grease traps, and pipe installation for commercial properties of every size.</p>
+        </div>
+      </div>
+      <p class="more-line"><strong>Also:</strong> garbage disposals, plumbing upgrades, code-compliant installations, and full-service plumbing for homes, businesses, and new construction projects.</p>
+    </div>
+  </section>
+
+  <!-- WHY -->
+  <section class="section">
+    <div class="wrap why-grid">
+      <div>
+        <p class="kicker">Why Raimondi</p>
+        <h2>The local Clearwater experts you've trusted for over two decades</h2>
+        <ul class="why-list">
+          <li><span class="tick">✓</span><div><h3>Florida-code specialists</h3><p>20+ years working to Florida code on this coast — systems that pass inspection the first time.</p></div></li>
+          <li><span class="tick">✓</span><div><h3>Partnered with your build team</h3><p>We work directly with general contractors, developers, and architects to deliver fully integrated plumbing, safely and efficiently.</p></div></li>
+          <li><span class="tick">✓</span><div><h3>Clean, uniformed &amp; respectful</h3><p>Technicians who show up presentable and treat your home or job site with respect.</p></div></li>
+          <li><span class="tick">✓</span><div><h3>Local, and available 24/7</h3><p>Based in Clearwater, covering all of Pinellas, Pasco &amp; Hillsborough Counties — around the clock.</p></div></li>
+        </ul>
+      </div>
+      <figure class="why-img" style="margin:0">
+        <img src="assets/roughin.jpg" alt="Plumbing rough-in with PVC stacks and PEX lines inside new home framing" />
+        <figcaption>Representative photo — new construction rough-in work.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- AREA -->
+  <section class="section soft">
+    <div class="wrap">
+      <p class="kicker">Service Area</p>
+      <h2>Keeping all of Pinellas, Pasco &amp; Hillsborough flowing</h2>
+      <div class="area-grid">
+        <div class="area-card"><h3>Pinellas County</h3><p>Clearwater, St. Petersburg, Largo, Dunedin, Palm Harbor, Seminole, Safety Harbor &amp; more.</p></div>
+        <div class="area-card"><h3>Pasco County</h3><p>New Port Richey, Port Richey, Land O' Lakes, Lutz &amp; surrounding communities.</p></div>
+        <div class="area-card"><h3>Hillsborough County</h3><p>Tampa and the surrounding communities across the bay.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ESTIMATE -->
+  <section class="section" id="estimate">
+    <div class="wrap form-grid">
+      <div>
+        <p class="kicker">Free Estimate</p>
+        <h2>Tell us about the job — we'll take it from there</h2>
+        <p class="lead">Fill this out in about 30 seconds and we'll take it from there — whether it's a leaking faucet at home or a full rough-in on a new build.</p>
+        <ul class="contact-lines">
+          <li><strong>Call or text</strong><a href="tel:+18886538303">(888) 653-8303</a></li>
+          <li><strong>Email</strong><a href="mailto:help@raimondiplumbing.com">help@raimondiplumbing.com</a></li>
+          <li><strong>Visit</strong>2780 Summerdale Drive, Clearwater, FL 33761</li>
+        </ul>
+      </div>
+      <div>
+        <form id="estimateForm">
+          <label>Your name
+            <input type="text" name="name" required autocomplete="name" placeholder="Full name" />
+          </label>
+          <label>Phone
+            <input type="tel" name="phone" required autocomplete="tel" placeholder="(727) 555-0123" />
+          </label>
+          <label>Email <span style="font-weight:400;color:var(--ink-2)">(optional)</span>
+            <input type="email" name="email" autocomplete="email" placeholder="you@example.com" />
+          </label>
+          <label>What do you need?
+            <select name="service" required>
+              <option value="">Choose a service…</option>
+              <option>Residential repair (leak, clog, fixture)</option>
+              <option>Water heater repair</option>
+              <option>Re-piping / water line</option>
+              <option>Garbage disposal</option>
+              <option>Kitchen or bathroom remodel</option>
+              <option>New construction / rough-in</option>
+              <option>Commercial service</option>
+              <option>Something else</option>
+            </select>
+          </label>
+          <label>Tell us about the job
+            <textarea name="details" placeholder="Where is it, what's going on, and how soon do you need it?"></textarea>
+          </label>
+          <button class="btn btn-call" type="submit" style="width:100%">Send My Free Estimate Request</button>
+          <p class="form-note">Submitting opens your email app with everything pre-filled and ready to send. Prefer to talk? Call <a href="tel:+18886538303">(888) 653-8303</a> — we're available 24/7.</p>
+        </form>
+        <div class="success" id="formSuccess" role="status">
+          <h3>Your estimate request is ready to send</h3>
+          <p style="color:var(--ink-2);margin:0">We opened your email app with your details pre-filled. Just hit send in that email and we'll get back to you shortly. If nothing opened, call us at <a href="tel:+18886538303">(888) 653-8303</a>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- OFFER / DEMO NOTE -->
+  <section class="section" style="padding-top:0">
+    <div class="wrap">
+      <figure style="margin:0 0 26px;border-radius:14px;overflow:hidden">
+        <img src="assets/clearwater.jpg" alt="Aerial view of Clearwater Beach and its turquoise Gulf shoreline" style="width:100%;max-height:300px;object-fit:cover" />
+      </figure>
+      <div class="offer">
+        <div>
+          <h2>Like this site? It's a demo built for Raimondi Plumbing.</h2>
+          <p>This page was built by Scale It to show what Raimondi's website could look like — your services, your brand, your phone number, built to turn visitors into estimate requests. If you buy it, it moves to your own domain, and the estimate form captures the full job details before anyone picks up the phone.</p>
+        </div>
+        <div class="price-box">
+          <div class="big">$70</div>
+          <p><strong>One-time.</strong> First year of hosting included, then just $5/month.</p>
+          <a class="btn btn-claim-light" href="https://square.link/u/cz1GGRh0" target="_blank" rel="noopener" style="margin-top:8px;width:100%">Claim this site — $70</a>
+          <a class="btn btn-gold" href="tel:+18886538303" style="margin-top:10px">Call (888) 653-8303</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap foot-grid">
+    <div>
+      <a class="logo" href="#top" style="font-size:1.15rem">Raimondi <span>Plumbing</span></a>
+      <p>Licensed plumbing for homes, businesses &amp; new construction.<br />2780 Summerdale Drive, Clearwater, FL 33761</p>
+    </div>
+    <div>
+      <p><strong style="color:var(--ink)">Contact</strong><br />
+      <a href="tel:+18886538303">(888) 653-8303</a><br />
+      <a href="mailto:help@raimondiplumbing.com">help@raimondiplumbing.com</a><br />
+      Serving Pinellas, Pasco &amp; Hillsborough Counties · 24/7</p>
+    </div>
+    <div>
+      <p><strong style="color:var(--ink)">Own this website</strong></p>
+      <a class="btn btn-gold" href="https://square.link/u/cz1GGRh0" target="_blank" rel="noopener">Claim this site</a>
+    </div>
+  </div>
+  <div class="wrap">
+    <span class="demo-tag">Demo website built by Scale It for Raimondi Plumbing — photos are representative, not Raimondi's own work.</span>
+  </div>
+</footer>
+
+<div class="callbar">
+  <a class="btn btn-call" href="tel:+18886538303">Call Now</a>
+  <a class="btn btn-gold" href="#estimate">Free Estimate</a>
+</div>
+
+<script>
+  document.getElementById('estimateForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var f = new FormData(e.target);
+    var lines = [
+      'Name: ' + (f.get('name') || ''),
+      'Phone: ' + (f.get('phone') || ''),
+      'Email: ' + (f.get('email') || '—'),
+      'Service needed: ' + (f.get('service') || ''),
+      '',
+      'Job details:',
+      (f.get('details') || '—')
+    ];
+    var subject = encodeURIComponent('Free estimate request — ' + (f.get('name') || 'Website lead'));
+    var body = encodeURIComponent(lines.join('\n'));
+    window.location.href = 'mailto:scaleitdesigns@gmail.com?subject=' + subject + '&body=' + body;
+    document.getElementById('formSuccess').style.display = 'block';
+    document.getElementById('formSuccess').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+</script>
+</body>
+</html>

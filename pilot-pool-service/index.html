@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="en">
+  <head><meta name="robots" content="noindex,nofollow">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>Pilot Pool Service, Inc. — Pool Cleaning, Repairs &amp; Leak Detection | Port Richey, FL</title>
+    <meta name="description" content="Family owned and operated since 1991. Weekly pool cleaning, equipment repairs, and leak detection across Pasco, Pinellas, and Hillsborough counties. Call (727) 849-0323." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+      button, [role="button"], select, summary, input:not([type="checkbox"], [type="radio"]), textarea { min-height: 2.25rem; }
+      * { box-sizing: border-box; }
+      :root {
+        color-scheme: light dark;
+        --bg: #f2f7f7;
+        --surface: #ffffff;
+        --surface-2: #e4efee;
+        --ink: #0d2b33;
+        --ink-soft: #3d5a61;
+        --line: #cfdfdd;
+        --deep: #083f4d;
+        --deep-2: #0a5568;
+        --aqua: #0e7c86;
+        --aqua-bright: #12a5ad;
+        --sun: #f0a832;
+        --on-deep: #eefafa;
+        --on-deep-soft: #b9d9de;
+        --shadow: 0 10px 30px rgba(8, 63, 77, 0.14);
+        --radius: 14px;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #06222b;
+          --surface: #0b303c;
+          --surface-2: #0e3a47;
+          --ink: #e9f5f5;
+          --ink-soft: #a9c6cb;
+          --line: #1d4a57;
+          --deep: #04222b;
+          --deep-2: #0a3d4c;
+          --aqua: #2bb3ba;
+          --aqua-bright: #3ec6cc;
+          --sun: #f5b84a;
+          --on-deep: #eefafa;
+          --on-deep-soft: #a9ccd2;
+          --shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        }
+      }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+        font-size: 1.05rem;
+        line-height: 1.55;
+      }
+      h1, h2, h3 {
+        font-family: "Barlow Condensed", "Barlow", sans-serif;
+        line-height: 1.08;
+        margin: 0;
+        letter-spacing: 0.01em;
+      }
+      p { margin: 0; }
+      a { color: var(--aqua); }
+      img { display: block; max-width: 100%; }
+      .wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+
+      /* ---------- top bar ---------- */
+      .topbar {
+        background: var(--deep);
+        color: var(--on-deep);
+        position: sticky; top: 0; z-index: 20;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+      }
+      .topbar .wrap {
+        display: flex; align-items: center; gap: 14px;
+        padding-top: 10px; padding-bottom: 10px;
+      }
+      .brand { display: flex; align-items: center; gap: 11px; min-width: 0; }
+      .brand-mark {
+        flex: 0 0 auto; width: 38px; height: 38px; border-radius: 50%;
+        background: var(--aqua-bright);
+        display: grid; place-items: center;
+      }
+      .brand-name { font-family: "Barlow Condensed", sans-serif; font-weight: 700; font-size: 1.3rem; line-height: 1; white-space: nowrap; }
+      .brand-sub { font-size: 0.78rem; color: var(--on-deep-soft); line-height: 1.2; white-space: nowrap; }
+      .topbar nav { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+      .topbar nav a {
+        color: var(--on-deep); text-decoration: none; font-weight: 600; font-size: 0.95rem;
+        padding: 9px 10px; border-radius: 8px; display: inline-flex; align-items: center; min-height: 2.25rem;
+      }
+      .topbar nav a:hover { background: rgba(255,255,255,0.12); }
+      .call-btn {
+        background: var(--sun); color: #231600 !important; border-radius: 999px;
+        padding: 9px 16px !important; margin-left: 6px; white-space: nowrap; flex: 0 0 auto;
+      }
+      .call-btn:hover { background: #ffb63e !important; }
+      .claim-header-btn {
+        background: var(--aqua-bright); color: #04222b !important; border-radius: 999px;
+        padding: 9px 16px !important; margin-left: 6px; white-space: nowrap; flex: 0 0 auto; font-weight: 700;
+      }
+      .claim-header-btn:hover { background: #3ec6cc !important; }
+      @media (max-width: 720px) {
+        .topbar nav a.nav-link { display: none; }
+        .brand-name { font-size: 1.08rem; white-space: normal; }
+        .brand-sub { display: none !important; }
+        .brand-mark { width: 32px; height: 32px; }
+        .topbar .wrap { gap: 10px; padding-left: 14px; padding-right: 14px; flex-wrap: wrap; }
+        .topbar nav { flex-wrap: wrap; justify-content: flex-end; }
+        .call-btn { padding: 9px 13px !important; font-size: 0.92rem; }
+        .claim-header-btn { padding: 9px 13px !important; font-size: 0.92rem; margin-left: 4px; }
+      }
+
+      /* ---------- hero ---------- */
+      .hero { background: var(--deep); color: var(--on-deep); }
+      .hero-grid {
+        display: grid; grid-template-columns: 1.02fr 1fr; gap: 34px;
+        padding: 44px 0 52px; align-items: center;
+      }
+      .hero h1 { font-size: clamp(2.5rem, 5.4vw, 3.9rem); font-weight: 700; text-transform: uppercase; }
+      .hero h1 .accent { color: var(--aqua-bright); }
+      .hero .lede { margin-top: 16px; font-size: 1.16rem; color: var(--on-deep-soft); max-width: 34rem; }
+      .hero-ctas { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
+      .btn {
+        display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+        font-weight: 700; font-size: 1.02rem; text-decoration: none;
+        padding: 12px 22px; border-radius: 999px; min-height: 3rem;
+        border: 2px solid transparent; cursor: pointer;
+      }
+      .btn-sun { background: var(--sun); color: #231600; }
+      .btn-sun:hover { background: #ffb63e; }
+      .btn-claim { background: var(--aqua-bright); color: #04222b; }
+      .btn-claim:hover { background: #3ec6cc; }
+      .btn-ghost { border-color: var(--on-deep-soft); color: var(--on-deep); background: transparent; }
+      .btn-ghost:hover { border-color: var(--on-deep); }
+      .claim-bottom { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+      .claim-bottom .claim-price { color: var(--on-deep-soft); font-size: 0.95rem; font-weight: 600; }
+      footer a.btn-claim { color: #04222b; }
+      footer a.btn-claim:hover { color: #04222b; text-decoration: none; background: #3ec6cc; }
+      .trust-row { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 28px; font-size: 0.95rem; font-weight: 600; }
+      .trust-row span { display: inline-flex; align-items: center; gap: 7px; }
+      .trust-row svg { flex: 0 0 auto; }
+      .hero-photo { position: relative; }
+      .hero-photo img { width: 100%; height: 100%; min-height: 320px; object-fit: cover; border-radius: var(--radius); box-shadow: var(--shadow); }
+      .hero-badge {
+        position: absolute; left: 14px; bottom: 14px;
+        background: var(--surface); color: var(--ink);
+        border-radius: 10px; padding: 10px 14px; box-shadow: var(--shadow);
+        font-size: 0.9rem; line-height: 1.3;
+      }
+      .hero-badge strong { display: block; font-family: "Barlow Condensed", sans-serif; font-size: 1.15rem; letter-spacing: 0.02em; }
+      @media (max-width: 860px) {
+        .hero-grid { grid-template-columns: 1fr; padding: 32px 0 40px; }
+        .hero-photo img { min-height: 240px; }
+      }
+
+      /* ---------- sections ---------- */
+      section { padding: 56px 0; }
+      .section-head { max-width: 44rem; margin-bottom: 30px; }
+      .section-head h2 { font-size: clamp(1.9rem, 3.6vw, 2.6rem); font-weight: 700; text-transform: uppercase; }
+      .section-head p { margin-top: 10px; color: var(--ink-soft); font-size: 1.08rem; }
+
+      .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+      @media (max-width: 920px) { .cards { grid-template-columns: 1fr; } }
+      .card {
+        background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+        overflow: hidden; display: flex; flex-direction: column;
+      }
+      .card img { width: 100%; height: 190px; object-fit: cover; }
+      .card-body { padding: 20px 22px 24px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+      .card h3 { font-size: 1.55rem; font-weight: 700; text-transform: uppercase; }
+      .card p { color: var(--ink-soft); }
+      .card ul { margin: 4px 0 0; padding: 0; list-style: none; display: grid; gap: 7px; }
+      .card li { display: flex; gap: 9px; align-items: flex-start; font-size: 0.99rem; }
+      .card li svg { flex: 0 0 auto; margin-top: 4px; }
+      .card .deal {
+        margin-top: auto; background: var(--surface-2); border-radius: 10px;
+        padding: 10px 13px; font-weight: 600; font-size: 0.96rem;
+      }
+
+      /* ---------- leak band ---------- */
+      .leak { background: var(--deep-2); color: var(--on-deep); }
+      .leak h2 { font-size: clamp(1.9rem, 3.6vw, 2.6rem); font-weight: 700; text-transform: uppercase; }
+      .leak .intro { margin-top: 10px; color: var(--on-deep-soft); max-width: 46rem; font-size: 1.08rem; }
+      .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 28px; }
+      @media (max-width: 920px) { .steps { grid-template-columns: repeat(2, 1fr); } }
+      @media (max-width: 540px) { .steps { grid-template-columns: 1fr; } }
+      .step { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.16); border-radius: var(--radius); padding: 18px; }
+      .step .num {
+        font-family: "Barlow Condensed", sans-serif; font-weight: 700; font-size: 1.9rem;
+        color: var(--aqua-bright); line-height: 1;
+      }
+      .step h3 { font-size: 1.25rem; margin: 8px 0 6px; text-transform: uppercase; }
+      .step p { font-size: 0.97rem; color: var(--on-deep-soft); }
+      .leak .cta-line { margin-top: 26px; display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+      .leak .cta-line p { font-weight: 600; }
+
+      /* ---------- why ---------- */
+      .why-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 34px; align-items: start; }
+      @media (max-width: 860px) { .why-grid { grid-template-columns: 1fr; } }
+      .why-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+      .why-list li { display: flex; gap: 12px; align-items: flex-start; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 15px 17px; }
+      .why-list .ic { flex: 0 0 auto; width: 40px; height: 40px; border-radius: 10px; background: var(--surface-2); display: grid; place-items: center; }
+      .why-list strong { display: block; font-size: 1.03rem; }
+      .why-list span { color: var(--ink-soft); font-size: 0.97rem; }
+      .area-box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; }
+      .area-box h3 { font-size: 1.5rem; text-transform: uppercase; margin-bottom: 8px; }
+      .area-box p { color: var(--ink-soft); }
+      .counties { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 14px; }
+      .counties span { background: var(--surface-2); border-radius: 999px; padding: 7px 14px; font-weight: 700; font-size: 0.95rem; }
+      .licenses { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 14px; font-size: 0.95rem; color: var(--ink-soft); display: grid; gap: 3px; }
+
+      /* ---------- estimate ---------- */
+      .estimate { background: var(--surface-2); }
+      .est-grid { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 34px; align-items: start; }
+      @media (max-width: 860px) { .est-grid { grid-template-columns: 1fr; } }
+      .est-copy h2 { font-size: clamp(1.9rem, 3.6vw, 2.6rem); font-weight: 700; text-transform: uppercase; }
+      .est-copy p { margin-top: 10px; color: var(--ink-soft); font-size: 1.08rem; }
+      .est-contact { margin-top: 22px; display: grid; gap: 12px; }
+      .est-contact a, .est-contact div.row {
+        display: flex; gap: 11px; align-items: center; font-weight: 600; text-decoration: none; color: var(--ink);
+        background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 15px; min-height: 3rem;
+      }
+      .est-contact a:hover { border-color: var(--aqua); }
+      form {
+        background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+        padding: 24px; display: grid; gap: 14px; box-shadow: var(--shadow);
+      }
+      .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+      @media (max-width: 540px) { .form-row { grid-template-columns: 1fr; } }
+      label { display: grid; gap: 6px; font-weight: 600; font-size: 0.95rem; }
+      input, select, textarea {
+        font: inherit; color: var(--ink); background: var(--bg);
+        border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; width: 100%;
+      }
+      input:focus, select:focus, textarea:focus { outline: 2px solid var(--aqua); outline-offset: 1px; border-color: var(--aqua); }
+      textarea { resize: vertical; min-height: 96px; }
+      .form-note { font-size: 0.9rem; color: var(--ink-soft); }
+      .form-status { display: none; font-weight: 600; color: var(--aqua); font-size: 0.97rem; }
+      .form-status.show { display: block; }
+
+      /* ---------- footer ---------- */
+      footer { background: var(--deep); color: var(--on-deep); padding: 44px 0 30px; }
+      .foot-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+      @media (max-width: 860px) { .foot-grid { grid-template-columns: 1fr; } }
+      footer h3 { font-size: 1.3rem; text-transform: uppercase; margin-bottom: 10px; }
+      footer p, footer a { color: var(--on-deep-soft); font-size: 0.99rem; }
+      footer a { text-decoration: none; }
+      footer a:hover { color: var(--on-deep); text-decoration: underline; }
+      .foot-lines { display: grid; gap: 5px; }
+      .demo-note {
+        margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.18); padding-top: 18px;
+        font-size: 0.92rem; color: var(--on-deep-soft); max-width: 52rem;
+      }
+      .demo-note strong { color: var(--on-deep); }
+      .foot-base { margin-top: 14px; font-size: 0.88rem; color: var(--on-deep-soft); }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="wrap">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#04222b" stroke-width="2.2" stroke-linecap="round"><path d="M2 15c2.5 0 2.5 2 5 2s2.5-2 5-2 2.5 2 5 2 2.5-2 5-2"/><path d="M2 20c2.5 0 2.5 2 5 2s2.5-2 5-2 2.5 2 5 2 2.5-2 5-2"/><path d="M7 11V5.5A2.5 2.5 0 0 1 9.5 3h1A2.5 2.5 0 0 1 13 5.5V11"/><path d="M17 11V8"/></svg>
+          </span>
+          <span>
+            <span class="brand-name">Pilot Pool Service, Inc.</span>
+            <span class="brand-sub" style="display:block;">Port Richey, Florida · Since 1991</span>
+          </span>
+        </div>
+        <nav aria-label="Main">
+          <a class="nav-link" href="#services">Services</a>
+          <a class="nav-link" href="#leak-check">Leak Check</a>
+          <a class="nav-link" href="#why">Why Pilot</a>
+          <a class="nav-link" href="#estimate">Get an Estimate</a>
+          <a class="claim-header-btn" href="https://square.link/u/cz1GGRh0" target="_blank" rel="noopener">Claim this site</a>
+          <a class="call-btn" href="tel:+17278490323">(727) 849-0323</a>
+        </nav>
+      </div>
+    </header>
+
+    <section class="hero" style="padding:0;">
+      <div class="wrap hero-grid">
+        <div>
+          <h1>Your pool, <span class="accent">swim-ready</span> every week.</h1>
+          <p class="lede">Pilot Pool Service is a full-service pool and spa company — weekly cleaning, equipment repairs, and leak detection — family owned and operated since 1991, serving Pasco, Pinellas, and Hillsborough counties.</p>
+          <div class="hero-ctas">
+            <a class="btn btn-sun" href="tel:+17278490323">Call (727) 849-0323</a>
+            <a class="btn btn-claim" href="https://square.link/u/cz1GGRh0" target="_blank" rel="noopener">Claim this site</a>
+            <a class="btn btn-ghost" href="#estimate">Get a free estimate</a>
+          </div>
+          <div class="trust-row">
+            <span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#3ec6cc" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Family owned since 1991</span>
+            <span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#3ec6cc" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Licensed, bonded &amp; insured</span>
+            <span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#3ec6cc" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>GPS-monitored trucks</span>
+          </div>
+        </div>
+        <div class="hero-photo">
+          <img src="assets/hero.jpg" alt="Sparkling backyard pool and raised spa with palm trees at a Florida home" />
+          <div class="hero-badge"><strong>35 years of clean pools</strong>Repairs &amp; maintenance at reasonable rates</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="services">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>What we do</h2>
+          <p>Professional, prompt, and affordable — from your weekly visit to the repair you didn't see coming.</p>
+        </div>
+        <div class="cards">
+          <article class="card">
+            <img src="assets/cleaning.jpg" alt="Pool technician skimming a bright blue swimming pool" />
+            <div class="card-body">
+              <h3>Weekly Pool Cleaning</h3>
+              <p>Scheduled cleaning and chemical care so you can take a refreshing dip any day of the week — no skimming, scrubbing, or guessing at chemicals.</p>
+              <ul>
+                <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--aqua)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Full cleaning and chemical balancing on every visit</li>
+                <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--aqua)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>A completed checklist of chemicals added and services performed, left at your door</li>
+                <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--aqua)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Not satisfied? We return within 48 hours</li>
+              </ul>
+              <p class="deal">Weekly cleaning customers save 5% on most pool and spa repairs.</p>
+            </div>
+          </article>
+
+          <article class="card">
+            <img src="assets/repair.jpg" alt="Technician repairing a pool pump and filtration system beside a pool" />
+            <div class="card-body">
+              <h3>Repairs &amp; Maintenance</h3>
+              <p>Highly trained, experienced technicians keep your pool running properly and efficiently — and answer every question along the way.</p>
+              <ul>
+                <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--aqua)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Pool and spa equipment repairs</li>
+                <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--aqua)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Licensed for repairs and gas work</li>
+                <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--aqua)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Prompt service from a local, family-run team</li>
+              </ul>
+              <p class="deal">Repair License #CPC057199 · Gas License #10664</p>
+            </div>
+          </article>
+
+          <article class="card">
+            <img src="assets/pool2.jpg" alt="Clear blue swimming pool surrounded by tropical landscaping" />
+            <div class="card-body">
+              <h3>Leak Detection</h3>
+              <p>Losing water faster than evaporation explains? We track down leaks in the pool, plumbing, and equipment — and repair them.</p>
+              <ul>
+                <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--aqua)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>24-hour water-loss measurement to confirm a leak</li>
+                <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--aqua)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Can't measure it yourself? We're happy to do it for you</li>
+                <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--aqua)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Detection and repair from the same crew</li>
+              </ul>
+              <p class="deal">The more accurate your measurement, the more cost-efficient we can be in locating the leak.</p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="leak" id="leak-check">
+      <div class="wrap">
+        <h2>Think your pool is leaking?</h2>
+        <p class="intro">In west-central Florida, losing ⅛″ to ¼″ of water a day to evaporation is normal — wind, water features, and heating all change the number. Before you call, run this simple 24-hour test from our leak team:</p>
+        <div class="steps">
+          <div class="step">
+            <div class="num">1</div>
+            <h3>Fill it up</h3>
+            <p>Fill the pool to its normal level — halfway up the skimmer mouth.</p>
+          </div>
+          <div class="step">
+            <div class="num">2</div>
+            <h3>Mark the level</h3>
+            <p>Put a piece of duct tape next to the skimmer at the water line.</p>
+          </div>
+          <div class="step">
+            <div class="num">3</div>
+            <h3>Wait 24 hours</h3>
+            <p>Run the pump as you normally would. Measure the loss as close to 24 hours later as you can, and note any rainfall.</p>
+          </div>
+          <div class="step">
+            <div class="num">4</div>
+            <h3>Compare</h3>
+            <p>Losing more than about ¼″ a day? That's more than evaporation — it's time to find the leak.</p>
+          </div>
+        </div>
+        <div class="cta-line">
+          <a class="btn btn-sun" href="tel:+17278490323">Call (727) 849-0323</a>
+          <p>Have your 24-hour measurement ready and we'll take it from there.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="why">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Why homeowners pick Pilot</h2>
+          <p>One family, one crew, three and a half decades of showing up when we say we will.</p>
+        </div>
+        <div class="why-grid">
+          <ul class="why-list">
+            <li>
+              <span class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--aqua)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+              <span><strong>Family owned &amp; operated since 1991</strong><span>Knowledgeable, experienced technicians and office staff — the same local team, year after year.</span></span>
+            </li>
+            <li>
+              <span class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--aqua)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></span>
+              <span><strong>Fully licensed, bonded &amp; insured</strong><span>Repair License #CPC057199 and Gas License #10664, for your protection on every job.</span></span>
+            </li>
+            <li>
+              <span class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--aqua)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 18v3"/><path d="m10 9 2 2 4-4"/></svg></span>
+              <span><strong>Background-checked, drug-tested employees</strong><span>Every person we send to your home is vetted — and every truck is GPS monitored.</span></span>
+            </li>
+            <li>
+              <span class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--aqua)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11H5a2 2 0 0 0-2 2v7h6z"/><path d="M9 11V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6"/><path d="M15 11h4a2 2 0 0 1 2 2v7h-6z"/><path d="M3 20h18"/></svg></span>
+              <span><strong>A checklist after every visit</strong><span>You always know exactly which chemicals were added and which services were performed.</span></span>
+            </li>
+          </ul>
+          <div class="area-box">
+            <h3>Where we work</h3>
+            <p>Based in Port Richey and servicing pools and spas across the Tampa Bay area's three northern counties:</p>
+            <div class="counties">
+              <span>Pasco County</span>
+              <span>Pinellas County</span>
+              <span>Hillsborough County</span>
+            </div>
+            <div class="licenses">
+              <span><strong>Office:</strong> 6039 Pine Hill Road, Port Richey, FL 34668</span>
+              <span><strong>Hours:</strong> Monday–Friday, 8:30 AM – 4:30 PM · Saturday–Sunday closed</span>
+              <span>Live in the area and not sure you're on a route? Call us — we'll tell you straight.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="estimate" id="estimate">
+      <div class="wrap est-grid">
+        <div class="est-copy">
+          <h2>Get an estimate</h2>
+          <p>Tell us what your pool needs — weekly cleaning, a repair, or a leak you can't find — and we'll get back to you with next steps and pricing.</p>
+          <div class="est-contact">
+            <a href="tel:+17278490323">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--aqua)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+              (727) 849-0323
+            </a>
+            <a href="mailto:pilotpoolserviceinc@gmail.com">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--aqua)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
+              pilotpoolserviceinc@gmail.com
+            </a>
+            <div class="row">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--aqua)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+              Mon–Fri, 8:30 AM – 4:30 PM
+            </div>
+          </div>
+        </div>
+
+        <form id="estimate-form" novalidate>
+          <div class="form-row">
+            <label>Your name
+              <input type="text" name="name" id="f-name" autocomplete="name" placeholder="Jane Smith" required />
+            </label>
+            <label>Phone
+              <input type="tel" name="phone" id="f-phone" autocomplete="tel" placeholder="(727) 555-0123" required />
+            </label>
+          </div>
+          <label>Email
+            <input type="email" name="email" id="f-email" autocomplete="email" placeholder="you@example.com" />
+          </label>
+          <label>What does your pool need?
+            <select name="service" id="f-service">
+              <option>Weekly pool cleaning</option>
+              <option>Pool or spa repair</option>
+              <option>Leak detection</option>
+              <option>Equipment maintenance</option>
+              <option>Something else</option>
+            </select>
+          </label>
+          <label>Anything we should know?
+            <textarea name="message" id="f-message" placeholder="Pool size, what's happening with it, best time to reach you…"></textarea>
+          </label>
+          <button class="btn btn-sun" type="submit" style="width:100%;">Request my estimate</button>
+          <p class="form-status" id="form-status" role="status"></p>
+          <p class="form-note">Submitting opens a pre-filled email with your details, ready to send — no account, no spam, just your request.</p>
+        </form>
+      </div>
+    </section>
+
+    <footer>
+      <div class="wrap">
+        <div class="foot-grid">
+          <div>
+            <h3>Pilot Pool Service, Inc.</h3>
+            <p>Full-service pool and spa repair, cleaning, and maintenance — family owned and operated continuously since 1991.</p>
+          </div>
+          <div>
+            <h3>Contact</h3>
+            <div class="foot-lines">
+              <a href="https://goo.gl/maps/QBnLqRm9JK6YBCH48" target="_blank" rel="noopener">6039 Pine Hill Road, Port Richey, FL 34668</a>
+              <a href="tel:+17278490323">(727) 849-0323</a>
+              <a href="mailto:pilotpoolserviceinc@gmail.com">pilotpoolserviceinc@gmail.com</a>
+            </div>
+          </div>
+          <div>
+            <h3>Hours &amp; Licenses</h3>
+            <div class="foot-lines">
+              <p>Monday–Friday: 8:30 AM – 4:30 PM</p>
+              <p>Saturday–Sunday: Closed</p>
+              <p>Repair License #CPC057199 · Gas License #10664</p>
+            </div>
+          </div>
+        </div>
+        <p class="demo-note"><strong>About this demo:</strong> This page is a free preview built for Pilot Pool Service by Scale It. When you buy, it moves to your own domain — $70 one-time, first year of hosting included, then $5/mo.</p>
+        <div class="claim-bottom">
+          <a class="btn btn-claim" href="https://square.link/u/cz1GGRh0" target="_blank" rel="noopener">Claim this site</a>
+          <span class="claim-price">$70 one-time · First year of hosting included · Then $5/mo</span>
+        </div>
+        <p class="foot-base">© 2026 Pilot Pool Service, Inc. · Port Richey, Florida · Servicing Pasco, Pinellas &amp; Hillsborough counties</p>
+      </div>
+    </footer>
+
+    <script>
+      (function () {
+        var form = document.getElementById('estimate-form');
+        var status = document.getElementById('form-status');
+        form.addEventListener('submit', function (e) {
+          e.preventDefault();
+          var name = document.getElementById('f-name').value.trim();
+          var phone = document.getElementById('f-phone').value.trim();
+          var email = document.getElementById('f-email').value.trim();
+          var service = document.getElementById('f-service').value;
+          var message = document.getElementById('f-message').value.trim();
+          if (!name || !phone) {
+            status.textContent = 'Please add your name and phone number so we can reach you.';
+            status.classList.add('show');
+            (!name ? document.getElementById('f-name') : document.getElementById('f-phone')).focus();
+            return;
+          }
+          var subject = 'Pool service estimate request — ' + name;
+          var lines = [
+            'Name: ' + name,
+            'Phone: ' + phone,
+            'Email: ' + (email || '(not provided)'),
+            'Service needed: ' + service,
+            '',
+            'Details:',
+            message || '(none)'
+          ];
+          var href = 'mailto:scaleitdesigns@gmail.com'
+            + '?subject=' + encodeURIComponent(subject)
+            + '&body=' + encodeURIComponent(lines.join('\n'));
+          status.textContent = 'Opening your email app with your estimate request — just press send.';
+          status.classList.add('show');
+          window.location.href = href;
+        });
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+<head><meta name="robots" content="noindex,nofollow">
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<link rel="icon" href="data:,"/>
+<title>Dunedin Electric — Electrician in Clearwater & Pinellas County Since 1987</title>
+<meta name="description" content="Palm Harbor & Dunedin Electric. Family-owned electrician serving Pinellas County since 1987. Residential & commercial, free estimates, 10% senior discount. Call (727) 773-1622."/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#ffffff; --bg2:#f4f6f8; --card:#ffffff; --ink:#14202e; --muted:#5a6b7d; --line:#dde4ea;
+  --navy:#0f2438; --navy2:#16344f; --amber:#f2a900; --amber-dark:#c98a00; --amber-soft:#fff6dd;
+  --radius:14px;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#0c1620; --bg2:#111f2e; --card:#132435; --ink:#eef3f7; --muted:#a7b6c4; --line:#24384c; --amber-soft:#2a2410; }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:"Barlow",system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55;-webkit-font-smoothing:antialiased}
+img{max-width:100%;display:block}
+a{color:inherit}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+h1,h2,h3{font-family:"Barlow Condensed",sans-serif;line-height:1.05;margin:0;text-transform:uppercase;letter-spacing:.01em}
+h2{font-size:clamp(2rem,4.5vw,2.9rem);font-weight:700}
+h3{font-size:1.35rem;font-weight:700}
+.section{padding:64px 0}
+.section.alt{background:var(--bg2)}
+.kicker{font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:.78rem;color:var(--amber-dark);margin:0 0 10px}
+@media (prefers-color-scheme: dark){.kicker{color:var(--amber)}}
+.lead{color:var(--muted);font-size:1.08rem;max-width:62ch}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:12px 22px;border-radius:10px;font-weight:700;text-decoration:none;border:2px solid transparent;cursor:pointer;font-size:1rem;font-family:inherit}
+.btn-amber{background:var(--amber);color:#1a1400}
+.btn-amber:hover{background:#ffb81a}
+.btn-ghost{border-color:var(--line);background:transparent;color:var(--ink)}
+.btn-navy{background:var(--navy);color:#fff}
+.btn-block{width:100%}
+
+/* Demo bar */
+.demo-bar{background:#0b1a29;color:#dbe7f1;font-size:.92rem}
+.demo-bar .wrap{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;justify-content:center;padding-top:10px;padding-bottom:10px;text-align:center}
+.demo-bar strong{color:var(--amber)}
+.demo-bar a{color:#fff;font-weight:700}
+
+/* Header */
+header{position:sticky;top:0;z-index:20;background:var(--navy);color:#fff;box-shadow:0 2px 14px rgba(0,0,0,.18)}
+.header-in{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none;min-height:48px}
+.bolt{width:44px;height:44px;border-radius:10px;background:var(--amber);display:grid;place-items:center;flex:0 0 auto}
+.bolt svg{width:26px;height:26px}
+.brand-name{font-family:"Barlow Condensed",sans-serif;font-size:1.55rem;font-weight:700;line-height:1;text-transform:uppercase}
+.brand-sub{font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:#b9cbdc}
+nav.main{display:none;gap:26px}
+nav.main a{text-decoration:none;font-weight:600;color:#e6eef5;padding:10px 2px}
+.header-cta{display:flex;gap:10px;align-items:center}
+.phone-btn{display:inline-flex;align-items:center;gap:8px;min-height:48px;padding:10px 16px;background:var(--amber);color:#1a1400;border-radius:10px;font-weight:800;text-decoration:none;white-space:nowrap}
+.claim-btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:10px 16px;background:#fff;color:#0f2438;border-radius:10px;font-weight:800;text-decoration:none;white-space:nowrap;border:2px solid #fff}
+.claim-btn:hover{background:#eef3f7}
+.footer-claim{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:10px 18px;background:var(--amber);color:#1a1400!important;border-radius:10px;font-weight:800;text-decoration:none;white-space:nowrap}
+@media(min-width:860px){nav.main{display:flex}}
+@media(max-width:640px){
+  .header-in{gap:10px;padding:10px 0}
+  .bolt{width:38px;height:38px}.bolt svg{width:22px;height:22px}
+  .brand{gap:9px;min-width:0}
+  .brand-name{font-size:1.25rem}
+  .brand-sub{font-size:.62rem;letter-spacing:.08em}
+  .phone-btn{padding:10px 12px;font-size:.92rem;min-height:44px}
+  .claim-btn{padding:10px 12px;font-size:.92rem;min-height:44px}
+  .header-in{flex-wrap:wrap}
+  .header-cta{margin-left:auto}
+}
+
+/* Hero */
+.hero{background:var(--navy);color:#fff;padding:0 0 56px}
+.hero-grid{display:grid;gap:36px;padding-top:36px}
+@media(min-width:920px){.hero-grid{grid-template-columns:1.05fr .95fr;align-items:center;padding-top:52px}}
+.hero-badge{display:inline-flex;gap:8px;align-items:center;background:rgba(242,169,0,.16);border:1px solid rgba(242,169,0,.5);color:#ffd34d;padding:7px 12px;border-radius:999px;font-weight:700;font-size:.86rem;margin-bottom:18px}
+.hero h1{font-size:clamp(2.7rem,7vw,4.6rem);font-weight:700}
+.hero h1 em{font-style:normal;color:var(--amber)}
+.hero p.sub{color:#c7d6e3;font-size:1.13rem;max-width:52ch}
+.hero-actions{display:flex;flex-wrap:wrap;gap:12px;margin:24px 0 28px}
+.hero-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;border-top:1px solid rgba(255,255,255,.16);padding-top:22px}
+.stat b{display:block;font-family:"Barlow Condensed",sans-serif;font-size:1.9rem;line-height:1;color:#fff}
+.stat span{font-size:.86rem;color:#a9bccf}
+.hero-photo{border-radius:18px;overflow:hidden;border:4px solid rgba(255,255,255,.12)}
+.hero-photo img{width:100%;height:100%;object-fit:cover;aspect-ratio:1/1}
+@media(min-width:920px){.hero-photo img{aspect-ratio:4/4.2}}
+.hero-card{background:#fff;color:#14202e;border-radius:12px;padding:14px 16px;margin-top:14px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+@media (prefers-color-scheme: dark){.hero-card{background:#132435;color:#eef3f7}}
+.hero-card strong{color:var(--amber-dark)}
+@media (prefers-color-scheme: dark){.hero-card strong{color:var(--amber)}}
+
+/* Trust strip */
+.trust{background:var(--amber);color:#1c1600}
+.trust .wrap{display:flex;flex-wrap:wrap;gap:10px 28px;justify-content:center;padding-top:14px;padding-bottom:14px;font-weight:700;font-size:.96rem}
+.trust span{display:inline-flex;align-items:center;gap:7px}
+
+/* Services */
+.grid{display:grid;gap:18px}
+@media(min-width:700px){.grid.cols-3{grid-template-columns:repeat(3,1fr)} .grid.cols-2{grid-template-columns:repeat(2,1fr)}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px}
+.card p{color:var(--muted);margin:8px 0 0}
+.card ul{margin:12px 0 0;padding:0;list-style:none}
+.card ul li{padding:7px 0 7px 26px;position:relative;border-top:1px dashed var(--line);color:var(--muted)}
+.card ul li:first-child{border-top:0}
+.card ul li::before{content:"✓";position:absolute;left:2px;color:var(--amber-dark);font-weight:800}
+@media (prefers-color-scheme: dark){.card ul li::before{color:var(--amber)}}
+.icon{width:46px;height:46px;border-radius:10px;background:var(--amber-soft);display:grid;place-items:center;margin-bottom:12px;font-size:1.35rem}
+
+/* Split */
+.split{display:grid;gap:32px;align-items:center}
+@media(min-width:900px){.split{grid-template-columns:1fr 1fr}}
+.split img{border-radius:16px;width:100%;height:100%;object-fit:cover;aspect-ratio:4/3}
+.checklist{list-style:none;padding:0;margin:20px 0 0;display:grid;gap:12px}
+.checklist li{display:flex;gap:12px;align-items:flex-start}
+.checklist .ck{width:26px;height:26px;flex:0 0 auto;border-radius:50%;background:var(--amber);color:#1a1400;display:grid;place-items:center;font-weight:800;font-size:.9rem;margin-top:2px}
+.checklist p{margin:0;color:var(--muted)} .checklist strong{color:var(--ink)}
+
+/* Reviews */
+.stars{color:var(--amber-dark);letter-spacing:2px;font-size:1.05rem}
+@media (prefers-color-scheme: dark){.stars{color:var(--amber)}}
+.review p{font-size:1.02rem;color:var(--ink)}
+.review footer{margin-top:14px;color:var(--muted);font-weight:600;font-size:.92rem}
+.rating-banner{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;background:var(--navy);color:#fff;border-radius:14px;padding:20px 22px;margin-bottom:22px}
+.rating-banner b{font-family:"Barlow Condensed",sans-serif;font-size:2rem}
+
+/* Areas */
+.areas{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
+.areas span{border:1px solid var(--line);background:var(--card);padding:9px 14px;border-radius:999px;font-weight:600;min-height:36px;display:inline-flex;align-items:center}
+
+/* Form */
+.form-wrap{background:var(--navy);color:#fff;border-radius:18px;padding:28px}
+.form-wrap h2{color:#fff}.form-wrap .lead{color:#c7d6e3}
+form{display:grid;gap:14px;margin-top:22px}
+@media(min-width:700px){form .row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}}
+label{font-weight:600;font-size:.94rem;display:block;margin-bottom:6px}
+input,select,textarea{width:100%;min-height:48px;padding:12px 14px;border-radius:10px;border:1px solid #35506a;background:#0f2438;color:#fff;font:inherit}
+textarea{min-height:110px;resize:vertical}
+input::placeholder,textarea::placeholder{color:#8fa6ba}
+.form-note{font-size:.9rem;color:#a9bccf;margin:0}
+.form-note a{color:#ffd34d}
+.success{display:none;background:#123524;border:1px solid #2b7a4b;color:#c9f2d6;border-radius:10px;padding:16px;margin-top:16px}
+.success.show{display:block}
+
+/* Contact */
+.contact-grid{display:grid;gap:18px}
+@media(min-width:800px){.contact-grid{grid-template-columns:1.2fr .8fr}}
+.hours{width:100%;border-collapse:collapse}
+.hours td{padding:10px 0;border-bottom:1px solid var(--line)}
+.hours td:last-child{text-align:right;font-weight:600}
+.big-phone{font-family:"Barlow Condensed",sans-serif;font-size:2.2rem;text-decoration:none;color:var(--amber-dark)}
+@media (prefers-color-scheme: dark){.big-phone{color:var(--amber)}}
+
+footer.site{background:#0b1a29;color:#a9bccf;padding:36px 0;font-size:.94rem}
+footer.site .wrap{display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between}
+footer.site a{color:#fff}
+.sticky-call{position:fixed;left:12px;right:12px;bottom:12px;z-index:30;display:flex;gap:10px;transform:translateY(130%);transition:transform .3s ease}
+.sticky-call.show{transform:none}
+@media (prefers-reduced-motion: reduce){.sticky-call{transition:none}}
+.sticky-call a{flex:1;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+@media(min-width:860px){.sticky-call{display:none}}
+body{padding-bottom:76px}@media(min-width:860px){body{padding-bottom:0}}
+</style>
+</head>
+<body>
+
+<div class="demo-bar"><div class="wrap">
+  <span><strong>Demo site by Scale It</strong> — $70 one-time, first year of hosting included, then $5/mo.</span>
+  <span>When you buy, it moves to your own domain.</span>
+</div></div>
+
+<header><div class="wrap header-in">
+  <a class="brand" href="#top" aria-label="Dunedin Electric home">
+    <span class="bolt" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M13 2 4.5 13.5H11L9.8 22 19 10h-6.5L13 2Z" fill="#14202e"/></svg></span>
+    <span><span class="brand-name">Dunedin Electric</span><br><span class="brand-sub">Palm Harbor &amp; Dunedin Electric Co.</span></span>
+  </a>
+  <nav class="main" aria-label="Main">
+    <a href="#services">Services</a><a href="#about">About</a><a href="#reviews">Reviews</a><a href="#areas">Areas</a><a href="#contact">Contact</a>
+  </nav>
+  <div class="header-cta"><a class="claim-btn" href="https://square.link/u/cz1GGRh0" target="_blank" rel="noopener">Claim This Site</a><a class="phone-btn" href="tel:+17277731622">☎ (727) 773-1622</a></div>
+</div></header>
+
+<main id="top">
+<section class="hero"><div class="wrap hero-grid">
+  <div>
+    <span class="hero-badge">★ Serving Pinellas County since 1987</span>
+    <h1>Clearwater's electrician for <em>nearly 40 years.</em></h1>
+    <p class="sub">Palm Harbor &amp; Dunedin Electric is a second-generation, family-owned electrical contractor. Veteran-founded, licensed, and trusted by more than 25,000 customers across Tampa Bay — with free estimates and straight answers, no upsell.</p>
+    <div class="hero-actions">
+      <a class="btn btn-amber" href="#estimate">Get a Free Estimate</a>
+      <a class="btn btn-ghost" style="border-color:rgba(255,255,255,.35);color:#fff" href="tel:+17277731622">Call (727) 773-1622</a>
+      <a class="btn" style="background:#fff;color:#0f2438;border-color:#fff" href="https://square.link/u/cz1GGRh0" target="_blank" rel="noopener">Claim This Site — $70</a>
+    </div>
+    <div class="hero-stats">
+      <div class="stat"><b>1987</b><span>Founded in Tampa Bay</span></div>
+      <div class="stat"><b>25,000+</b><span>Satisfied customers</span></div>
+      <div class="stat"><b>20+</b><span>Seasoned electricians</span></div>
+    </div>
+  </div>
+  <div>
+    <div class="hero-photo"><img src="assets/hero.jpg" alt="Electrician installing a ceiling fan in a bright Pinellas County living room"/></div>
+    <div class="hero-card"><span><strong>Free estimates</strong> on every job</span><span><strong>10% off</strong> for senior citizens</span><span>License <strong>#EC13002291</strong></span></div>
+  </div>
+</div></section>
+
+<div class="trust"><div class="wrap">
+  <span>✓ Licensed &amp; Insured — #EC13002291</span><span>✓ Veteran / Family Owned &amp; Operated</span><span>✓ Free Estimates</span><span>✓ Uniformed Professionals</span><span>✓ Residential &amp; Commercial</span>
+</div></div>
+
+<section class="section" id="services"><div class="wrap">
+  <p class="kicker">What we do</p>
+  <h2>Electrical services, done right the first time</h2>
+  <p class="lead">From a faulty outlet to a full commercial build-out, our uniformed electricians handle residential and commercial work across all of Pinellas County.</p>
+
+  <div class="grid cols-3" style="margin-top:30px">
+    <article class="card"><div class="icon" aria-hidden="true">🏠</div><h3>Residential Electrical</h3><p>Prompt, accurate repairs and installs for your home — priced fairly and finished clean.</p>
+      <ul><li>Repairs &amp; troubleshooting</li><li>Outlets, switches &amp; fixtures</li><li>Ceiling fan installation</li><li>Electrical for additions &amp; remodels</li><li>Mobile home electrical</li></ul></article>
+
+    <article class="card"><div class="icon" aria-hidden="true">🏢</div><h3>Commercial Electrical</h3><p>A leading local contractor that works closely with owners, designers, architects, and general contractors.</p>
+      <ul><li>Commercial build-outs &amp; wiring</li><li>Office, retail, restaurant &amp; school work</li><li>Inspections &amp; maintenance</li><li>Exterior building lighting</li></ul></article>
+
+    <article class="card"><div class="icon" aria-hidden="true">💡</div><h3>Lighting Design &amp; Install</h3><p>Light up your space with lighting designed for how you actually live and work.</p>
+      <ul><li>Lighting design &amp; installation</li><li>Interior &amp; exterior lighting</li><li>Outdoor &amp; landscape lighting</li><li>Fixture install &amp; replacement</li></ul></article>
+
+    <article class="card"><div class="icon" aria-hidden="true">⚡</div><h3>Panels, Wiring &amp; Upgrades</h3><p>Older Pinellas homes need panels that can keep up. We upgrade safely and to code.</p>
+      <ul><li>Panel &amp; breaker upgrades</li><li>Wiring &amp; rewiring</li><li>Older-home electrical updates</li><li>EV charger installation</li></ul></article>
+
+    <article class="card"><div class="icon" aria-hidden="true">🛡️</div><h3>Safety &amp; Inspections</h3><p>Know where your system stands before a small issue becomes an expensive one.</p>
+      <ul><li>Electrical inspections</li><li>Home safety products</li><li>GFI / GFCI replacement</li><li>Lightning protection</li></ul></article>
+
+    <article class="card"><div class="icon" aria-hidden="true">🚨</div><h3>Emergency Help</h3><p>Lights out or power down? Call us — after-hours support is available for electrical emergencies.</p>
+      <ul><li>Fast response in Pinellas County</li><li>After-hours emergency support</li><li>Call (727) 773-1622 anytime you need us</li></ul></article>
+  </div>
+</div></section>
+
+<section class="section alt" id="about"><div class="wrap split">
+  <div><img src="assets/commercial.jpg" alt="Licensed electrician wiring a commercial electrical control panel"/></div>
+  <div>
+    <p class="kicker">Our story</p>
+    <h2>Built on honesty, integrity &amp; discipline</h2>
+    <p class="lead">Brad Martin founded Dunedin Electric in 1987 after leading electrical projects in the U.S. Navy. That discipline became the company's standard. Today it's a second-generation family business: Brad's son Wes — a Florida State Certified Electrical Contractor since 2008 — runs day-to-day operations, with his wife Jill in management and brother William having run office administration.</p>
+    <ul class="checklist">
+      <li><span class="ck">✓</span><p><strong>Word-of-mouth reputation.</strong> We grew from a two-man specialty shop to 20+ electricians and a full fleet — mostly on referrals.</p></li>
+      <li><span class="ck">✓</span><p><strong>No upsell.</strong> You get the straight facts and only the work you actually need.</p></li>
+      <li><span class="ck">✓</span><p><strong>Customers first.</strong> The principle the company was founded on, on every job since 1987.</p></li>
+    </ul>
+    <div style="margin-top:24px"><a class="btn btn-navy" href="#estimate">Work With Our Team</a></div>
+  </div>
+</div></section>
+
+<section class="section"><div class="wrap split">
+  <div>
+    <p class="kicker">For homeowners</p>
+    <h2>Home electrical without the runaround</h2>
+    <p class="lead">Flickering lights, a dead outlet, a panel from another era, or a new ceiling fan still in the box — one call handles it. We explain what's going on, what needs replacing, and what it costs before we start.</p>
+    <ul class="checklist">
+      <li><span class="ck">✓</span><p><strong>Free estimates</strong> — know the price before you commit.</p></li>
+      <li><span class="ck">✓</span><p><strong>10% senior citizen discount</strong> on service.</p></li>
+      <li><span class="ck">✓</span><p><strong>Older-home specialists</strong> — panel checks and update guidance for aging systems.</p></li>
+    </ul>
+  </div>
+  <div><img src="assets/residential.jpg" alt="Electrician installing a wall outlet in a home"/></div>
+</div></section>
+
+<section class="section alt" id="reviews"><div class="wrap">
+  <p class="kicker">Reviews</p>
+  <h2>Neighbors who'd call us again</h2>
+  <div class="rating-banner" style="margin-top:22px">
+    <div><b>4.8 ★</b> &nbsp;average rating</div>
+    <div>Rated 4.9 from 85 reviews on Angi &nbsp;•&nbsp; Serving Pinellas since 1987</div>
+    <a class="btn btn-amber" href="#estimate">Join 25,000+ Happy Customers</a>
+  </div>
+  <div class="grid cols-3">
+    <article class="card review"><div class="stars" aria-label="5 stars">★★★★★</div><p>“True professionals that under promise and over deliver. They are prompt, courteous, professional and you get the straight facts. Nobody tries up-selling you on services you don't need.”</p><footer>— Homeowner, Dunedin (via Angi)</footer></article>
+    <article class="card review"><div class="stars" aria-label="5 stars">★★★★★</div><p>“My wife Judy called Dunedin Electric because we used them in the past and were happy. Tom Fuller was prompt, courteous and knowledgeable. He put my wife at ease, explained what needed replacing, and the price was reasonable.”</p><footer>— Returning customer (via Angi)</footer></article>
+    <article class="card review"><div class="stars" aria-label="5 stars">★★★★★</div><p>“Jeff did a great job and displayed excellent multitasking skills — handling questions and still completing the job in a reasonable amount of time.”</p><footer>— Customer review (via Angi)</footer></article>
+  </div>
+</div></section>
+
+<section class="section" id="areas"><div class="wrap">
+  <p class="kicker">Service area</p>
+  <h2>All of Pinellas County</h2>
+  <p class="lead">Based at 2300 Congress Ave in Clearwater, our fleet covers Palm Harbor, Dunedin, and communities across the county.</p>
+  <div class="areas">
+    <span>Clearwater</span><span>Dunedin</span><span>Palm Harbor</span><span>Largo</span><span>Tarpon Springs</span><span>Safety Harbor</span><span>Oldsmar</span><span>Pinellas Park</span><span>Seminole</span><span>Belleair</span><span>East Lake</span><span>Ozuna / Crystal Beach</span>
+  </div>
+</div></section>
+
+<section class="section alt" id="estimate"><div class="wrap">
+  <div class="form-wrap">
+    <p class="kicker" style="color:var(--amber)">Free estimate</p>
+    <h2>Tell us what you need</h2>
+    <p class="lead">Fill this out and we'll get back to you with a free estimate. Prefer to talk? Call <a href="tel:+17277731622" style="color:#ffd34d;font-weight:700">(727) 773-1622</a>, Mon–Fri 8:00 AM–4:30 PM.</p>
+
+    <form id="estimateForm" novalidate>
+      <div class="row2">
+        <div><label for="f-name">Your name *</label><input id="f-name" name="name" required placeholder="Jane Smith" autocomplete="name"/></div>
+        <div><label for="f-phone">Phone *</label><input id="f-phone" name="phone" required placeholder="(727) 555-0123" autocomplete="tel"/></div>
+      </div>
+      <div class="row2">
+        <div><label for="f-email">Email</label><input id="f-email" name="email" type="email" placeholder="you@email.com" autocomplete="email"/></div>
+        <div><label for="f-service">Service needed</label>
+          <select id="f-service" name="service">
+            <option>Residential repair / troubleshooting</option><option>Panel upgrade / wiring</option><option>Lighting design &amp; installation</option><option>Ceiling fan / fixture install</option><option>EV charger installation</option><option>Commercial electrical</option><option>Safety inspection</option><option>Emergency</option><option>Other</option>
+          </select></div>
+      </div>
+      <div><label for="f-city">City / property address</label><input id="f-city" name="city" placeholder="Clearwater, FL"/></div>
+      <div><label for="f-msg">Tell us about the job</label><textarea id="f-msg" name="message" placeholder="e.g. Panel is tripping when the AC runs, house built in 1978…"></textarea></div>
+      <button class="btn btn-amber btn-block" type="submit">Request My Free Estimate →</button>
+      <p class="form-note">Submitting opens a pre-filled email addressed to Scale It at <a href="mailto:scaleitdesigns@gmail.com">scaleitdesigns@gmail.com</a>, who routes your request to Dunedin Electric. You can also reach Dunedin Electric directly at <a href="mailto:info@dunedinelectric.com">info@dunedinelectric.com</a> or (727) 773-1622.</p>
+      <div class="success" id="formSuccess" role="status">Thanks — your email app should open with your estimate request ready to send to scaleitdesigns@gmail.com. If it didn't, email scaleitdesigns@gmail.com or call (727) 773-1622.</div>
+    </form>
+  </div>
+</div></section>
+
+<section class="section" id="contact"><div class="wrap">
+  <p class="kicker">Contact</p>
+  <h2>Visit or call the shop</h2>
+  <div class="contact-grid" style="margin-top:24px">
+    <article class="card">
+      <h3>Palm Harbor &amp; Dunedin Electric Co.</h3>
+      <p style="margin-top:12px">2300 Congress Avenue<br>Clearwater, Florida 33763</p>
+      <p><a class="big-phone" href="tel:+17277731622">(727) 773-1622</a></p>
+      <p>Fax: (727) 773-1721<br>Email: <a href="mailto:info@dunedinelectric.com" style="font-weight:700;text-decoration:underline">info@dunedinelectric.com</a><br>License #EC13002291</p>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:16px">
+        <a class="btn btn-amber" href="tel:+17277731622">Call Now</a>
+        <a class="btn btn-ghost" href="https://www.dunedinelectric.com" target="_blank" rel="noopener">Current Website</a>
+      </div>
+    </article>
+    <article class="card">
+      <h3>Business Hours</h3>
+      <table class="hours" aria-label="Business hours">
+        <tr><td>Monday</td><td>8:00 AM – 4:30 PM</td></tr>
+        <tr><td>Tuesday</td><td>8:00 AM – 4:30 PM</td></tr>
+        <tr><td>Wednesday</td><td>8:00 AM – 4:30 PM</td></tr>
+        <tr><td>Thursday</td><td>8:00 AM – 4:30 PM</td></tr>
+        <tr><td>Friday</td><td>8:00 AM – 4:30 PM</td></tr>
+        <tr><td>Saturday</td><td>Closed</td></tr>
+        <tr><td>Sunday</td><td>Closed</td></tr>
+      </table>
+      <p>After-hours support available for electrical emergencies — call (727) 773-1622.</p>
+    </article>
+  </div>
+</div></section>
+</main>
+
+<section style="background:var(--amber);color:#1c1600;padding:40px 0;text-align:center">
+  <div class="wrap">
+    <h2 style="color:#1c1600">Own this website for your business</h2>
+    <p style="max-width:62ch;margin:12px auto 20px;font-weight:600">$70 one-time, first year of hosting included, then $5/mo. When you buy, it moves to your own domain.</p>
+    <a class="btn btn-navy" href="https://square.link/u/cz1GGRh0" target="_blank" rel="noopener">Claim This Site — $70</a>
+  </div>
+</section>
+
+<footer class="site"><div class="wrap">
+  <span>© Dunedin Electric Co. — Palm Harbor &amp; Dunedin Electric, Clearwater, FL. License #EC13002291.</span>
+  <span>Demo built by <a href="mailto:scaleitdesigns@gmail.com">Scale It</a> • $70 one-time, first year hosting included, then $5/mo • When you buy, it moves to your own domain.</span>
+  <a class="footer-claim" href="https://square.link/u/cz1GGRh0" target="_blank" rel="noopener">Claim This Site</a>
+</div></footer>
+
+<div class="sticky-call">
+  <a class="btn btn-navy" href="tel:+17277731622">☎ Call Now</a>
+  <a class="btn btn-amber" href="#estimate">Free Estimate</a>
+</div>
+
+<script>
+var stickyBar=document.querySelector('.sticky-call');
+function onScroll(){ if(window.scrollY>520){stickyBar.classList.add('show')}else{stickyBar.classList.remove('show')} }
+window.addEventListener('scroll',onScroll,{passive:true}); onScroll();
+document.getElementById('estimateForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  var name=document.getElementById('f-name').value.trim();
+  var phone=document.getElementById('f-phone').value.trim();
+  if(!name||!phone){ var s=document.getElementById('formSuccess'); s.textContent='Please add your name and phone so we can reach you, then submit again.'; s.classList.add('show'); return; }
+  var email=document.getElementById('f-email').value.trim();
+  var service=document.getElementById('f-service').value;
+  var city=document.getElementById('f-city').value.trim();
+  var msg=document.getElementById('f-msg').value.trim();
+  var subject=encodeURIComponent('Free Estimate Request — Dunedin Electric — '+name);
+  var body=encodeURIComponent(
+    'New estimate request for Dunedin Electric (via demo site)\n\n'+
+    'Name: '+name+'\nPhone: '+phone+'\nEmail: '+(email||'—')+'\nService: '+service+'\nCity / Address: '+(city||'—')+'\n\nDetails:\n'+(msg||'—')+'\n'
+  );
+  window.location.href='mailto:scaleitdesigns@gmail.com?subject='+subject+'&body='+body;
+  document.getElementById('formSuccess').classList.add('show');
+});
+</script>
+</body>
+</html>

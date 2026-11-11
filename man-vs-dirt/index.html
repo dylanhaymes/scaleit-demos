@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head><meta name="robots" content="noindex,nofollow">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="data:,">
+<title>Man vs Dirt — Commercial Cleaning in Tampa Bay | Demo</title>
+<meta name="description" content="Recurring commercial cleaning built around your business. Offices, medical & dental, churches, restaurants, hotels and post-construction across Tampa Bay. Free walkthrough: 727-295-0039.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f7f5; --surface:#ffffff; --surface2:#eaf1ed; --ink:#0f2420; --muted:#5b6f68; --line:#d7e2dc;
+  --navy:#0c2b26; --emerald:#08755f; --emerald-dark:#065c4b; --lime:#c8e86a; --gold:#f2b01e;
+  --radius:18px; --shadow:0 12px 32px rgba(12,43,38,.10);
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#0b1512; --surface:#13201c; --surface2:#1a2b26; --ink:#eaf4f0; --muted:#a7bcb4; --line:#243832; --navy:#081c18; --shadow:0 12px 32px rgba(0,0,0,.35); }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:"Barlow",system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55}
+img{max-width:100%;display:block}
+a{color:inherit}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+h1,h2,h3{font-family:"Barlow Condensed", "Barlow", sans-serif;line-height:.95;letter-spacing:.01em;margin:0;text-transform:uppercase}
+h1{font-size:clamp(2.9rem,7vw,5.2rem);font-weight:800}
+h2{font-size:clamp(2rem,4.5vw,3.1rem);font-weight:800}
+h3{font-size:1.35rem;font-weight:700}
+p{margin:0}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:12px 20px;border-radius:999px;font-weight:700;text-decoration:none;border:1px solid transparent;cursor:pointer;font-size:1rem}
+.btn-primary{background:var(--emerald);color:#fff}
+.btn-primary:hover{background:var(--emerald-dark)}
+.btn-dark{background:var(--navy);color:#fff}
+.btn-ghost{background:transparent;border-color:var(--line);color:var(--ink)}
+.btn-lime{background:var(--lime);color:#12251f}
+.topbar{background:var(--navy);color:#dff3ec;font-size:.92rem}
+.topbar .wrap{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;justify-content:space-between;padding-top:8px;padding-bottom:8px}
+.topbar a{font-weight:700;text-decoration:none}
+header.site{position:sticky;top:0;z-index:20;background:color-mix(in srgb, var(--bg) 92%, transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+header.site .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:12px;padding-bottom:12px}
+.logo{font-family:"Barlow Condensed",sans-serif;font-weight:800;font-size:1.9rem;letter-spacing:.02em;text-transform:uppercase;line-height:1;text-decoration:none}
+.logo span{color:var(--emerald)}
+.logo small{display:block;font-family:"Barlow",sans-serif;font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-top:2px}
+nav.main{display:flex;gap:4px;flex-wrap:wrap}
+nav.main a{text-decoration:none;font-weight:600;padding:10px 12px;border-radius:999px;min-height:40px;display:inline-flex;align-items:center}
+nav.main a:hover{background:var(--surface2)}
+.hero{padding:34px 0 8px}
+.hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:28px;align-items:center}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:7px 12px;font-weight:700;font-size:.88rem}
+.eyebrow i{width:8px;height:8px;border-radius:50%;background:var(--emerald);display:inline-block}
+.hero h1 em{font-style:normal;color:var(--emerald)}
+.hero-sub{font-size:1.18rem;color:var(--muted);margin-top:16px;max-width:34rem}
+.hero-cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.hero-points{list-style:none;padding:0;margin:20px 0 0;display:grid;gap:8px;font-weight:600}
+.hero-points li{display:flex;gap:10px;align-items:flex-start}
+.hero-points li::before{content:"✓";width:24px;height:24px;flex:0 0 24px;border-radius:50%;background:var(--emerald);color:#fff;display:grid;place-items:center;font-size:.85rem;margin-top:1px}
+.hero-media{position:relative}
+.hero-media img{width:100%;height:520px;object-fit:cover;border-radius:22px;box-shadow:var(--shadow)}
+.badge{position:absolute;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;box-shadow:var(--shadow);max-width:240px}
+.badge b{display:block;font-size:1.05rem}
+.badge span{color:var(--muted);font-size:.9rem}
+.badge-1{left:14px;bottom:14px}
+.badge-2{right:14px;top:14px;text-align:right}
+.stars{color:var(--gold);letter-spacing:2px;font-size:1rem}
+.stats{margin-top:26px;background:var(--navy);color:#fff;border-radius:18px;padding:18px;display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.stats div{text-align:center;padding:6px}
+.stats b{font-family:"Barlow Condensed",sans-serif;font-size:2rem;display:block;line-height:1}
+.stats span{color:#b9d6cd;font-size:.92rem;font-weight:600}
+section{padding:52px 0}
+.section-head{max-width:720px;margin-bottom:24px}
+.section-head p{color:var(--muted);margin-top:10px;font-size:1.05rem}
+.kicker{font-weight:800;letter-spacing:.14em;text-transform:uppercase;font-size:.78rem;color:var(--emerald);margin-bottom:8px}
+.services{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.card img{width:100%;height:190px;object-fit:cover}
+.card-body{padding:18px}
+.card-body p{color:var(--muted);margin-top:8px}
+.card-body a{font-weight:700;color:var(--emerald);text-decoration:none;display:inline-block;margin-top:12px;padding:6px 0}
+.text-card{padding:22px;display:flex;flex-direction:column;justify-content:center;min-height:280px}
+.text-card .icon{font-size:2rem;margin-bottom:10px}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:24px}
+.panel ul{margin:14px 0 0;padding-left:20px;color:var(--muted)}
+.panel li{margin:8px 0}
+.panel li b{color:var(--ink)}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.step{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px}
+.step-num{font-family:"Barlow Condensed",sans-serif;font-size:2.4rem;color:var(--emerald);line-height:1;font-weight:800}
+.step p{color:var(--muted);margin-top:8px}
+.process{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.process .step{padding:16px}
+.reviews{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.review{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:22px}
+.review p{margin-top:10px}
+.review footer{margin-top:14px;color:var(--muted);font-weight:600;font-size:.95rem}
+.areas{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+.pill{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:10px 16px;font-weight:700;min-height:44px;display:inline-flex;align-items:center}
+.faq details{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:6px 18px;margin-bottom:10px}
+.faq summary{font-weight:700;cursor:pointer;padding:12px 0;min-height:44px;display:flex;align-items:center}
+.faq details p{color:var(--muted);padding:0 0 16px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+label{font-weight:700;font-size:.95rem;display:block}
+input,select,textarea{width:100%;margin-top:6px;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit;min-height:48px}
+textarea{min-height:110px}
+.full{grid-column:1/-1}
+.form-note{color:var(--muted);font-size:.93rem;margin-top:12px}
+.demo-box{background:#fff8d6;border:1px solid #e6cf6a;color:#3d3410;border-radius:var(--radius);padding:22px}
+@media (prefers-color-scheme: dark){ .demo-box{background:#2a2410;border-color:#6b5d1e;color:#f3e9b8} }
+.demo-box h3{font-family:"Barlow",sans-serif;text-transform:none;letter-spacing:0}
+.demo-box p{margin-top:8px}
+.price-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.price{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-weight:700}
+footer.site{background:var(--navy);color:#cfe6de;padding:36px 0}
+footer.site a{color:#fff}
+.footer-grid{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:20px}
+.footer-grid p{margin-top:8px;color:#a9c8be}
+@media (max-width:900px){
+  nav.main{display:none}
+  .hero-grid,.split,.footer-grid{grid-template-columns:1fr}
+  .hero-media img{height:340px}
+  .stats{grid-template-columns:1fr 1fr}
+  .services{grid-template-columns:1fr 1fr}
+  .steps,.process{grid-template-columns:1fr 1fr}
+  .reviews{grid-template-columns:1fr}
+}
+@media (max-width:560px){
+  .services,.steps,.process,.form-grid{grid-template-columns:1fr}
+  .badge-2{display:none}
+  .topbar .wrap{justify-content:center;text-align:center}
+}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="wrap"><span>Commercial cleaning · Tampa Bay — Tampa • Pasco • Pinellas • Sarasota</span><span><a href="tel:+17272950039">☎ 727-295-0039</a> &nbsp;·&nbsp; <a href="mailto:info@manvsdirtcleaning.com">info@manvsdirtcleaning.com</a></span></div></div>
+
+<header class="site"><div class="wrap">
+  <a class="logo" href="#top">Man <span>vs</span> Dirt<small>Commercial Cleaning · Tampa Bay</small></a>
+  <nav class="main" aria-label="Main">
+    <a href="#services">Services</a><a href="#how">How It Works</a><a href="#reviews">Reviews</a><a href="#faq">FAQ</a><a href="#estimate">Free Estimate</a>
+  </nav>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+    <a class="btn btn-primary" href="#estimate">Get Free Estimate</a>
+    <a class="btn btn-lime" href="https://square.link/u/cz1GGRh0" target="_blank" rel="noopener">Claim This Site — $70</a>
+  </div>
+</div></header>
+
+<main id="top">
+  <!-- HERO -->
+  <div class="hero"><div class="wrap"><div class="hero-grid">
+    <div>
+      <span class="eyebrow"><i></i> ★ 5.0 on Google · 21+ reviews · Commercial only</span>
+      <h1 style="margin-top:16px">Commercial cleaning. <em>Built around your business.</em></h1>
+      <p class="hero-sub">Recurring commercial cleaning that keeps your space ready for the people who count on it — from the first person through the door to the last light switched off.</p>
+      <div class="hero-cta">
+        <a class="btn btn-primary" href="#estimate">Schedule My Free Walkthrough →</a>
+        <a class="btn btn-ghost" href="tel:+17272950039">Call 727-295-0039</a>
+      </div>
+      <ul class="hero-points">
+        <li>Cleaning plans built around your facility, traffic, and hours</li>
+        <li>Recurring service and after-hours options</li>
+        <li>Local crews. Clear communication. Hands-on leadership.</li>
+      </ul>
+    </div>
+    <div class="hero-media">
+      <img src="assets/hero.jpg" alt="Man vs Dirt cleaning team working together in a bright modern office">
+      <div class="badge badge-2"><span class="stars">★★★★★</span><b>5-Star Service</b><span>Google Reviews</span></div>
+      <div class="badge badge-1"><b>24/7 Support</b><span>Support &amp; communication when you need it</span></div>
+    </div>
+  </div>
+  <div class="stats">
+    <div><b>5.0 ★</b><span>Google rating</span></div>
+    <div><b>21+</b><span>Google reviews</span></div>
+    <div><b>4</b><span>Counties — Tampa, Pasco, Pinellas, Sarasota</span></div>
+    <div><b>24/7</b><span>Support &amp; communication</span></div>
+  </div>
+  </div></div>
+
+  <!-- SERVICES -->
+  <section id="services"><div class="wrap">
+    <div class="section-head"><div class="kicker">Cleaning that fits the way you work</div><h2>Every facility. One dependable routine.</h2><p>Your space makes an impression. Build a cleaning plan around your facility, traffic, and hours — not a one-size-fits-all checklist.</p></div>
+    <div class="services">
+      <article class="card"><img src="assets/medical.webp" alt="Professional cleaner disinfecting a counter in a medical office waiting area"><div class="card-body"><h3>Medical &amp; Dental Cleaning</h3><p>Recurring facility cleaning around patient hours, with attention to high-touch surfaces and waiting areas.</p><a href="#estimate">Get this service →</a></div></article>
+      <article class="card"><img src="assets/office.jpg" alt="Cleaning team mopping and wiping desks in a bright office"><div class="card-body"><h3>Office Cleaning</h3><p>A workplace ready for your team and your customers — workstations, common areas, restrooms, and glass.</p><a href="#estimate">Get this service →</a></div></article>
+      <article class="card"><img src="assets/church.jpg" alt="Bright, clean church interior with rows of pews ready for service"><div class="card-body"><h3>Church Cleaning</h3><p>For weekly services, ministries, and special events. Sanctuaries, fellowship halls, and classrooms kept ready.</p><a href="#estimate">Get this service →</a></div></article>
+      <article class="card"><img src="assets/construction.png" alt="Workers performing detailed post-construction cleanup in a finished space"><div class="card-body"><h3>Post-Construction Cleaning</h3><p>Prepare your finished space for its next chapter — detailed cleanup around delicate surfaces, marble, and fine finishes.</p><a href="#estimate">Get this service →</a></div></article>
+      <article class="card"><img src="assets/restaurant.jpg" alt="Staff member wiping down a table in a clean, modern restaurant dining room"><div class="card-body"><h3>Restaurant Cleaning</h3><p>Dining areas, restrooms, and approved kitchen surfaces — so the room is guest-ready before the first seating.</p><a href="#estimate">Get this service →</a></div></article>
+      <article class="card"><img src="assets/hotel.jpg" alt="Polished, spotless hotel lobby with reception desk and seating"><div class="card-body"><h3>Hotel &amp; Day Porter</h3><p>Upkeep for busy, shared, and guest-facing spaces. Lobbies, clubhouses, and common areas that stay presentation-ready all day.</p><a href="#estimate">Get this service →</a></div></article>
+      <article class="card text-card"><div class="icon">🏢</div><h3>Commercial Cleaning</h3><p>Flexible cleaning plans for everyday business — retail, clubhouses, resorts, and multi-tenant properties across Tampa Bay.</p><a href="#estimate" style="font-weight:700;color:var(--emerald);text-decoration:none;margin-top:12px">Build my plan →</a></article>
+      <article class="card text-card"><div class="icon">🌙</div><h3>After-Hours Cleaning</h3><p>Keep cleaning on schedule after the doors close. After-hours scheduling arranged around your access and crew availability.</p><a href="#estimate" style="font-weight:700;color:var(--emerald);text-decoration:none;margin-top:12px">Ask about after-hours →</a></article>
+      <article class="card text-card" style="background:var(--navy);color:#fff;border-color:var(--navy)"><div class="icon">🧹</div><h3>Floors &amp; Detail Work</h3><p style="color:#b9d6cd">From clubhouse strip-and-wax jobs to fine-detail catches other crews miss — if it is in your agreed scope, it gets done and checked.</p><a href="#estimate" style="font-weight:700;color:var(--lime);text-decoration:none;margin-top:12px">Request a walkthrough →</a></article>
+    </div>
+  </div></section>
+
+  <!-- WHY / LEADERSHIP -->
+  <section style="padding-top:0"><div class="wrap"><div class="split">
+    <div class="panel">
+      <div class="kicker">The people behind Man vs Dirt</div><h2>Local leadership. Personal accountability.</h2>
+      <p style="color:var(--muted);margin-top:12px">Man vs Dirt is built around a hands-on leadership team that understands both the operational and service side of professional cleaning. From the initial walkthrough to ongoing service, managers stay close to the work, support the crews, and help ensure every cleaning plan is completed with consistency and clear communication.</p>
+      <ul>
+        <li><b>Hands-On Leadership</b> — Managers who stay involved in the service process.</li>
+        <li><b>Clear Communication</b> — Direct updates from walkthrough through ongoing service.</li>
+        <li><b>Defined Expectations</b> — Custom scopes and cleaning plans built around each property.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <div class="kicker">Keep cleaning off your to-do list</div><h2>Your team has a business to run.</h2>
+      <p style="color:var(--muted);margin-top:12px">Start with a walkthrough, agree on the priorities, and get a recurring schedule that fits your operation.</p>
+      <ul>
+        <li><b>Agreed Cleaning Scope</b> — A walkthrough and checklist based on your property.</li>
+        <li><b>A Schedule That Fits</b> — Recurring service coordinated around your operating hours.</li>
+        <li><b>Cleaner Workstations &amp; Common Areas</b> — Plus attention to high-touch surfaces.</li>
+        <li><b>A More Professional Presentation</b> — Ready for employees, customers, tenants, and guests.</li>
+      </ul>
+      <a class="btn btn-dark" href="#estimate" style="margin-top:18px">Get My Free Estimate</a>
+    </div>
+  </div></div></section>
+
+  <!-- HOW IT WORKS -->
+  <section id="how" style="padding-top:0"><div class="wrap">
+    <div class="section-head"><div class="kicker">How it works</div><h2>From quote request to service start</h2><p>Understand your options, build the right cleaning plan, and get service started without unnecessary delays.</p></div>
+    <div class="steps">
+      <div class="step"><div class="step-num">01</div><h3>Request Your Free Estimate</h3><p>Complete the form and tell us about your property, timeline, and cleaning needs.</p></div>
+      <div class="step"><div class="step-num">02</div><h3>Schedule a Walkthrough</h3><p>Our team reviews the property and clarifies the spaces, priorities, frequency, and service expectations.</p></div>
+      <div class="step"><div class="step-num">03</div><h3>Review Your Custom Plan</h3><p>We prepare a clear cleaning plan and recommendation based on your facility, schedule, and budget.</p></div>
+      <div class="step"><div class="step-num">04</div><h3>Approve &amp; Schedule Service</h3><p>Once the plan is approved, we coordinate the service date and prepare the team for your property.</p></div>
+    </div>
+    <div class="section-head" style="margin-top:36px"><div class="kicker">What to expect on every visit</div><h2>A process built for consistency</h2></div>
+    <div class="process">
+      <div class="step"><div class="step-num">01</div><h3>Arrival &amp; Site Review</h3><p>Crew confirms scope, priority areas, access, and property conditions.</p></div>
+      <div class="step"><div class="step-num">02</div><h3>Prep &amp; Protection</h3><p>Work area prepared with the right safety, access, and property-protection procedures.</p></div>
+      <div class="step"><div class="step-num">03</div><h3>Detailed Cleaning</h3><p>Approved checklist completed, with close attention to high-use and high-visibility areas.</p></div>
+      <div class="step"><div class="step-num">04</div><h3>Quality Control</h3><p>Completed areas reviewed against the cleaning plan so missed details can be addressed.</p></div>
+      <div class="step"><div class="step-num">05</div><h3>Final Check</h3><p>Final review completed and any important updates or next steps communicated.</p></div>
+    </div>
+  </div></section>
+
+  <!-- REVIEWS -->
+  <section id="reviews" style="padding-top:0"><div class="wrap">
+    <div class="section-head"><div class="kicker">Customer reviews · Google ★ 5-star service</div><h2>What Tampa Bay customers have to say</h2><p>Real feedback from property managers, contractors, business owners, and facility operators who trust Man vs Dirt. Excerpts from Google reviews.</p></div>
+    <div class="reviews">
+      <article class="review"><span class="stars">★★★★★</span><p>“Highly recommend Man Vs Dirt for any residential or commercial cleaning jobs. They have been very professional, friendly, and eager to assist. Truly appreciate their hard work and attention to detail in cleaning our offices at Bartlett Tree Experts.”</p><footer>— Google review · Bartlett Tree Experts offices</footer></article>
+      <article class="review"><span class="stars">★★★★★</span><p>“We had an excellent experience with Man vs. Dirt! From the initial estimate through scheduling and completion, they were professional, responsive, and very communicative. The quality of their work exceeded our expectations! The owner of CP Communications was astonished by the results.”</p><footer>— Google review · CP Communications</footer></article>
+      <article class="review"><span class="stars">★★★★★</span><p>“Man Vs Dirt did an amazing job on the clubhouse floors at Waterside Club. I am very pleased with the finished result. It was not an easy strip and wax. I will not hesitate to call them for all my janitorial needs.”</p><footer>— Google review · Waterside Club</footer></article>
+      <article class="review"><span class="stars">★★★★★</span><p>“I’m the maintenance director at one of the resorts on Treasure Island and Karla and her team have been working with us for a few years now and can’t compliment them enough. They continue to do great consistent work and our guests agree!!”</p><footer>— Google review · Treasure Island resort</footer></article>
+      <article class="review"><span class="stars">★★★★★</span><p>“We hired this team for a post-construction cleanup in a new penthouse, and the results were outstanding. They paid exceptional attention to detail, especially around delicate surfaces like marble floors and level 5 drywall finishes. Jonathan was very communicative throughout.”</p><footer>— Google review · Post-construction penthouse</footer></article>
+      <article class="review"><span class="stars">★★★★★</span><p>“Have used Jonathan and the crew for multiple post-construction cleanings. Fast, efficient and detailed. Good communication through the process. I first noticed MVD from our church where they do regular cleanings. I appreciate how clean they keep our church!”</p><footer>— Google review · Church + post-construction client</footer></article>
+    </div>
+  </div></section>
+
+  <!-- AREAS + FAQ -->
+  <section style="padding-top:0"><div class="wrap"><div class="split">
+    <div>
+      <div class="kicker">Serving Tampa Bay</div><h2>Local cleaning for your commercial space</h2>
+      <p style="color:var(--muted);margin-top:10px">We serve commercial properties across Tampa Bay. Contact us to confirm availability for your location.</p>
+      <div class="areas"><span class="pill">📍 Tampa</span><span class="pill">📍 Pasco</span><span class="pill">📍 Pinellas</span><span class="pill">📍 Sarasota</span><span class="pill">📍 Clearwater — HQ</span></div>
+      <div class="panel" style="margin-top:18px">
+        <h3 style="font-family:var(--font-body);text-transform:none">Man Vs Dirt LLC</h3>
+        <p style="color:var(--muted);margin-top:8px">4407 Baden Dr, Clearwater, FL 33765<br>Phone: <a href="tel:+17272950039" style="font-weight:700">727-295-0039</a><br>Email: <a href="mailto:info@manvsdirtcleaning.com" style="font-weight:700">info@manvsdirtcleaning.com</a><br>Current site: <a href="https://www.manvsdirtcleaning.com" target="_blank" rel="noopener" style="font-weight:700">manvsdirtcleaning.com</a></p>
+        <p style="color:var(--muted);margin-top:10px;font-size:.95rem">Note: Man vs Dirt cleans commercial properties and facilities only — no residential house cleaning.</p>
+      </div>
+    </div>
+    <div id="faq" class="faq">
+      <div class="kicker">Commercial cleaning FAQ</div><h2 style="margin-bottom:18px">Common questions</h2>
+      <details open><summary>Do you offer recurring commercial cleaning?</summary><p>Yes. We can build daily, weekly, or other recurring schedules around your facility’s needs, operating hours, and agreed scope.</p></details>
+      <details><summary>Can you clean after our business closes?</summary><p>After-hours scheduling can be arranged based on your location, access requirements, and crew availability. We review those details during your walkthrough.</p></details>
+      <details><summary>Do you offer residential house cleaning?</summary><p>No. These services are for commercial properties and facilities. We do not offer residential house cleaning.</p></details>
+      <details><summary>How do we get a quote?</summary><p>Request a free walkthrough. We review your space, cleaning priorities, access, and preferred schedule before preparing your cleaning plan and estimate. Use the form on this page — it opens a pre-filled email so you can review it before sending.</p></details>
+      <details><summary>What areas do you serve?</summary><p>We serve commercial properties across Tampa Bay, including Tampa, Pasco, Pinellas, and Sarasota. Contact us to confirm availability for your location.</p></details>
+    </div>
+  </div></div></section>
+
+  <!-- ESTIMATE FORM -->
+  <section id="estimate" style="padding-top:0"><div class="wrap"><div class="split">
+    <div>
+      <div class="kicker">Free commercial cleaning walkthrough</div>
+      <h2>Ready for a cleaner, more professional space?</h2>
+      <p style="color:var(--muted);margin-top:12px;font-size:1.05rem">Tell us about your property and the team will reach out to schedule a free walkthrough. No pressure — you get a clear plan and estimate first, then decide.</p>
+      <ul class="hero-points" style="margin-top:18px">
+        <li>Free walkthrough — no obligation</li>
+        <li>Custom plan based on your facility, schedule, and budget</li>
+        <li>Recurring, after-hours, and one-time options</li>
+      </ul>
+      <div class="demo-box" style="margin-top:22px">
+        <h3>About this demo site</h3>
+        <p>This is a demo redesign built by <b>Scale It</b> for Man vs Dirt. When you buy, it moves to your own domain — you own the site, not a demo link.</p>
+        <div class="price-row">
+          <span class="price">$70 one-time</span>
+          <span class="price">First year of hosting included</span>
+          <span class="price">Then $5/mo hosting</span>
+        </div>
+        <p style="font-size:.93rem">The estimate form on this demo opens a pre-filled email addressed to Scale It at scaleitdesigns@gmail.com so leads from this demo reach Scale It first.</p>
+        <a class="btn btn-dark" href="https://square.link/u/cz1GGRh0" target="_blank" rel="noopener" style="width:100%;margin-top:16px">Claim This Site — $70 One-Time · First Year Hosting Included · Then $5/mo →</a>
+      </div>
+    </div>
+    <div class="panel">
+      <h3 style="font-size:1.6rem">Get your free estimate</h3>
+      <p style="color:var(--muted);margin-top:6px">Fill this in and your email app will open with everything pre-filled — just press send.</p>
+      <form id="estimateForm" style="margin-top:18px">
+        <div class="form-grid">
+          <div><label for="f-name">Your name *<input id="f-name" name="name" required autocomplete="name" placeholder="Jane Smith"></label></div>
+          <div><label for="f-business">Business / Property<input id="f-business" name="business" autocomplete="organization" placeholder="ABC Offices, Tampa"></label></div>
+          <div><label for="f-phone">Phone<input id="f-phone" name="phone" type="tel" autocomplete="tel" placeholder="(727) 555-0123"></label></div>
+          <div><label for="f-email">Email<input id="f-email" name="email" type="email" autocomplete="email" placeholder="you@company.com"></label></div>
+          <div><label for="f-type">Property type
+            <select id="f-type" name="type">
+              <option>Office</option><option>Medical / Dental</option><option>Church</option><option>Restaurant</option><option>Hotel / Resort / Clubhouse</option><option>Retail / Commercial</option><option>Post-Construction</option><option>Other commercial</option>
+            </select></label></div>
+          <div><label for="f-freq">How often?
+            <select id="f-freq" name="freq">
+              <option>Weekly — recurring</option><option>Daily — recurring</option><option>2–3x per week</option><option>Bi-weekly</option><option>One-time / deep clean</option><option>Post-construction — one-time</option><option>Not sure yet</option>
+            </select></label></div>
+          <div class="full"><label for="f-size">Approx. size / areas to clean<input id="f-size" name="size" placeholder="e.g. 6,000 sq ft — offices, 4 restrooms, lobby, break room"></label></div>
+          <div class="full"><label for="f-msg">Tell us about your property<textarea id="f-msg" name="message" placeholder="Current cleaning situation, hours, after-hours access, priorities, timeline…"></textarea></label></div>
+        </div>
+        <button class="btn btn-primary" type="submit" style="width:100%;margin-top:16px">Request Free Walkthrough →</button>
+        <p class="form-note">Submitting opens your email app with a pre-filled message to <b>scaleitdesigns@gmail.com</b> (Scale It, for this demo). Prefer to talk? Call Man vs Dirt directly at <a href="tel:+17272950039" style="font-weight:700">727-295-0039</a> or email <a href="mailto:info@manvsdirtcleaning.com" style="font-weight:700">info@manvsdirtcleaning.com</a>.</p>
+        <p id="formStatus" class="form-note" role="status" aria-live="polite"></p>
+      </form>
+    </div>
+  </div></div></section>
+</main>
+
+<footer class="site"><div class="wrap"><div class="footer-grid">
+  <div><div class="logo" style="color:#fff">Man <span style="color:var(--lime)">vs</span> Dirt</div><p>Commercial cleaning built around your business. Recurring, after-hours, and post-construction cleaning across Tampa Bay.</p></div>
+  <div><h3 style="color:#fff;font-size:1.1rem">Contact</h3><p>Man Vs Dirt LLC<br>4407 Baden Dr, Clearwater, FL 33765<br><a href="tel:+17272950039">727-295-0039</a><br><a href="mailto:info@manvsdirtcleaning.com">info@manvsdirtcleaning.com</a></p></div>
+  <div><h3 style="color:#fff;font-size:1.1rem">Services</h3><p>Office · Medical &amp; Dental · Church<br>Restaurant · Hotel &amp; Day Porter<br>Post-Construction · After-Hours</p></div>
+</div><p style="margin-top:24px;font-size:.9rem;color:#8fb3a7">Demo redesign by Scale It — $70 one-time, first year of hosting included, then $5/mo. When you buy, it moves to your own domain. Business facts and reviews sourced from manvsdirtcleaning.com.</p><div style="margin-top:18px"><a class="btn btn-lime" href="https://square.link/u/cz1GGRh0" target="_blank" rel="noopener">Claim This Site — $70</a></div></div></footer>
+
+<script>
+document.getElementById('estimateForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  var v = function(id){ return (document.getElementById(id).value || '').trim(); };
+  var lines = [
+    'New estimate request — Man vs Dirt (via Scale It demo)',
+    '',
+    'Name: ' + v('f-name'),
+    'Business / Property: ' + v('f-business'),
+    'Phone: ' + v('f-phone'),
+    'Email: ' + v('f-email'),
+    'Property type: ' + v('f-type'),
+    'Frequency: ' + v('f-freq'),
+    'Size / areas: ' + v('f-size'),
+    '',
+    'About the property:',
+    v('f-msg')
+  ];
+  var subject = encodeURIComponent('Free Estimate Request — ' + (v('f-business') || v('f-name') || 'Commercial Cleaning'));
+  var body = encodeURIComponent(lines.join('\n'));
+  window.location.href = 'mailto:scaleitdesigns@gmail.com?subject=' + subject + '&body=' + body;
+  document.getElementById('formStatus').textContent = 'Opening your email app — your request is pre-filled to scaleitdesigns@gmail.com. Just press send there.';
+});
+</script>
+</body>
+</html>

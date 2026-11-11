@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+<head><meta name="robots" content="noindex,nofollow">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="light dark" />
+<link rel="icon" href="data:," />
+<title>EasyBreezy AC — New Port Richey, FL | Life's Hard. Comfort's Not.</title>
+<meta name="description" content="EasyBreezy AC — family-owned HVAC in New Port Richey, FL since 2009. Emergency AC repair, new installs, residential & commercial HVAC, and Gold-Standard maintenance. 4.9 stars from 1,522 reviews." />
+<style>
+  :root{
+    --bg:#f3f8fa; --surface:#ffffff; --surface2:#e8f2f5; --ink:#102e3d; --muted:#476273;
+    --line:#cfe0e7; --brand:#0b6e8f; --brand-deep:#084e68; --brand-soft:#dff2f7;
+    --sun:#f2b01e; --sun-ink:#3d2c00; --good:#177245;
+    --radius:14px; --shadow:0 10px 28px rgba(8,60,82,.12);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0a1c26; --surface:#102a38; --surface2:#143444; --ink:#eaf4f7; --muted:#a9c3cd;
+      --line:#224657; --brand:#3aa8c9; --brand-deep:#7ccbe4; --brand-soft:#143a4a;
+      --sun:#f2b01e; --sun-ink:#241a00; --good:#5ec98d;
+      --shadow:0 10px 28px rgba(0,0,0,.4);
+    }
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto} }
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55;-webkit-font-smoothing:antialiased}
+  h1,h2,h3{font-family:Georgia,"Times New Roman",serif;line-height:1.12;margin:0;letter-spacing:-.01em}
+  p{margin:0}
+  a{color:var(--brand)}
+  img{max-width:100%;display:block}
+  button,input,select,textarea{font:inherit;min-height:44px}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+  /* header */
+  header.top{position:sticky;top:0;z-index:20;background:color-mix(in srgb, var(--bg) 92%, transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+  .top-in{display:flex;align-items:center;gap:16px;padding:12px 0;flex-wrap:wrap}
+  .logo{font-family:Georgia,serif;font-weight:700;font-size:1.35rem;color:var(--ink);text-decoration:none;line-height:1}
+  .logo span{color:var(--brand)}
+  .logo small{display:block;font-family:system-ui,sans-serif;font-size:.68rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-top:3px}
+  nav.main{margin-left:auto;display:flex;gap:4px;flex-wrap:wrap}
+  nav.main a{color:var(--ink);text-decoration:none;font-weight:600;font-size:.95rem;padding:10px 12px;border-radius:8px;min-height:44px;display:inline-flex;align-items:center}
+  nav.main a:hover{background:var(--surface2)}
+  .call-btn{background:var(--brand);color:#fff !important;text-decoration:none;font-weight:700;padding:10px 18px;border-radius:999px;display:inline-flex;align-items:center;min-height:44px;white-space:nowrap}
+  @media (prefers-color-scheme: dark){ .call-btn{color:#06222e !important;background:var(--brand)} }
+  /* hero */
+  .hero{padding:44px 0 8px}
+  .hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:36px;align-items:center}
+  @media (max-width:860px){ .hero-grid{grid-template-columns:1fr} }
+  .tagline{font-size:clamp(2.4rem,6vw,4rem);font-weight:700}
+  .tagline em{font-style:normal;color:var(--brand)}
+  .hero-sub{margin-top:16px;font-size:1.13rem;color:var(--muted);max-width:34rem}
+  .badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+  .badge{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:7px 13px;font-size:.88rem;font-weight:600;display:inline-flex;gap:6px;align-items:center}
+  .badge .stars{color:#d9930d;letter-spacing:1px}
+  .hero-ctas{display:flex;gap:12px;flex-wrap:wrap;margin-top:26px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;font-weight:700;border-radius:10px;padding:13px 22px;min-height:48px;border:1px solid transparent;cursor:pointer}
+  .btn-primary{background:var(--sun);color:var(--sun-ink)}
+  .btn-ghost{background:var(--surface);color:var(--ink);border-color:var(--line)}
+  .btn-claim{background:var(--brand);color:#fff;border-color:var(--brand)}
+  @media (prefers-color-scheme: dark){ .btn-claim{color:#06222e} }
+  .claim-header{background:var(--sun);color:var(--sun-ink) !important}
+  .hero-img{border-radius:18px;overflow:hidden;box-shadow:var(--shadow)}
+  .hero-img img{width:100%;height:100%;object-fit:cover;aspect-ratio:4/3.1}
+  .hero-cap{font-size:.85rem;color:var(--muted);margin-top:8px;text-align:right}
+  /* stats */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:36px 0 8px}
+  @media (max-width:760px){ .stats{grid-template-columns:repeat(2,1fr)} }
+  .stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px;text-align:center}
+  .stat b{display:block;font-family:Georgia,serif;font-size:1.7rem;color:var(--brand-deep)}
+  .stat span{font-size:.88rem;color:var(--muted);font-weight:600}
+  /* sections */
+  section{padding:52px 0 8px}
+  .kicker{font-size:.78rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--brand);margin-bottom:10px}
+  h2{font-size:clamp(1.7rem,3.4vw,2.3rem);margin-bottom:12px}
+  .lede{color:var(--muted);max-width:44rem;font-size:1.05rem}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
+  .grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:26px}
+  @media (max-width:860px){ .grid3,.grid2{grid-template-columns:1fr} }
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:24px}
+  .card h3{font-size:1.22rem;margin-bottom:8px}
+  .card p{color:var(--muted);font-size:.98rem}
+  .icon{width:44px;height:44px;border-radius:10px;background:var(--brand-soft);display:flex;align-items:center;justify-content:center;margin-bottom:14px}
+  .icon svg{width:24px;height:24px;stroke:var(--brand);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  /* split */
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start;margin-top:8px}
+  @media (max-width:860px){ .split{grid-template-columns:1fr} }
+  .split img.photo{border-radius:16px;box-shadow:var(--shadow);width:100%;aspect-ratio:4/3;object-fit:cover}
+  ul.check{list-style:none;margin:18px 0 0;padding:0;display:grid;gap:12px}
+  ul.check li{display:flex;gap:11px;align-items:flex-start;font-size:1rem}
+  ul.check li::before{content:"";flex:0 0 auto;width:22px;height:22px;margin-top:2px;border-radius:50%;background:var(--brand-soft) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230b6e8f' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6L9 17l-5-5'/%3E%3C/svg%3E") center/13px no-repeat}
+  ul.check li b{font-weight:700}
+  ul.check li span{color:var(--muted)}
+  /* reviews */
+  .review .stars{color:#d9930d;letter-spacing:2px;font-size:1.05rem;margin-bottom:10px}
+  .review p{color:var(--ink);font-size:1rem}
+  .review footer{margin-top:14px;font-size:.88rem;color:var(--muted);font-weight:600}
+  /* giving back */
+  .give{background:var(--brand-deep);color:#fff;border-radius:18px;padding:32px;display:grid;grid-template-columns:1.2fr .8fr;gap:28px;align-items:center}
+  @media (prefers-color-scheme: dark){ .give{background:#0e3446} }
+  @media (max-width:760px){ .give{grid-template-columns:1fr} }
+  .give h2{color:#fff}
+  .give p{color:#d7ecf3}
+  .give .bucks{background:var(--sun);color:var(--sun-ink);border-radius:14px;padding:22px;text-align:center}
+  .give .bucks b{display:block;font-family:Georgia,serif;font-size:2.2rem}
+  .give .bucks span{font-weight:600;font-size:.95rem}
+  /* areas */
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+  .chip{background:var(--surface);border:1px solid var(--line);padding:8px 14px;border-radius:999px;font-weight:600;font-size:.92rem}
+  .county-note{margin-top:14px;color:var(--muted)}
+  /* form */
+  .form-wrap{background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);overflow:hidden;display:grid;grid-template-columns:.9fr 1.1fr}
+  @media (max-width:860px){ .form-wrap{grid-template-columns:1fr} }
+  .form-side{background:var(--brand-soft);padding:30px}
+  .form-side h3{font-size:1.4rem;margin-bottom:10px}
+  .form-side p{color:var(--muted)}
+  .form-side .row{margin-top:18px;font-size:.98rem}
+  .form-side .row b{display:block;font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;color:var(--brand);margin-bottom:2px}
+  .form-side a{font-weight:700}
+  form{padding:30px;display:grid;gap:14px}
+  label{font-weight:600;font-size:.92rem;display:grid;gap:6px}
+  input,select,textarea{border:1px solid var(--line);border-radius:9px;padding:11px 13px;background:var(--bg);color:var(--ink);width:100%}
+  textarea{min-height:96px;resize:vertical}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--brand);outline-offset:1px}
+  .form-note{font-size:.86rem;color:var(--muted)}
+  .sent{display:none;background:#e7f6ec;border:1px solid #bfe6cb;color:#14532d;border-radius:10px;padding:14px 16px;font-weight:600}
+  @media (prefers-color-scheme: dark){ .sent{background:#123324;border-color:#1f5136;color:#a9e8c0} }
+  /* demo box */
+  .demo-box{margin:56px 0 0;border:2px dashed var(--brand);border-radius:16px;padding:26px;background:var(--surface)}
+  .demo-box h2{font-size:1.5rem}
+  .demo-box .price{font-family:Georgia,serif;font-size:2rem;color:var(--brand-deep)}
+  .demo-box p{color:var(--muted);max-width:46rem;margin-top:6px}
+  footer.site{margin-top:48px;border-top:1px solid var(--line);padding:28px 0 44px;color:var(--muted);font-size:.92rem}
+  footer.site .cols{display:flex;gap:28px;flex-wrap:wrap;justify-content:space-between}
+  footer.site b{color:var(--ink)}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap top-in">
+    <a class="logo" href="#top">Easy<span>Breezy</span> AC<small>New Port Richey, Florida</small></a>
+    <nav class="main" aria-label="Main">
+      <a href="#services">Services</a>
+      <a href="#maintenance">Maintenance</a>
+      <a href="#reviews">Reviews</a>
+      <a href="#areas">Service Area</a>
+      <a href="#estimate">Get an Estimate</a>
+    </nav>
+    <a class="call-btn" href="tel:+17278564822">Call (727) 856-4822</a>
+    <a class="call-btn claim-header" href="https://square.link/u/cz1GGRh0" target="_blank" rel="noopener">Claim This Site — $70</a>
+  </div>
+</header>
+
+<main id="top">
+  <!-- HERO -->
+  <div class="wrap hero">
+    <div class="hero-grid">
+      <div>
+        <h1 class="tagline">Life's Hard.<br><em>Comfort's Not.</em></h1>
+        <p class="hero-sub">EasyBreezy AC is a family-owned HVAC company in New Port Richey, established in 2009 — first-class repairs, maintenance, and installation for all major brands, for homes and businesses across Tampa Bay.</p>
+        <div class="badges">
+          <span class="badge"><span class="stars" aria-hidden="true">★★★★★</span> 4.9 · 1,522 reviews</span>
+          <span class="badge">BBB A+ Rated</span>
+          <span class="badge">License #CAC1818988</span>
+          <span class="badge">Open 7 Days · 8 AM – 5 PM</span>
+        </div>
+        <div class="hero-ctas">
+          <a class="btn btn-primary" href="#estimate">Get a Free Estimate</a>
+          <a class="btn btn-ghost" href="tel:+17278564822">Call (727) 856-4822</a>
+          <a class="btn btn-claim" href="https://square.link/u/cz1GGRh0" target="_blank" rel="noopener">Claim This Site — $70</a>
+        </div>
+      </div>
+      <div>
+        <div class="hero-img"><img src="assets/hero.jpg" alt="Two HVAC technicians installing an outdoor air conditioning unit beside a Florida home with palm trees — representative photo" /></div>
+        <p class="hero-cap">Representative photo — new AC installation, done right the first time.</p>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><b>~10,000</b><span>Active residential &amp; commercial customers</span></div>
+      <div class="stat"><b>4.9 ★</b><span>Average rating across 1,522 reviews</span></div>
+      <div class="stat"><b>Since 2009</b><span>Family-owned in Tampa Bay</span></div>
+      <div class="stat"><b>4 Counties</b><span>Pasco · Pinellas · Hernando · Hillsborough</span></div>
+    </div>
+  </div>
+
+  <!-- SERVICES -->
+  <section id="services">
+    <div class="wrap">
+      <p class="kicker">What We Do</p>
+      <h2>Repair, maintenance &amp; installation — for every system</h2>
+      <p class="lede">With a fleet of service vans and an on-call staff, we try to always be there when you need us — and we service the brands you know and trust, with guaranteed installations.</p>
+      <div class="grid3">
+        <div class="card">
+          <div class="icon"><svg viewBox="0 0 24 24"><path d="M13 2L4.5 13.5H11L9.5 22 19 10h-6.5L13 2z"/></svg></div>
+          <h3>Emergency AC Repair</h3>
+          <p>AC out in the Florida heat? Our on-call team responds fast — reviewers tell us techs have arrived within the hour, explained the problem clearly, and fixed it right.</p>
+        </div>
+        <div class="card">
+          <div class="icon"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="10" rx="2"/><path d="M7 19h10M12 15v4M7 9h10M7 12h6"/></svg></div>
+          <h3>New AC Sales &amp; Installation</h3>
+          <p>The right unit for your home or business, expertly installed and guaranteed — including eco-friendly, high-efficiency equipment that can bring energy bills down.</p>
+        </div>
+        <div class="card">
+          <div class="icon"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7M5 10v10h14V10M10 20v-5h4v5"/></svg></div>
+          <h3>Residential HVAC</h3>
+          <p>Repair, maintenance, and installation of residential cooling and heating systems — plus whole-home air filters, purifiers, and indoor air quality solutions.</p>
+        </div>
+        <div class="card">
+          <div class="icon"><svg viewBox="0 0 24 24"><path d="M4 21V8l6 4V8l6 4V5h4v16H4zM8 17h2M14 17h2"/></svg></div>
+          <h3>Commercial HVAC</h3>
+          <p>We select the right units for your business and provide maintenance &amp; repair to keep your employees and customers comfortable — no downtime, no lost service.</p>
+        </div>
+        <div class="card">
+          <div class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div>
+          <h3>Maintenance Plans</h3>
+          <p>Our Gold-Standard maintenance programs keep systems running at maximum efficiency — set it and forget it, with huge cost savings and peace of mind.</p>
+        </div>
+        <div class="card">
+          <div class="icon"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M9 4v6M15 4v6M9 15h6"/></svg></div>
+          <h3>Data Center Cooling</h3>
+          <p>Specialized expertise to ensure there is no downtime or loss of service due to cooling issues — precision cooling for the rooms that can't afford to get warm.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MAINTENANCE -->
+  <section id="maintenance">
+    <div class="wrap">
+      <div class="split">
+        <div>
+          <p class="kicker">Gold-Standard Maintenance</p>
+          <h2>Set it and forget it</h2>
+          <p class="lede">For commercial and residential alike, we have the best maintenance program you'll find anywhere — planned ahead, so breakdowns don't catch you in the middle of a Florida summer.</p>
+          <ul class="check">
+            <li><div><b>Planned maintenance visits</b> — <span>scheduled before the cooling and heating season starts.</span></div></li>
+            <li><div><b>Free phone troubleshooting</b> — <span>for unexpected malfunctions, talk it through with us first.</span></div></li>
+            <li><div><b>Priority emergency service</b> — <span>we service our Gold-Standard customers first.</span></div></li>
+            <li><div><b>Your own EasyBreezy email</b> — <span>a personalized address created just for you: (YourName)@EasyBreezyAC.com.</span></div></li>
+          </ul>
+          <div class="hero-ctas">
+            <a class="btn btn-primary" href="#estimate">Ask About a Maintenance Plan</a>
+          </div>
+        </div>
+        <div>
+          <img class="photo" src="assets/repair.jpg" alt="HVAC technician servicing an air conditioning system — representative photo" />
+          <img class="photo" src="assets/install.jpg" alt="New high-efficiency air conditioning installation in Florida — representative photo" style="margin-top:16px" />
+          <p class="hero-cap">Representative photos of HVAC service and installation work.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- REVIEWS -->
+  <section id="reviews">
+    <div class="wrap">
+      <p class="kicker">Reviews</p>
+      <h2>4.9 stars from 1,522 reviews</h2>
+      <p class="lede">Real words from real EasyBreezy customers across Tampa Bay.</p>
+      <div class="grid3">
+        <div class="card review">
+          <div class="stars" aria-label="5 out of 5 stars">★★★★★</div>
+          <p>"Mike and Marcus came out to troubleshoot and repair the unit in the attic. They were very knowledgeable, fast, and friendly. I will happily deal with them in the future and recommend you do as well."</p>
+          <footer>Verified customer review · via Birdeye</footer>
+        </div>
+        <div class="card review">
+          <div class="stars" aria-label="5 out of 5 stars">★★★★★</div>
+          <p>"Got home from work and the AC would not cool. Called Easy Breezy AC and they had techs to me within an hour. Marcos and Mike were super helpful, informative, and quick — they explained what was going on, how we were gonna fix it, and how to prevent it from happening again."</p>
+          <footer>Verified customer review · via Birdeye</footer>
+        </div>
+        <div class="card review">
+          <div class="stars" aria-label="5 out of 5 stars">★★★★★</div>
+          <p>"Excellent service in the middle of the summer. They were able to have someone out quickly too. Very reasonable service fees. Highly recommended."</p>
+          <footer>Verified customer review · via Birdeye</footer>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GIVING BACK -->
+  <section>
+    <div class="wrap">
+      <div class="give">
+        <div>
+          <h2>Help us help others</h2>
+          <p style="margin-top:10px">We believe "to whom much is given, much is expected." Our Food Drive lets customers help neighbors in need — our employees collect cans of food for local food banks, with distribution partners F.E.A.S.T. in Pinellas County and Helping Hands in Pasco County.</p>
+        </div>
+        <div class="bucks">
+          <b>$20</b>
+          <span>in EasyBreezy Bucks credited to your account for a one-time donation of two cans of food</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- AREAS -->
+  <section id="areas">
+    <div class="wrap">
+      <p class="kicker">Service Area</p>
+      <h2>Proudly serving Tampa Bay</h2>
+      <p class="lede">Based in New Port Richey and serving Pasco, Pinellas, Hernando, and Hillsborough counties — including:</p>
+      <div class="chips">
+        <span class="chip">New Port Richey</span><span class="chip">Tampa</span><span class="chip">Westchase</span>
+        <span class="chip">Oldsmar</span><span class="chip">Palm Harbor</span><span class="chip">Safety Harbor</span>
+        <span class="chip">Trinity</span><span class="chip">Hudson</span><span class="chip">Port Richey</span>
+        <span class="chip">Tarpon Springs</span><span class="chip">Dunedin</span><span class="chip">Clearwater</span>
+        <span class="chip">Land O' Lakes</span><span class="chip">Wesley Chapel</span><span class="chip">Spring Hill</span>
+      </div>
+      <p class="county-note">Don't see your town? Call <a href="tel:+17278564822"><b>(727) 856-4822</b></a> — with nearly 10,000 active customers across the region, chances are we're already on your street.</p>
+    </div>
+  </section>
+
+  <!-- ESTIMATE FORM -->
+  <section id="estimate">
+    <div class="wrap">
+      <p class="kicker">Get Started</p>
+      <h2>Request your free estimate</h2>
+      <p class="lede" style="margin-bottom:26px">Tell us what you need — repair, a new system, or a maintenance plan — and we'll get back to you.</p>
+      <div class="form-wrap">
+        <div class="form-side">
+          <h3>Talk to EasyBreezy AC</h3>
+          <p>Prefer to talk it through? Reach us any day of the week.</p>
+          <div class="row"><b>Phone</b><a href="tel:+17278564822">(727) 856-4822</a></div>
+          <div class="row"><b>Email</b><a href="mailto:Service@EasyBreezyAC.com">Service@EasyBreezyAC.com</a></div>
+          <div class="row"><b>Visit</b>6652 Osteen Road<br>New Port Richey, FL 34653</div>
+          <div class="row"><b>Hours</b>Open 7 days a week<br>8:00 AM – 5:00 PM</div>
+          <div class="row"><b>Licensed</b>Florida License #CAC1818988</div>
+        </div>
+        <form id="estimateForm" novalidate>
+          <label>Your name
+            <input type="text" name="name" id="f-name" autocomplete="name" placeholder="Jane Smith" required />
+          </label>
+          <label>Phone
+            <input type="tel" name="phone" id="f-phone" autocomplete="tel" placeholder="(727) 555-0123" required />
+          </label>
+          <label>What do you need?
+            <select name="service" id="f-service">
+              <option>Emergency AC repair</option>
+              <option>New AC installation</option>
+              <option>Residential HVAC service</option>
+              <option>Commercial HVAC service</option>
+              <option>Gold-Standard maintenance plan</option>
+              <option>Indoor air quality</option>
+              <option>Something else</option>
+            </select>
+          </label>
+          <label>Tell us a little more
+            <textarea name="message" id="f-message" placeholder="e.g. AC stopped cooling last night, house is 1,800 sq ft in Palm Harbor…"></textarea>
+          </label>
+          <button class="btn btn-primary" type="submit" style="width:100%">Send My Estimate Request</button>
+          <p class="form-note">This demo form opens your email app with your request pre-filled and addressed to <b>scaleitdesigns@gmail.com</b> — just press send there and it comes straight to us.</p>
+          <div class="sent" id="sentMsg" role="status">Your email app should have opened with your request ready to send to scaleitdesigns@gmail.com. If it didn't, call us at (727) 856-4822.</div>
+        </form>
+      </div>
+
+      <!-- SCALE IT DEMO BOX -->
+      <div class="demo-box">
+        <p class="kicker">About This Demo Site</p>
+        <h2>Like this site? It's yours for <span class="price">$70</span></h2>
+        <p>This is a demo website built by <b>Scale It</b> for EasyBreezy AC. The price is <b>$70 one-time</b> — the first year of hosting is included, then hosting is just <b>$5/mo</b> after that. When you buy, it moves to your own domain, and we finish it with your final details before it goes live.</p>
+        <div style="margin-top:18px">
+          <a class="btn btn-claim" href="https://square.link/u/cz1GGRh0" target="_blank" rel="noopener" style="font-size:1.05rem;padding:14px 28px">Claim This Site — $70</a>
+          <p style="margin-top:10px;font-size:.92rem">$70 one-time · First year of hosting included · Then $5/mo</p>
+        </div>
+        <p style="margin-top:10px">Questions about buying this site? Email <a href="mailto:scaleitdesigns@gmail.com"><b>scaleitdesigns@gmail.com</b></a>.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site">
+  <div class="wrap cols">
+    <div>
+      <b>EasyBreezy AC</b><br>
+      6652 Osteen Road, New Port Richey, FL 34653<br>
+      (727) 856-4822 · Service@EasyBreezyAC.com<br>
+      Florida License #CAC1818988 · Open 7 days, 8 AM – 5 PM
+    </div>
+    <div>
+      Life's Hard. Comfort's Not.<br>
+      Demo site built by Scale It — demo only, not the business's live website.<br>
+      <a class="btn btn-claim" href="https://square.link/u/cz1GGRh0" target="_blank" rel="noopener" style="margin-top:12px">Claim This Site — $70</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('estimateForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var name = document.getElementById('f-name').value.trim();
+    var phone = document.getElementById('f-phone').value.trim();
+    var service = document.getElementById('f-service').value;
+    var message = document.getElementById('f-message').value.trim();
+    if (!name || !phone) {
+      document.getElementById(!name ? 'f-name' : 'f-phone').focus();
+      return;
+    }
+    var subject = 'Estimate request — ' + service + ' — ' + name;
+    var body = 'Name: ' + name + '\nPhone: ' + phone + '\nService needed: ' + service + '\n\nDetails:\n' + (message || '(none provided)') + '\n\n— Sent from the EasyBreezy AC demo website';
+    window.location.href = 'mailto:scaleitdesigns@gmail.com?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+    document.getElementById('sentMsg').style.display = 'block';
+  });
+</script>
+</body>
+</html>

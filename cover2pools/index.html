@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="en">
+<head><meta name="robots" content="noindex,nofollow">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="light dark" />
+<meta name="description" content="Cover2Pools — residential and commercial pool cleaning, maintenance, water testing, scrubbing, skimming and pH balancing in Pinellas and Hillsborough County. Seminole, FL." />
+<link rel="icon" href="data:," />
+<title>Cover2Pools — Pool Service in Pinellas & Hillsborough County</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@1,6..72,400;1,6..72,500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f2f8f8; --bg2:#eaf4f4; --surface:#ffffff; --surface2:#eef7f7;
+    --ink:#0a2b33; --ink2:#123f49; --muted:#55757e; --line:#d7e7e9;
+    --aqua:#0693ad; --aqua-dark:#067086; --aqua-bright:#13b5cf; --deep:#062e38; --deep2:#083a47;
+    --sun:#f5b81b; --radius-lg:22px; --radius-md:14px;
+    --shadow:0 10px 30px rgba(6,46,56,.10), 0 2px 8px rgba(6,46,56,.06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#071c22; --bg2:#0a272f; --surface:#0d2f38; --surface2:#103a44;
+      --ink:#eef9fa; --ink2:#d6edef; --muted:#9dbec4; --line:#1e4550;
+      --aqua:#2bbcd6; --aqua-dark:#13a8c2; --aqua-bright:#3fd0e8; --deep:#04161b; --deep2:#07272f;
+      --shadow:0 10px 30px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.25);
+    }
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;font-family:"Lexend",system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55;-webkit-font-smoothing:antialiased}
+  img{max-width:100%;display:block}
+  a{color:inherit}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+  h1,h2,h3{line-height:1.08;letter-spacing:-.02em;margin:0}
+  p{margin:0}
+  /* header */
+  .topbar{background:var(--deep);color:#dff3f5;font-size:.82rem}
+  .topbar .wrap{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center;justify-content:space-between;padding-top:8px;padding-bottom:8px}
+  .topbar a{color:#fff;text-decoration:none;font-weight:600}
+  header.site{position:sticky;top:0;z-index:30;background:color-mix(in srgb, var(--bg) 88%, transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+  .nav{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 0}
+  .logo{font-weight:800;font-size:1.42rem;letter-spacing:-.03em;text-decoration:none;line-height:1}
+  .logo span{color:var(--aqua)}
+  .logo small{display:block;font-size:.62rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-top:3px}
+  .nav-links{display:none;gap:4px}
+  .nav-links a{text-decoration:none;font-weight:500;font-size:.94rem;padding:10px 12px;border-radius:999px;color:var(--ink2)}
+  .nav-links a:hover{background:var(--surface2)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:12px 20px;border-radius:999px;font-weight:700;font-size:.96rem;text-decoration:none;border:1px solid transparent;cursor:pointer;font-family:inherit;transition:transform .15s ease, background .15s ease}
+  .btn:active{transform:scale(.98)}
+  .btn-primary{background:var(--aqua);color:#fff}
+  .btn-primary:hover{background:var(--aqua-dark)}
+  .btn-white{background:#fff;color:var(--deep)}
+  .btn-ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+  .btn-sm{min-height:44px;padding:9px 16px;font-size:.9rem}
+  @media(min-width:860px){.nav-links{display:flex}}
+  /* hero */
+  .hero{padding:28px 0 0}
+  .hero-card{position:relative;border-radius:28px;overflow:hidden;background:var(--deep);color:#fff;box-shadow:var(--shadow)}
+  .hero-card img.hero-img{width:100%;height:560px;object-fit:cover;object-position:center}
+  .hero-overlay{position:absolute;inset:0;background:linear-gradient(90deg, rgba(4,32,40,.88) 0%, rgba(4,32,40,.68) 46%, rgba(4,32,40,.08) 78%), linear-gradient(0deg, rgba(4,32,40,.55), transparent 55%)}
+  .hero-content{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:28px}
+  .hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.28);backdrop-filter:blur(6px);color:#fff;font-size:.8rem;font-weight:600;padding:7px 12px;border-radius:999px;width:fit-content;margin-bottom:14px}
+  .stars{color:var(--sun);letter-spacing:2px;font-size:.9rem}
+  .hero h1{font-size:clamp(2.15rem,6vw,3.9rem);font-weight:800;max-width:640px}
+  .hero h1 em{font-family:"Newsreader",Georgia,serif;font-style:italic;font-weight:500;color:#8fe6f2;letter-spacing:0}
+  .hero-sub{margin-top:12px;max-width:560px;color:#dff3f5;font-size:1.02rem}
+  .hero-ctas{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
+  .hero-meta{display:flex;flex-wrap:wrap;gap:8px 20px;margin-top:18px;font-size:.86rem;color:#cfe9ec}
+  .hero-meta strong{color:#fff}
+  @media(max-width:640px){.hero-card img.hero-img{height:620px}.hero-content{padding:22px 20px 24px}}
+  /* stats */
+  .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:14px 0 0}
+  .stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-md);padding:16px 18px}
+  .stat b{font-size:1.35rem;display:block;letter-spacing:-.02em}
+  .stat span{font-size:.84rem;color:var(--muted)}
+  @media(min-width:760px){.stats{grid-template-columns:repeat(4,1fr)}}
+  section{padding:56px 0 8px}
+  .section-head{max-width:680px;margin-bottom:24px}
+  .section-head h2{font-size:clamp(1.7rem,3.6vw,2.35rem);font-weight:800}
+  .section-head p{margin-top:10px;color:var(--muted)}
+  .label{font-size:.78rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--aqua);margin-bottom:10px}
+  /* services */
+  .visit{display:grid;gap:18px}
+  @media(min-width:900px){.visit{grid-template-columns:1.05fr .95fr;align-items:stretch}}
+  .visit-img{border-radius:var(--radius-lg);overflow:hidden;min-height:320px}
+  .visit-img img{width:100%;height:100%;object-fit:cover}
+  .checklist{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);padding:24px;box-shadow:var(--shadow)}
+  .checklist h3{font-size:1.18rem;margin-bottom:6px}
+  .checklist>p{color:var(--muted);font-size:.92rem;margin-bottom:16px}
+  .checks{list-style:none;margin:0;padding:0;display:grid;gap:0}
+  @media(min-width:560px){.checks{grid-template-columns:1fr 1fr;column-gap:20px}}
+  .checks li{display:flex;gap:10px;padding:9px 0;border-top:1px solid var(--line);font-size:.93rem;font-weight:500;align-items:flex-start}
+  .checks li:first-child{border-top:0}
+  .check-ic{flex:none;width:22px;height:22px;border-radius:50%;background:color-mix(in srgb, var(--aqua) 16%, transparent);color:var(--aqua-dark);display:grid;place-items:center;margin-top:1px}
+  .check-ic svg{width:13px;height:13px}
+  .service-tiles{display:grid;gap:12px;margin-top:14px}
+  @media(min-width:760px){.service-tiles{grid-template-columns:1fr 1fr 1fr}}
+  .tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-md);padding:20px}
+  .tile h3{font-size:1.02rem;margin-bottom:6px}
+  .tile p{font-size:.9rem;color:var(--muted)}
+  .tile .tag{display:inline-block;font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--aqua-dark);background:color-mix(in srgb, var(--aqua) 13%, transparent);padding:4px 8px;border-radius:999px;margin-bottom:10px}
+  /* why / story */
+  .split{display:grid;gap:22px;align-items:center}
+  @media(min-width:900px){.split{grid-template-columns:1fr 1fr}}
+  .split img.rounded{border-radius:var(--radius-lg);width:100%;height:420px;object-fit:cover;box-shadow:var(--shadow)}
+  .points{display:grid;gap:14px;margin-top:20px}
+  .point{display:flex;gap:14px}
+  .point-num{flex:none;width:38px;height:38px;border-radius:10px;background:var(--deep);color:#8fe6f2;display:grid;place-items:center;font-weight:800;font-size:.95rem}
+  .point h3{font-size:1rem}
+  .point p{font-size:.92rem;color:var(--muted);margin-top:2px}
+  blockquote.big{font-family:"Newsreader",Georgia,serif;font-style:italic;font-size:1.28rem;line-height:1.4;margin:22px 0 0;padding-left:16px;border-left:3px solid var(--aqua)}
+  /* reviews */
+  .reviews{display:grid;gap:12px}
+  @media(min-width:860px){.reviews{grid-template-columns:repeat(3,1fr)}}
+  .review{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-md);padding:22px;display:flex;flex-direction:column;gap:12px}
+  .review p{font-size:.95rem;color:var(--ink2)}
+  .review footer{margin-top:auto}
+  .review .who{font-weight:700;font-size:.9rem}
+  .review .src{font-size:.8rem;color:var(--muted)}
+  /* chlorine vs salt */
+  .compare{display:grid;gap:12px}
+  @media(min-width:760px){.compare{grid-template-columns:1fr 1fr}}
+  .compare-card{border-radius:var(--radius-md);padding:22px;border:1px solid var(--line);background:var(--surface)}
+  .compare-card.salt{background:var(--deep);color:#eaf7f8;border-color:var(--deep)}
+  .compare-card h3{font-size:1.08rem;margin-bottom:8px}
+  .compare-card p,.compare-card li{font-size:.92rem;color:var(--muted)}
+  .compare-card.salt p,.compare-card.salt li{color:#c4e2e7}
+  .compare-card ul{margin:10px 0 0;padding-left:18px;display:grid;gap:6px}
+  /* areas */
+  .areas{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);padding:24px}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+  .pill{font-size:.86rem;font-weight:500;padding:8px 13px;border-radius:999px;background:var(--surface2);border:1px solid var(--line)}
+  /* faq */
+  .faq{display:grid;gap:10px}
+  details{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-md);padding:4px 18px}
+  summary{cursor:pointer;font-weight:600;padding:14px 0;min-height:48px;display:flex;align-items:center;list-style:none}
+  summary::-webkit-details-marker{display:none}
+  details p{padding:0 0 16px;color:var(--muted);font-size:.94rem}
+  /* estimate */
+  .estimate{background:var(--deep);color:#fff;border-radius:28px;padding:28px;overflow:hidden;position:relative}
+  @media(min-width:900px){.estimate{padding:36px}}
+  .estimate-grid{display:grid;gap:26px}
+  @media(min-width:900px){.estimate-grid{grid-template-columns:.9fr 1.1fr}}
+  .estimate h2{font-size:clamp(1.7rem,3.4vw,2.3rem);font-weight:800}
+  .estimate .lead{color:#cfe9ec;margin-top:10px}
+  .contact-list{list-style:none;margin:20px 0 0;padding:0;display:grid;gap:12px}
+  .contact-list li{display:flex;gap:12px;align-items:center;font-size:.96rem}
+  .contact-list a{color:#fff;font-weight:700;text-decoration:none}
+  .contact-ic{width:40px;height:40px;flex:none;border-radius:10px;background:rgba(255,255,255,.12);display:grid;place-items:center}
+  form{background:#fff;color:#0a2b33;border-radius:18px;padding:22px}
+  @media (prefers-color-scheme: dark){form{background:#0d2f38;color:#eef9fa}}
+  .form-grid{display:grid;gap:12px}
+  @media(min-width:560px){.form-grid{grid-template-columns:1fr 1fr}.form-grid .full{grid-column:1/-1}}
+  label{font-size:.84rem;font-weight:600;display:block;margin-bottom:6px}
+  input,select,textarea{width:100%;min-height:48px;padding:11px 13px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-size:.95rem}
+  textarea{min-height:96px;resize:vertical}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--aqua);outline-offset:1px;border-color:var(--aqua)}
+  .form-note{font-size:.82rem;color:var(--muted);margin-top:12px;line-height:1.5}
+  .success{display:none;background:color-mix(in srgb, var(--aqua) 14%, transparent);border:1px solid var(--aqua);border-radius:12px;padding:14px 16px;font-size:.92rem;margin-top:14px}
+  /* footer */
+  footer.site{margin-top:64px;background:var(--deep);color:#cfe9ec}
+  footer.site .wrap{padding-top:36px;padding-bottom:28px}
+  .foot-grid{display:grid;gap:24px}
+  @media(min-width:800px){.foot-grid{grid-template-columns:1.3fr 1fr 1fr}}
+  footer.site h3{color:#fff;font-size:1rem;margin-bottom:10px}
+  footer.site a{color:#fff;text-decoration:none}
+  footer.site p,footer.site li{font-size:.9rem}
+  footer.site ul{list-style:none;margin:0;padding:0;display:grid;gap:7px}
+  .demo-note{margin-top:28px;border-top:1px solid rgba(255,255,255,.16);padding-top:18px;font-size:.86rem;color:#a9cdd2;display:grid;gap:6px}
+  .demo-note strong{color:#fff}
+  .demo-note a{color:#8fe6f2;text-decoration:underline}
+  /* mobile call bar */
+  .callbar{position:fixed;left:12px;right:12px;bottom:12px;z-index:40;display:flex;gap:8px}
+  .callbar a{flex:1;box-shadow:0 12px 28px rgba(0,0,0,.28)}
+  @media(min-width:860px){.callbar{display:none}}
+  body{padding-bottom:76px}
+  @media(min-width:860px){body{padding-bottom:0}}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}.btn{transition:none}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="wrap">
+    <span>Seminole, FL &nbsp;·&nbsp; Serving Pinellas &amp; Hillsborough County</span>
+    <span>Call today: <a href="tel:+17272693457">(727) 269-3457</a></span>
+  </div>
+</div>
+
+<header class="site">
+  <div class="wrap nav">
+    <a class="logo" href="#top">Cover<span>2</span>Pools<small>Pool Service · Seminole, FL</small></a>
+    <nav class="nav-links" aria-label="Main">
+      <a href="#services">Services</a>
+      <a href="#why">Why Us</a>
+      <a href="#reviews">Reviews</a>
+      <a href="#areas">Service Area</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end">
+      <a class="btn btn-primary btn-sm" href="#estimate">Get an Estimate</a>
+      <a class="btn btn-sm" href="https://square.link/u/cz1GGRh0" target="_blank" rel="noopener" style="background:var(--sun);color:#062e38">Claim this site — $70</a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+  <!-- HERO -->
+  <div class="wrap hero">
+    <div class="hero-card">
+      <img class="hero-img" src="assets/hero.jpg" alt="Long, crystal-clear blue pool beside a Florida waterfront home with palm trees" />
+      <div class="hero-overlay"></div>
+      <div class="hero-content">
+        <span class="hero-badge"><span class="stars" aria-hidden="true">★★★★★</span> 5-star rated on Google Reviews</span>
+        <h1>Need pool service?<br><em>We’ve got you covered.</em></h1>
+        <p class="hero-sub">Residential and commercial pool cleaning, maintenance, water testing, scrubbing, skimming and pH balancing — done right, week after week, across Pinellas and Hillsborough County.</p>
+        <div class="hero-ctas">
+          <a class="btn btn-primary" href="tel:+17272693457">Call (727) 269-3457</a>
+          <a class="btn btn-white" href="#estimate">Get a Free Estimate</a>
+        </div>
+        <div class="hero-meta">
+          <span><strong>Residential + Commercial</strong> homes, condos &amp; rentals</span>
+          <span><strong>Based in Seminole</strong> Box 8361, Seminole, FL 33775</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats" aria-label="Highlights">
+      <div class="stat"><b>5-star</b><span>Google Reviews rating</span></div>
+      <div class="stat"><b>15 years</b><span>of experience, noted by reviewers</span></div>
+      <div class="stat"><b>2 counties</b><span>Pinellas &amp; Hillsborough</span></div>
+      <div class="stat"><b>Every visit</b><span>full checklist — clean, test &amp; balance</span></div>
+    </div>
+  </div>
+
+  <!-- SERVICES -->
+  <section id="services">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="label">Our Services</div>
+        <h2>Pool cleaning and maintenance, handled down to the basics</h2>
+        <p>Our pool services address the basics — and that’s the foundation of protecting your investment. Regular removal of debris, minerals and algae extends the life of your pool and its filter equipment.</p>
+      </div>
+
+      <div class="visit">
+        <div class="visit-img"><img src="assets/service.jpg" alt="Pool technician skimming a bright blue pool from above with a leaf net" loading="lazy" /></div>
+        <div class="checklist">
+          <h3>What’s included in every visit</h3>
+          <p>When we arrive at your pool, we work through our full checklist so your water stays clear, balanced and swim-ready.</p>
+          <ul class="checks">
+            <li><span class="check-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg></span>Pool brushing &amp; scrubbing</li>
+            <li><span class="check-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg></span>Pool filter cleaning</li>
+            <li><span class="check-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg></span>Pool vacuuming</li>
+            <li><span class="check-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg></span>Netting &amp; skimming</li>
+            <li><span class="check-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg></span>Skimmer &amp; basket cleaning</li>
+            <li><span class="check-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg></span>pH level testing</li>
+            <li><span class="check-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg></span>Mineral content check</li>
+            <li><span class="check-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg></span>Chlorine level check</li>
+            <li><span class="check-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg></span>Alkalinity check</li>
+            <li><span class="check-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg></span>Debris removal</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="service-tiles">
+        <article class="tile">
+          <span class="tag">Homes</span>
+          <h3>Residential Pool Service</h3>
+          <p>Weekly cleaning and balancing for backyard pools — skimmed, brushed, vacuumed and tested so you can just swim.</p>
+        </article>
+        <article class="tile">
+          <span class="tag">Condos &amp; Commercial</span>
+          <h3>Commercial Pool Service</h3>
+          <p>Dependable service for condo and commercial pools, including the Tierra Verde condo pool reviewers call out by name.</p>
+        </article>
+        <article class="tile">
+          <span class="tag">Water Care</span>
+          <h3>Testing &amp; Balancing</h3>
+          <p>pH, chlorine, alkalinity and mineral checks on every visit — preventing algae, staining, scaling and corrosion before they start.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHY -->
+  <section id="why">
+    <div class="wrap split">
+      <div>
+        <div class="label">Why Cover2Pools</div>
+        <h2 style="font-size:clamp(1.7rem,3.6vw,2.35rem);font-weight:800">Knowledgeable. Dependable. Responsive.</h2>
+        <p style="margin-top:10px;color:var(--muted)">That’s how customers describe Cover2Pools on Google — and it’s the standard Krista brings to every pool on the route.</p>
+        <div class="points">
+          <div class="point"><span class="point-num">1</span><div><h3>We show up and do the full job</h3><p>Brushing prevents algae and staining, filter cleaning keeps your system running efficiently, and vacuuming improves circulation of cleaning chemicals throughout the pool.</p></div></div>
+          <div class="point"><span class="point-num">2</span><div><h3>Balanced water, every time</h3><p>Correct pH, chlorine and alkalinity sanitize the water, protect metal fixtures and surfaces, and reduce calcium build-up on your pool and equipment.</p></div></div>
+          <div class="point"><span class="point-num">3</span><div><h3>Fast when it matters</h3><p>One reviewer found two mice in her pool, texted Krista, and she was at the house within minutes. That’s the responsiveness you get from a local operator.</p></div></div>
+        </div>
+        <blockquote class="big">“Quality, efficiency and 15 years of experience — what’s not to love?”</blockquote>
+      </div>
+      <img class="rounded" src="assets/clean.jpg" alt="Curved Florida backyard pool with sparkling turquoise water surrounded by palm trees" loading="lazy" />
+    </div>
+  </section>
+
+  <!-- REVIEWS -->
+  <section id="reviews">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="label">Testimonials</div>
+        <h2>What clients are saying</h2>
+        <p>Real Google Reviews for Cover2Pools.</p>
+      </div>
+      <div class="reviews">
+        <article class="review">
+          <span class="stars" aria-label="5 stars">★★★★★</span>
+          <p>“Amazing service!! Krista is one of the sweetest and hardworking people out there!!! Look no further for your pool needs; Quality, efficiency and 15 years of experience, what’s not to love!! Thanks for all you do for our customers Krista!!”</p>
+          <footer><div class="who">White Sand Equity LLC</div><div class="src">Google Review</div></footer>
+        </article>
+        <article class="review">
+          <span class="stars" aria-label="5 stars">★★★★★</span>
+          <p>“Cover2Pools has been servicing our condo pool in Tierra Verde the past 6 months. They are amazing! Knowledgeable, dependable, and responsive! I would highly recommend Cover2Pools!”</p>
+          <footer><div class="who">Heidi Edwards</div><div class="src">Google Review</div></footer>
+        </article>
+        <article class="review">
+          <span class="stars" aria-label="5 stars">★★★★★</span>
+          <p>“Today Krista went above and beyond for us. I reached out after finding two mice in my pool…. I sent Krista a text message and she was at my house within minutes!”</p>
+          <footer><div class="who">Shaleigh Schneider</div><div class="src">Google Review</div></footer>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHLORINE VS SALT -->
+  <section aria-labelledby="cvs-title">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="label">From Our Blog</div>
+        <h2 id="cvs-title">Chlorine vs. salt — what’s the difference?</h2>
+        <p>A quick version of our guide. Either way, regular testing and balancing is what keeps the water safe and clear — and that’s included in every Cover2Pools visit.</p>
+      </div>
+      <div class="compare">
+        <article class="compare-card">
+          <h3>Chlorine pools</h3>
+          <p>The most common type. Chlorine is added directly — as tablets, granules or liquid — to kill bacteria, viruses and other microorganisms.</p>
+          <ul>
+            <li>Lower upfront cost, familiar maintenance</li>
+            <li>Requires regular balancing to stay sanitized</li>
+            <li>Chlorine levels checked on every visit</li>
+          </ul>
+        </article>
+        <article class="compare-card salt">
+          <h3>Saltwater pools</h3>
+          <p>Instead of adding chlorine directly, a salt chlorine generator produces chlorine from salt in the water.</p>
+          <ul>
+            <li>Higher upfront investment for the generator</li>
+            <li>Salt cell needs periodic cleaning or replacement</li>
+            <li>Still needs pH, alkalinity and mineral checks</li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- AREAS -->
+  <section id="areas">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="label">Service Area</div>
+        <h2>Pool services in Pinellas County — plus Hillsborough</h2>
+        <p>Based in Seminole and serving communities across Pinellas County and Hillsborough County. Don’t see your town? Call <a href="tel:+17272693457" style="font-weight:700;color:var(--aqua-dark)">(727) 269-3457</a> and ask.</p>
+      </div>
+      <div class="areas">
+        <img src="assets/aerial.jpg" alt="Aerial view of a pristine rectangular Florida pool with a spa, sun shelf and palm trees beside a lake" loading="lazy" style="width:100%;height:300px;object-fit:cover;border-radius:14px" />
+        <div class="pills" aria-label="Communities served in Pinellas County">
+          <span class="pill">Seminole</span><span class="pill">Clearwater</span><span class="pill">Largo</span><span class="pill">St. Petersburg</span><span class="pill">St. Pete Beach</span><span class="pill">Dunedin</span><span class="pill">Pinellas Park</span><span class="pill">Tarpon Springs</span><span class="pill">Oldsmar</span><span class="pill">Safety Harbor</span><span class="pill">Belleair</span><span class="pill">Belleair Beach</span><span class="pill">Belleair Bluffs</span><span class="pill">Belleair Shore</span><span class="pill">Gulfport</span><span class="pill">Indian Rocks Beach</span><span class="pill">Indian Shores</span><span class="pill">Kenneth City</span><span class="pill">Madeira Beach</span><span class="pill">North Redington Beach</span><span class="pill">Redington Beach</span><span class="pill">Redington Shores</span><span class="pill">South Pasadena</span><span class="pill">Treasure Island</span><span class="pill">Hillsborough County</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="label">Questions</div>
+        <h2>Frequently asked questions</h2>
+      </div>
+      <div class="faq">
+        <details><summary>What does a regular visit include?</summary><p>Every visit works through our checklist: brushing and scrubbing, vacuuming, netting and skimming, skimmer and basket cleaning, filter cleaning, and testing pH, chlorine, alkalinity and mineral content — then balancing the water so it stays clear.</p></details>
+        <details><summary>Do you service commercial and condo pools?</summary><p>Yes. Cover2Pools provides residential and commercial pool services, including condo pools — one Google reviewer notes we’ve serviced their Tierra Verde condo pool for six months.</p></details>
+        <details><summary>Which areas do you cover?</summary><p>Pinellas County and Hillsborough County, including Seminole, Clearwater, Largo, St. Petersburg, Dunedin, Pinellas Park, Tarpon Springs and the beach communities listed above.</p></details>
+        <details><summary>Why does water balance matter so much?</summary><p>Balanced pH and alkalinity prevent corrosion to metal fixtures and surfaces, correct chlorine levels sanitize the water and control algae, and mineral checks reduce calcium build-up that deteriorates pool surfaces and equipment.</p></details>
+        <details><summary>How do I get started?</summary><p>Call (727) 269-3457, email cover2pools@gmail.com, or send the estimate form below. Tell us where the pool is and what it needs, and we’ll reach out right away with next steps.</p></details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ESTIMATE -->
+  <section id="estimate">
+    <div class="wrap">
+      <div class="estimate">
+        <div class="estimate-grid">
+          <div>
+            <h2>Get your free estimate</h2>
+            <p class="lead">Fill out the form and we’ll reach out right away — or reach us directly:</p>
+            <ul class="contact-list">
+              <li><span class="contact-ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#8fe6f2" stroke-width="2"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.5 2.1L8.1 10a16 16 0 0 0 6 6l1.3-1.2a2 2 0 0 1 2.1-.5c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.6 2z"/></svg></span><span>Call or text<br><a href="tel:+17272693457">(727) 269-3457</a></span></li>
+              <li><span class="contact-ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#8fe6f2" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg></span><span>Email us<br><a href="mailto:cover2pools@gmail.com">cover2pools@gmail.com</a></span></li>
+              <li><span class="contact-ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#8fe6f2" stroke-width="2"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></span><span>Mailing address<br><strong style="color:#fff">Box 8361, Seminole, FL 33775</strong></span></li>
+            </ul>
+          </div>
+          <div>
+            <form id="estimateForm" novalidate>
+              <div class="form-grid">
+                <div><label for="f-name">Your name *</label><input id="f-name" name="name" type="text" autocomplete="name" required placeholder="Jane Smith" /></div>
+                <div><label for="f-phone">Phone *</label><input id="f-phone" name="phone" type="tel" autocomplete="tel" required placeholder="(727) 555-0123" /></div>
+                <div><label for="f-email">Email</label><input id="f-email" name="email" type="email" autocomplete="email" placeholder="you@email.com" /></div>
+                <div><label for="f-city">Pool city *</label><input id="f-city" name="city" type="text" required placeholder="Seminole, Clearwater, Largo…" /></div>
+                <div><label for="f-type">Pool type</label><select id="f-type" name="type"><option>Residential — home pool</option><option>Commercial / condo pool</option><option>Rental property pool</option><option>Other</option></select></div>
+                <div><label for="f-service">Service needed</label><select id="f-service" name="service"><option>Regular cleaning &amp; maintenance</option><option>Water testing &amp; balancing</option><option>One-time cleaning</option><option>Not sure — please advise</option></select></div>
+                <div class="full"><label for="f-msg">Tell us about your pool</label><textarea id="f-msg" name="message" placeholder="Pool size, current condition, how often you’d like service, anything else we should know…"></textarea></div>
+              </div>
+              <button class="btn btn-primary" type="submit" style="width:100%;margin-top:14px">Request My Estimate</button>
+              <p class="form-note">Submitting opens a pre-filled email in your mail app, addressed to our team — just press send there and your request is on its way. Prefer to talk? Call <a href="tel:+17272693457" style="font-weight:700">(727) 269-3457</a>.</p>
+              <div class="success" id="formSuccess" role="status"></div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <a class="logo" href="#top" style="color:#fff">Cover<span>2</span>Pools</a>
+        <p style="margin-top:12px;max-width:340px">Residential and commercial pool services, maintenance, water testing, scrubbing, skimming and pH balancing in Pinellas and Hillsborough County.</p>
+      </div>
+      <div>
+        <h3>Contact</h3>
+        <ul>
+          <li><a href="tel:+17272693457">(727) 269-3457</a></li>
+          <li><a href="mailto:cover2pools@gmail.com">cover2pools@gmail.com</a></li>
+          <li>Box 8361, Seminole, FL 33775</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Quick Links</h3>
+        <ul>
+          <li><a href="#services">Pool Services</a></li>
+          <li><a href="#reviews">Reviews</a></li>
+          <li><a href="#areas">Service Area</a></li>
+          <li><a href="#estimate">Get an Estimate</a></li>
+          <li><a href="https://cover2pools.com" target="_blank" rel="noopener">cover2pools.com</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="demo-note">
+      <p><strong>Demo preview — built by Scale It.</strong> This is a preview design for Cover2Pools. When you buy, it moves to your own domain. Price: $70 one-time, first year of hosting included, then $5/mo.</p>
+      <p>Estimate enquiries from this preview are routed to Scale It at scaleitdesigns@gmail.com so nothing gets lost during the demo.</p>
+      <p style="margin-top:12px"><a class="btn" href="https://square.link/u/cz1GGRh0" target="_blank" rel="noopener" style="background:var(--sun);color:#062e38;text-decoration:none">Claim this site — $70</a></p>
+      <p>$70 one-time, first year of hosting included, then $5/mo.</p>
+    </div>
+  </div>
+</footer>
+
+<div class="callbar">
+  <a class="btn btn-primary" href="tel:+17272693457">Call Now</a>
+  <a class="btn btn-white" href="#estimate" style="border:1px solid var(--line)">Free Estimate</a>
+</div>
+
+<script>
+(function(){
+  var form = document.getElementById('estimateForm');
+  var success = document.getElementById('formSuccess');
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    var name = document.getElementById('f-name').value.trim();
+    var phone = document.getElementById('f-phone').value.trim();
+    var email = document.getElementById('f-email').value.trim();
+    var city = document.getElementById('f-city').value.trim();
+    var type = document.getElementById('f-type').value;
+    var service = document.getElementById('f-service').value;
+    var msg = document.getElementById('f-msg').value.trim();
+    if(!name || !phone || !city){
+      success.style.display = 'block';
+      success.textContent = 'Please add your name, phone, and pool city so we can respond — then try again.';
+      success.scrollIntoView({behavior:'smooth', block:'nearest'});
+      return;
+    }
+    var subject = 'New pool service estimate request — ' + name + ' (' + city + ')';
+    var lines = [
+      'New estimate request from the Cover2Pools website',
+      '',
+      'Name: ' + name,
+      'Phone: ' + phone,
+      'Email: ' + (email || 'Not provided'),
+      'Pool city: ' + city,
+      'Pool type: ' + type,
+      'Service needed: ' + service,
+      '',
+      'About the pool:',
+      msg || 'No additional details provided.'
+    ];
+    var href = 'mailto:scaleitdesigns@gmail.com?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(lines.join('\n'));
+    success.style.display = 'block';
+    success.innerHTML = 'Thanks, ' + name.replace(/</g,'&lt;') + ' — your email app should open with your request addressed to our team. Just press send there. If nothing opened, <a href="' + href + '" style="font-weight:700;text-decoration:underline">tap here to open it</a> or call (727) 269-3457.';
+    window.location.href = href;
+  });
+})();
+</script>
+</body>
+</html>

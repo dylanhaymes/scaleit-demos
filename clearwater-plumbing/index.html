@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="en">
+<head><meta name="robots" content="noindex,nofollow">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="light" />
+<link rel="icon" href="data:," />
+<title>Clearwater Plumbing Inc — Demo Concept | Clearwater, FL Plumbers Since 1951</title>
+<meta name="description" content="Demo website concept for Clearwater Plumbing Inc, Clearwater, FL. Residential, commercial and industrial plumbing since 1951. Call (727) 446-8355." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --navy:#0a2e47; --navy-2:#0f4c75; --navy-3:#123f5f;
+    --gold:#f2a900; --gold-dark:#c98a00;
+    --ink:#1c2b36; --muted:#52616c; --line:#dde4e8;
+    --bg:#ffffff; --bg-soft:#f4f7f8; --bg-navy-soft:#eef3f6;
+    --radius:14px;
+    --shadow:0 10px 30px rgba(10,46,71,.10);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;font-family:"Barlow",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink);background:var(--bg);line-height:1.6;-webkit-font-smoothing:antialiased}
+  img{max-width:100%;display:block}
+  a{color:inherit}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+  h1,h2,h3{font-family:"Barlow Condensed","Barlow",sans-serif;letter-spacing:.2px;line-height:1.08;margin:0}
+  /* tap targets */
+  button,[role="button"],select,input,textarea{font-family:inherit}
+  .callbtn,.btn,.stickybar a{min-height:48px}
+
+  /* Demo banner */
+  .demo-banner{background:#111827;color:#f9fafb;text-align:center;padding:10px 16px;font-size:13.5px;font-weight:600;letter-spacing:.2px}
+  .demo-banner strong{color:var(--gold)}
+  .demo-banner span{opacity:.85;font-weight:500}
+
+  /* Header */
+  header.site{position:sticky;top:0;z-index:60;background:#fff;border-bottom:1px solid var(--line);box-shadow:0 1px 0 rgba(10,46,71,.04)}
+  .nav{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 0}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;min-width:0}
+  .brand-mark{width:46px;height:46px;flex:0 0 46px;border-radius:10px;background:var(--navy);color:#fff;display:grid;place-items:center}
+  .brand-mark svg{width:26px;height:26px}
+  .brand-text{line-height:1.05;min-width:0}
+  .brand-text .name{display:block;font-family:"Barlow Condensed",sans-serif;font-size:24px;font-weight:700;color:var(--navy);letter-spacing:.3px;white-space:nowrap}
+  .brand-text .sub{display:block;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted);margin-top:2px}
+  @media(max-width:680px){
+    .nav{gap:10px;padding:10px 0}
+    .brand{gap:9px;flex:1 1 auto}
+    .brand-mark{width:38px;height:38px;flex:0 0 38px;border-radius:8px}
+    .brand-mark svg{width:21px;height:21px}
+    .brand-text .name{font-size:19px;white-space:normal;line-height:1.05}
+    .brand-text .sub{font-size:9.5px;letter-spacing:1.1px}
+    .callbtn{font-size:13.5px;padding:0 11px;min-height:44px;flex:0 0 auto}
+    .callbtn svg{width:15px;height:15px;flex:0 0 15px}
+  }
+  .nav-links{display:none;gap:26px;font-weight:600;font-size:15px;color:var(--navy)}
+  .nav-links a{text-decoration:none;padding:10px 2px}
+  .nav-links a:hover{color:var(--navy-2);text-decoration:underline;text-underline-offset:4px}
+  .callbtn{display:inline-flex;align-items:center;gap:8px;background:var(--navy-2);color:#fff;text-decoration:none;font-weight:700;padding:0 18px;border-radius:10px;font-size:15.5px;white-space:nowrap}
+  .callbtn:hover{background:var(--navy)}
+  .callbtn svg{width:18px;height:18px;flex:0 0 18px}
+  @media(min-width:900px){.nav-links{display:flex}}
+  .header-actions{display:flex;align-items:center;gap:10px;flex:0 0 auto}
+  .claimbtn{display:inline-flex;align-items:center;justify-content:center;background:var(--gold);color:#1a1a1a;text-decoration:none;font-weight:800;padding:0 18px;border-radius:10px;font-size:15.5px;white-space:nowrap;min-height:48px}
+  .claimbtn:hover{background:#ffb81f}
+  .btn-claim{background:#fff;color:var(--navy);border-color:#fff}
+  .btn-claim:hover{background:var(--gold);border-color:var(--gold);color:#1a1a1a}
+  .claim-bottom{display:flex;width:100%;margin:4px 0 6px;font-size:18px;min-height:56px}
+  .claim-note{text-align:center;font-size:14px;color:var(--muted);margin:0 0 8px}
+  @media(max-width:680px){.claimbtn{display:none}}
+
+  /* Hero */
+  .hero{background:var(--navy);color:#fff;overflow:hidden}
+  .hero-grid{display:grid;grid-template-columns:1fr}
+  .hero-copy{padding:38px 0 30px}
+  .hero-eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--gold);margin-bottom:14px}
+  .hero-eyebrow::before{content:"";width:28px;height:2px;background:var(--gold)}
+  .hero h1{font-size:46px;font-weight:700;text-transform:uppercase}
+  .hero h1 .gold{color:var(--gold)}
+  .hero p.lede{font-size:18px;color:#dbe7ee;max-width:560px;margin:16px 0 0}
+  .hero-cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:26px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;text-decoration:none;font-weight:800;padding:0 24px;border-radius:10px;font-size:16.5px;border:2px solid transparent;cursor:pointer}
+  .btn-gold{background:var(--gold);color:#1a1a1a}
+  .btn-gold:hover{background:#ffb81f}
+  .btn-outline{background:transparent;color:#fff;border-color:rgba(255,255,255,.55)}
+  .btn-outline:hover{border-color:#fff;background:rgba(255,255,255,.08)}
+  .hero-meta{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:24px;font-size:14.5px;color:#c7d6df;font-weight:600}
+  .hero-meta span{display:inline-flex;align-items:center;gap:7px}
+  .hero-meta svg{width:16px;height:16px;color:var(--gold);flex:0 0 16px}
+  .hero-photo{position:relative;min-height:280px}
+  .hero-photo img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
+  .hero-photo::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,46,71,.18),rgba(10,46,71,0) 40%)}
+  .hero-badge{position:absolute;z-index:2;left:16px;bottom:16px;background:#fff;color:var(--navy);border-radius:12px;padding:12px 16px;box-shadow:var(--shadow);display:flex;align-items:center;gap:12px}
+  .hero-badge .big{font-family:"Barlow Condensed",sans-serif;font-size:30px;font-weight:700;line-height:1}
+  .hero-badge .small{font-size:12.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);line-height:1.3}
+  @media(min-width:900px){
+    .hero-grid{grid-template-columns:1.05fr .95fr;gap:0}
+    .hero-copy{padding:64px 40px 64px 0;display:flex;flex-direction:column;justify-content:center}
+    .hero h1{font-size:64px}
+    .hero-photo{min-height:520px}
+  }
+  @media(max-width:899px){ .hero-photo{margin:0 -20px} }
+
+  /* Trust bar */
+  .trust{background:#fff;border-bottom:1px solid var(--line)}
+  .trust ul{list-style:none;margin:0;padding:20px 0;display:grid;grid-template-columns:1fr 1fr;gap:16px 20px}
+  .trust li{display:flex;gap:11px;align-items:flex-start}
+  .trust .ic{width:38px;height:38px;flex:0 0 38px;border-radius:9px;background:var(--bg-navy-soft);display:grid;place-items:center;color:var(--navy-2)}
+  .trust .ic svg{width:20px;height:20px}
+  .trust strong{display:block;font-size:15px;color:var(--navy);line-height:1.25}
+  .trust span{font-size:13.5px;color:var(--muted);line-height:1.4;display:block}
+  @media(min-width:900px){.trust ul{grid-template-columns:repeat(4,1fr);padding:26px 0}}
+
+  section.block{padding:52px 0}
+  section.soft{background:var(--bg-soft)}
+  .kicker{font-size:13px;font-weight:800;letter-spacing:1.6px;text-transform:uppercase;color:var(--navy-2);margin-bottom:8px}
+  h2.title{font-size:36px;font-weight:700;color:var(--navy);text-transform:uppercase}
+  .sub{color:var(--muted);font-size:17px;margin:10px 0 28px;max-width:720px}
+  @media(min-width:900px){section.block{padding:72px 0} h2.title{font-size:44px}}
+
+  /* Services */
+  .grid{display:grid;grid-template-columns:1fr;gap:16px}
+  @media(min-width:640px){.grid{grid-template-columns:1fr 1fr}}
+  @media(min-width:980px){.grid{grid-template-columns:1fr 1fr 1fr}}
+  .card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:24px}
+  .card .ic{width:46px;height:46px;border-radius:11px;background:var(--navy);color:var(--gold);display:grid;place-items:center;margin-bottom:14px}
+  .card .ic svg{width:24px;height:24px}
+  .card h3{font-size:22px;font-weight:600;color:var(--navy);margin-bottom:6px}
+  .card p{margin:0;font-size:15.5px;color:var(--muted)}
+
+  /* About */
+  .about-grid{display:grid;grid-template-columns:1fr;gap:32px}
+  @media(min-width:900px){.about-grid{grid-template-columns:1.15fr .85fr;gap:48px}}
+  .about p{font-size:16.5px;color:#37474f;margin:0 0 14px}
+  .checklist{list-style:none;margin:18px 0 0;padding:0}
+  .checklist li{display:flex;gap:11px;padding:10px 0;border-bottom:1px solid var(--line);font-size:15.5px;font-weight:600;color:var(--ink)}
+  .checklist li:last-child{border-bottom:0}
+  .checklist svg{width:20px;height:20px;flex:0 0 20px;color:var(--gold-dark);margin-top:2px}
+  .stats{background:var(--navy);color:#fff;border-radius:var(--radius);padding:28px}
+  .stats .row{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:14px 0;border-bottom:1px solid rgba(255,255,255,.14)}
+  .stats .row:first-child{padding-top:2px}.stats .row:last-child{border-bottom:0;padding-bottom:2px}
+  .stats .num{font-family:"Barlow Condensed",sans-serif;font-size:36px;font-weight:700;color:var(--gold);white-space:nowrap}
+  .stats .lbl{font-size:14.5px;color:#dbe7ee;text-align:right}
+
+  /* Gallery */
+  .gal{display:grid;grid-template-columns:1fr;gap:16px}
+  @media(min-width:760px){.gal{grid-template-columns:repeat(3,1fr)}}
+  .gal figure{margin:0;border-radius:var(--radius);overflow:hidden;background:#fff;border:1px solid var(--line)}
+  .gal img{width:100%;height:230px;object-fit:cover}
+  .gal figcaption{padding:14px 16px;font-size:14.5px;color:var(--muted)}
+  .gal figcaption strong{color:var(--navy);display:block;font-size:15.5px}
+  .note{font-size:13px;color:#7a8a94;margin-top:14px}
+
+  /* Form */
+  .formsec{background:var(--navy);color:#fff}
+  .formsec h2.title{color:#fff}
+  .formsec .sub{color:#c7d6df}
+  .form-grid{display:grid;grid-template-columns:1fr;gap:28px}
+  @media(min-width:900px){.form-grid{grid-template-columns:.9fr 1.1fr;gap:44px;align-items:start}}
+  .form-side .phone-big{font-family:"Barlow Condensed",sans-serif;font-size:40px;font-weight:700;color:#fff;text-decoration:none;display:inline-block;margin:6px 0 4px}
+  .form-side .phone-big:hover{color:var(--gold)}
+  .form-side p{color:#c7d6df;font-size:16px;margin:8px 0}
+  .form-side a.mail{color:var(--gold);font-weight:700}
+  form.card-form{background:#fff;color:var(--ink);border-radius:var(--radius);padding:26px;box-shadow:var(--shadow)}
+  form.card-form label{display:block;font-weight:700;font-size:14px;margin:16px 0 6px;color:var(--navy)}
+  form.card-form label:first-child{margin-top:0}
+  form.card-form input,form.card-form select,form.card-form textarea{width:100%;padding:13px 14px;border:1.5px solid #cbd6dc;border-radius:9px;font-size:16px;background:#fff;color:var(--ink);min-height:48px}
+  form.card-form textarea{min-height:96px;resize:vertical}
+  form.card-form input:focus,form.card-form select:focus,form.card-form textarea:focus{outline:3px solid rgba(242,169,0,.45);border-color:var(--navy-2)}
+  form.card-form button{width:100%;margin-top:22px;background:var(--navy-2);color:#fff;border:0;padding:16px;border-radius:10px;font-size:17px;font-weight:800;cursor:pointer;min-height:54px}
+  form.card-form button:hover{background:var(--navy)}
+  .fineprint{font-size:12.5px;color:var(--muted);margin-top:12px;text-align:center}
+  .thanks{display:none;background:#e9f7ee;border:1.5px solid #9fd3ae;border-radius:var(--radius);padding:28px}
+  .thanks h3{font-size:26px;color:#14532d;margin-bottom:8px}
+  .thanks p{color:#37474f;margin:0 0 10px}
+  .thanks a{color:var(--navy-2);font-weight:800}
+
+  /* Areas */
+  .areas ul{list-style:none;display:flex;flex-wrap:wrap;gap:9px;margin:0;padding:0}
+  .areas li{background:#fff;border:1.5px solid var(--line);border-radius:999px;padding:9px 18px;font-size:14.5px;font-weight:700;color:var(--navy)}
+
+  /* Contact */
+  .contact-card{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);padding:30px;text-align:center}
+  .contact-card .big{font-family:"Barlow Condensed",sans-serif;font-size:42px;font-weight:700;color:var(--navy-2);text-decoration:none}
+  .contact-card .big:hover{text-decoration:underline}
+  .contact-card p{color:var(--muted);margin:6px 0;font-size:16px}
+
+  footer.site{background:var(--navy);color:#c7d6df;padding:34px 0 92px;text-align:center;font-size:14.5px}
+  footer.site strong{color:#fff}
+  footer.site p{margin:5px 0}
+  .footer-claim{display:inline-flex;align-items:center;justify-content:center;background:var(--gold);color:#1a1a1a;text-decoration:none;font-weight:800;padding:0 22px;border-radius:10px;font-size:15.5px;min-height:48px;margin:14px 0 8px}
+  .footer-claim:hover{background:#ffb81f}
+  @media(min-width:768px){footer.site{padding-bottom:34px}}
+
+  /* Scale It pitch */
+  .pitch{border-top:4px solid var(--gold);background:#fffdf4}
+  .pitch-box{border:1.5px solid #ecd9a0;background:#fff;border-radius:var(--radius);padding:28px;box-shadow:var(--shadow)}
+  .pitch-box h2{font-size:30px;color:var(--navy);text-transform:uppercase}
+  .pitch-box p{font-size:16.5px;color:#37474f}
+  .price-line{display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:var(--navy);color:#fff;border-radius:11px;padding:16px 20px;margin:18px 0}
+  .price-line .price{font-family:"Barlow Condensed",sans-serif;font-size:34px;font-weight:700;color:var(--gold);line-height:1}
+  .price-line .terms{font-size:15px;color:#dbe7ee}
+  .hosting{margin-top:22px}
+  .hosting h3{font-size:22px;color:var(--navy);margin-bottom:10px}
+  .hosting dl{margin:0;display:grid;grid-template-columns:1fr;gap:12px}
+  @media(min-width:760px){.hosting dl{grid-template-columns:1fr 1fr}}
+  .hosting .qa{background:var(--bg-soft);border:1px solid var(--line);border-radius:11px;padding:16px 18px}
+  .hosting dt{font-weight:800;color:var(--navy);font-size:15px;margin-bottom:4px}
+  .hosting dd{margin:0;font-size:14.5px;color:var(--muted)}
+
+  /* Sticky mobile bar */
+  .stickybar{position:fixed;left:0;right:0;bottom:0;z-index:70;display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:rgba(255,255,255,.97);border-top:1px solid var(--line);box-shadow:0 -6px 20px rgba(10,46,71,.10)}
+  .stickybar a{display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;font-weight:800;font-size:16px;border-radius:10px;padding:0 10px}
+  .stickybar .call{background:var(--navy-2);color:#fff}
+  .stickybar .est{background:var(--gold);color:#1a1a1a}
+  .stickybar svg{width:18px;height:18px}
+  @media(min-width:768px){.stickybar{display:none}}
+  @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto} }
+</style>
+</head>
+<body>
+
+<div class="demo-banner"><strong>Demo concept</strong> — <span>not the live site. Built by Scale It as a redesign preview for Clearwater Plumbing Inc.</span></div>
+
+<header class="site">
+  <div class="wrap nav">
+    <a class="brand" href="#top" aria-label="Clearwater Plumbing Inc — home">
+      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4.5 4.5 0 0 0-6 6L3 18l3 3 5.7-5.7a4.5 4.5 0 0 0 6-6L14 13l-3-3 3.7-3.7z"/></svg></span>
+      <span class="brand-text"><span class="name">Clearwater Plumbing Inc</span><span class="sub">Clearwater, Florida</span></span>
+    </a>
+    <nav class="nav-links" aria-label="Main">
+      <a href="#services">Services</a>
+      <a href="#about">About</a>
+      <a href="#work">Our Work</a>
+      <a href="#areas">Service Area</a>
+    </nav>
+    <div class="header-actions">
+      <a class="claimbtn" href="https://square.link/u/cz1GGRh0" target="_blank" rel="noopener">Claim this site</a>
+      <a class="callbtn" href="tel:+17274468355"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>(727) 446-8355</a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+  <!-- HERO -->
+  <div class="hero">
+    <div class="wrap hero-grid">
+      <div class="hero-copy">
+        <div class="hero-eyebrow">Plumbers in Clearwater, FL — Since 1951</div>
+        <h1>Service is<br />our <span class="gold">salesman.</span></h1>
+        <p class="lede">Full-service plumbing for homes, businesses, and industrial properties across Clearwater, St. Petersburg, and Tampa Bay. One call, one team, done right the first time.</p>
+        <div class="hero-cta">
+          <a class="btn btn-gold" href="tel:+17274468355">Call (727) 446-8355</a>
+          <a class="btn btn-outline" href="#estimate">Get a Free Estimate</a>
+          <a class="btn btn-claim" href="https://square.link/u/cz1GGRh0" target="_blank" rel="noopener">Claim this site — $70</a>
+        </div>
+        <div class="hero-meta">
+          <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Residential, commercial &amp; industrial</span>
+          <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Service, repair &amp; new construction</span>
+        </div>
+      </div>
+      <div class="hero-photo">
+        <img src="assets/hero.jpg" alt="Clearwater Plumbing technician tightening a copper pipe fitting with a wrench" />
+        <div class="hero-badge"><div class="big">1951</div><div class="small">Serving Tampa Bay<br />for 70+ years</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TRUST -->
+  <div class="trust">
+    <div class="wrap"><ul>
+      <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span><div><strong>Since 1951</strong><span>Three generations of Clearwater plumbing</span></div></li>
+      <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/></svg></span><div><strong>Every property type</strong><span>Homes, businesses &amp; industrial sites</span></div></li>
+      <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4.5 4.5 0 0 0-6 6L3 18l3 3 5.7-5.7a4.5 4.5 0 0 0 6-6L14 13l-3-3 3.7-3.7z"/></svg></span><div><strong>Full-service team</strong><span>Repair, renovation &amp; new construction</span></div></li>
+      <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-3.6 8-10V5l-8-3-8 3v7c0 6.4 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></span><div><strong>Licensed professionals</strong><span>Trained techs who diagnose before they dig</span></div></li>
+    </ul></div>
+  </div>
+
+  <!-- SERVICES -->
+  <section class="block soft" id="services">
+    <div class="wrap">
+      <div class="kicker">What we do</div>
+      <h2 class="title">Our Services</h2>
+      <p class="sub">From a leaky faucet to a full re-pipe, one team handles the whole job — no runaround, no subcontractor shuffle.</p>
+      <div class="grid">
+        <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h6v6"/><path d="M20 10h-6V4"/><path d="M14 10l7-7"/><path d="M3 21l7-7"/></svg></div><h3>Sewer &amp; Drain Cleaning</h3><p>Clogged drains, sewer backups, and root problems cleared fast — with camera inspection and hydro jetting to find the real cause.</p></div>
+        <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3 2.5.5 5 2.5 5 6a5 5 0 0 1-10 0c0-1.5.5-3 1.5-4 .5 1 1 2 2 3.5z"/></svg></div><h3>Water Heaters</h3><p>Repair, replacement, and installation of tank and tankless water heaters for homes and businesses — sized right, installed to code.</p></div>
+        <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h4l2-7 4 14 2-7h8"/></svg></div><h3>Pipe Re-lining</h3><p>Trenchless pipe re-lining that restores damaged lines from the inside — without tearing up your yard, driveway, or floors.</p></div>
+        <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg></div><h3>Water Treatment</h3><p>Filtration, softening, and water quality systems that protect your pipes, your appliances, and your family.</p></div>
+        <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v3H4z"/><path d="M12 7v4"/><path d="M8 21h8"/><path d="M10 11h4v5a2 2 0 0 1-4 0z"/></svg></div><h3>Fixtures &amp; Faucets</h3><p>Sinks, toilets, showers, tubs, and faucets installed and repaired by professionals — clean work, no drips left behind.</p></div>
+        <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="M12 18v4"/><path d="m4.9 4.9 2.8 2.8"/><path d="m16.3 16.3 2.8 2.8"/><path d="M2 12h4"/><path d="M18 12h4"/><circle cx="12" cy="12" r="4"/></svg></div><h3>Gas Piping</h3><p>Safe, code-compliant gas line installation and repair for homes, restaurants, and commercial kitchens.</p></div>
+        <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg></div><h3>Grease Traps</h3><p>Grease trap installation, cleaning, and service for restaurants and commercial kitchens — stay compliant, stay open.</p></div>
+        <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3"/><path d="M18.4 8.6a9 9 0 1 1-12.8 0"/><path d="M12 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg></div><h3>Lift Stations &amp; Pumps</h3><p>Lift station service, sump pumps, and sewer pumps kept running — so your property stays dry when it matters most.</p></div>
+        <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v6a4 4 0 0 0 4 4h12"/><path d="m16 10 4 4-4 4"/><path d="M20 20v-6a4 4 0 0 0-4-4H4"/></svg></div><h3>Repiping</h3><p>Whole-home and commercial repiping with copper and modern piping systems — the permanent fix for chronic leaks and low pressure.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ABOUT -->
+  <section class="block" id="about">
+    <div class="wrap about-grid">
+      <div class="about">
+        <div class="kicker">About us</div>
+        <h2 class="title">Clearwater Plumbing Inc</h2>
+        <p style="margin-top:12px">Clearwater Plumbing Inc has provided quality plumbing service, repair, and installation in Clearwater, St. Petersburg, and throughout the Tampa Bay area since 1951. Our expertly trained technicians specialize in diagnosing and solving residential, commercial, and industrial plumbing problems.</p>
+        <p>Leaky pipe, clogged drain, burst line, or a water heater that quit — we show up, explain the problem in plain language, and fix it right the first time. That is why our motto has held for over 70 years: <strong>service is our salesman.</strong></p>
+        <ul class="checklist">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Residential, commercial, and industrial plumbing</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Service, repair, renovation, and new construction</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Sewer &amp; drain cleaning, camera inspection, hydro jetting</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Water heaters, fixtures, gas piping, and water treatment</li>
+        </ul>
+      </div>
+      <div>
+        <div class="stats" aria-label="Company facts">
+          <div class="row"><span class="num">1951</span><span class="lbl">Founded in Clearwater, FL</span></div>
+          <div class="row"><span class="num">70+</span><span class="lbl">Years serving Tampa Bay</span></div>
+          <div class="row"><span class="num">3</span><span class="lbl">Markets: residential, commercial, industrial</span></div>
+          <div class="row"><span class="num">9</span><span class="lbl">Core services under one roof</span></div>
+        </div>
+        <p class="note" style="margin-top:14px">Hours: Monday – Friday, 7:30 AM – 4:30 PM<br />2101 Calumet Street, Clearwater, FL 33765</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- GALLERY -->
+  <section class="block soft" id="work">
+    <div class="wrap">
+      <div class="kicker">The work</div>
+      <h2 class="title">What We Do Every Day</h2>
+      <p class="sub">The kind of jobs Clearwater Plumbing Inc handles across Clearwater and Tampa Bay — in homes, restaurants, offices, and industrial properties.</p>
+      <div class="gal">
+        <figure><img src="assets/pipes.jpg" alt="Industrial pipework and valves on a commercial plumbing system" /><figcaption><strong>Commercial &amp; industrial systems</strong>Large-diameter piping, valves, and lift systems serviced and maintained.</figcaption></figure>
+        <figure><img src="assets/bathroom.jpg" alt="Finished modern bathroom with glass shower, double vanity, and new fixtures" /><figcaption><strong>Bathroom renovation plumbing</strong>Showers, tubs, vanities, and toilets roughed in and finished clean.</figcaption></figure>
+        <figure><img src="assets/faucet.jpg" alt="Close-up of a polished chrome faucet and fixtures" /><figcaption><strong>Fixtures &amp; faucets</strong>Quality fixture installation and repair for kitchens and baths.</figcaption></figure>
+      </div>
+      <p class="note">Photos shown are representative images for illustration. Ask us about recent jobs in your neighborhood.</p>
+    </div>
+  </section>
+
+  <!-- ESTIMATE FORM -->
+  <section class="block formsec" id="estimate">
+    <div class="wrap form-grid">
+      <div class="form-side">
+        <div class="kicker" style="color:var(--gold)">Free estimate</div>
+        <h2 class="title">Get a Free Estimate</h2>
+        <p>Tell us what you need and we will get back to you quickly with a straight answer and a time that works for you. The form takes about 30 seconds.</p>
+        <p>Prefer to talk?</p>
+        <a class="phone-big" href="tel:+17274468355">(727) 446-8355</a>
+        <p>Or email us at <a class="mail" href="mailto:scaleitdesigns@gmail.com">scaleitdesigns@gmail.com</a></p>
+        <p style="font-size:14.5px">Submitting opens a pre-filled email in your mail app — nothing is sent until you hit send there.</p>
+      </div>
+      <div>
+        <form class="card-form" id="estimate-form" novalidate>
+          <label for="f-name">Your name *</label>
+          <input id="f-name" name="name" type="text" required autocomplete="name" placeholder="Full name" />
+          <label for="f-phone">Phone *</label>
+          <input id="f-phone" name="phone" type="tel" required autocomplete="tel" placeholder="(727) 555-0123" />
+          <label for="f-email">Email</label>
+          <input id="f-email" name="email" type="email" autocomplete="email" placeholder="you@email.com" />
+          <label for="f-service">Service needed</label>
+          <select id="f-service" name="service">
+            <option>Sewer &amp; Drain Cleaning</option>
+            <option>Water Heaters</option>
+            <option>Pipe Re-lining</option>
+            <option>Water Treatment</option>
+            <option>Fixtures &amp; Faucets</option>
+            <option>Gas Piping</option>
+            <option>Grease Traps</option>
+            <option>Lift Stations &amp; Pumps</option>
+            <option>Repiping</option>
+            <option>Other / Not sure</option>
+          </select>
+          <label for="f-msg">Tell us about the job</label>
+          <textarea id="f-msg" name="message" placeholder="What is going on, where is it, and when do you need it done?"></textarea>
+          <button type="submit">Request My Free Estimate</button>
+          <p class="fineprint">No spam, no obligation. We reply by phone or email.</p>
+        </form>
+        <div class="thanks" id="thanks" role="status">
+          <h3>Almost done — check your mail app</h3>
+          <p>We opened a pre-filled email with your details. Hit <strong>Send</strong> in your mail app and we will call you back shortly to confirm your free estimate.</p>
+          <p>Urgent? Call us directly at <a href="tel:+17274468355">(727) 446-8355</a>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- AREAS -->
+  <section class="block areas" id="areas">
+    <div class="wrap">
+      <div class="kicker">Where we work</div>
+      <h2 class="title">Service Area</h2>
+      <p class="sub">Proudly serving Clearwater and the greater Tampa Bay area.</p>
+      <ul>
+        <li>Clearwater</li><li>St. Petersburg</li><li>Dunedin</li><li>Largo</li><li>Palm Harbor</li><li>Safety Harbor</li><li>Seminole</li><li>Pinellas Park</li><li>Tampa Bay</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section class="block" style="padding-top:0">
+    <div class="wrap">
+      <div class="contact-card">
+        <div class="kicker">Contact</div>
+        <h2 class="title">Talk to Clearwater Plumbing</h2>
+        <p style="margin-top:10px">Call or email today. We answer, we show up, and we fix it right.</p>
+        <p><a class="big" href="tel:+17274468355">(727) 446-8355</a></p>
+        <p>2101 Calumet Street, Clearwater, FL 33765</p>
+        <p>Monday – Friday, 7:30 AM – 4:30 PM</p>
+        <p><a href="mailto:info@clearwaterplumbing.us" style="color:var(--navy-2);font-weight:700">info@clearwaterplumbing.us</a> &nbsp;·&nbsp; <a href="https://clearwaterplumbing.com" target="_blank" rel="noopener" style="color:var(--navy-2);font-weight:700">clearwaterplumbing.com</a></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCALE IT PITCH -->
+  <section class="block pitch" id="pitch">
+    <div class="wrap">
+      <div class="pitch-box">
+        <div class="kicker">Demo by Scale It</div>
+        <h2>Why this demo exists</h2>
+        <p>Clearwater Plumbing has been serving Tampa Bay since 1951, but their current homepage still leads with a COVID announcement from years ago — so a customer landing there has to dig to find what they actually do. This demo puts their name, their phone number, and every service front and center on a clean, mobile-first page, with a working free-estimate form that takes thirty seconds instead of a phone call or nothing at all. It is built in their own navy and gold, not a generic template.</p>
+        <div class="price-line">
+          <span class="price">$70 one-time</span>
+          <span class="terms">First year of hosting included, then $5/month. Ready to go live on their own domain.</span>
+        </div>
+        <a class="btn btn-gold claim-bottom" href="https://square.link/u/cz1GGRh0" target="_blank" rel="noopener">Claim this site — $70 one-time</a>
+        <p class="claim-note">First year of hosting included, then $5/month. Secure checkout via Square.</p>
+        <div class="hosting">
+          <h3>About hosted demo pages — your questions, answered</h3>
+          <dl>
+            <div class="qa"><dt>Where do hosted pages live?</dt><dd>On a hosted-page system. Each demo gets its own public share link (this page is one) — no server or account setup on the business's side.</dd></div>
+            <div class="qa"><dt>Are they free?</dt><dd>Yes. Publishing and keeping a demo page up costs nothing extra — there is no per-page hosting fee for the demo itself.</dd></div>
+            <div class="qa"><dt>How long do they stay up?</dt><dd>They stay published until they are taken down or replaced. There is no trial window or auto-expiry on the demo link.</dd></div>
+            <div class="qa"><dt>Can a prospect open one without logging in?</dt><dd>Yes. The link is public — anyone with it opens the page directly, no login, no app, no account needed. It works on any phone or computer.</dd></div>
+            <div class="qa"><dt>When does it move to our own domain?</dt><dd>When you buy, it moves to your own domain (for Clearwater Plumbing, clearwaterplumbing.com). Until then, the demo link is just the review copy.</dd></div>
+            <div class="qa"><dt>What happens to the estimate form?</dt><dd>In this demo it opens a pre-filled email to Scale It at scaleitdesigns@gmail.com. On a live site it can post straight to their inbox or phone — wired up at launch, once they approve.</dd></div>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site">
+  <div class="wrap">
+    <p><strong>Clearwater Plumbing Inc</strong> — Clearwater, Florida</p>
+    <p>2101 Calumet Street, Clearwater, FL 33765 · (727) 446-8355 · Mon–Fri 7:30 AM – 4:30 PM</p>
+    <p><a class="footer-claim" href="https://square.link/u/cz1GGRh0" target="_blank" rel="noopener">Claim this site</a></p>
+    <p>Demo concept — not the live site · Website by Scale It</p>
+  </div>
+</footer>
+
+<div class="stickybar" aria-label="Quick contact">
+  <a class="call" href="tel:+17274468355"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>Call Now</a>
+  <a class="est" href="#estimate">Free Estimate</a>
+</div>
+
+<script>
+(function(){
+  var form = document.getElementById('estimate-form');
+  var thanks = document.getElementById('thanks');
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    var name = document.getElementById('f-name').value.trim();
+    var phone = document.getElementById('f-phone').value.trim();
+    if(!name || !phone){
+      if(!name) document.getElementById('f-name').focus();
+      else document.getElementById('f-phone').focus();
+      return;
+    }
+    var email = document.getElementById('f-email').value.trim();
+    var service = document.getElementById('f-service').value;
+    var msg = document.getElementById('f-msg').value.trim();
+    var subject = 'Free estimate request — ' + service;
+    var body = 'Name: ' + name + '\nPhone: ' + phone + (email ? '\nEmail: ' + email : '') + '\nService needed: ' + service + (msg ? '\n\nAbout the job:\n' + msg : '');
+    var href = 'mailto:scaleitdesigns@gmail.com?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+    window.location.href = href;
+    form.style.display = 'none';
+    thanks.style.display = 'block';
+    thanks.scrollIntoView({behavior:'smooth', block:'center'});
+  });
+})();
+</script>
+</body>
+</html>

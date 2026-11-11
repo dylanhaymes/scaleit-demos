@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="en">
+<head><meta name="robots" content="noindex,nofollow">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="light dark" />
+<link rel="icon" href="data:," />
+<title>Arbor Addicts Tree Service — Dunedin, FL | Tree Removal, Trimming, Stump Grinding</title>
+<meta name="description" content="Family-owned tree service in Dunedin, FL since 2017. Tree removal, trimming & pruning, palm care, stump grinding, and 24/7 storm cleanup across Pinellas & Pasco Counties. Free estimates: (727) 678-8371." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#f6f2e7; --surface:#fffdf6; --surface2:#efe8d6;
+    --ink:#1c2a1e; --ink-soft:#43503f; --muted:#6b7563;
+    --green:#1e4630; --green-deep:#14301f; --green-bright:#2e6b45;
+    --amber:#e8a020; --amber-ink:#7a5200;
+    --line:#ddd3ba; --chip:#e9e1cb;
+    --shadow:0 10px 30px rgba(28,42,30,.14);
+    color-scheme:light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#10160f; --surface:#18211a; --surface2:#1f2a20;
+      --ink:#eef2e4; --ink-soft:#c3cdb4; --muted:#97a48b;
+      --green:#2e6b45; --green-deep:#0c1a10; --green-bright:#4c9a68;
+      --amber:#f0b23e; --amber-ink:#f0b23e;
+      --line:#2c3a2d; --chip:#243126;
+      --shadow:0 10px 30px rgba(0,0,0,.45);
+      color-scheme:dark;
+    }
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Barlow",system-ui,sans-serif;font-size:17px;line-height:1.55}
+  img{max-width:100%;display:block}
+  a{color:var(--green-bright)}
+  button,[role="button"],select,summary,input:not([type="checkbox"],[type="radio"]),textarea{ min-height:2.25rem; }
+  .wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+
+  /* Header */
+  header{position:sticky;top:0;z-index:20;background:var(--green-deep);color:#f3efdd}
+  .header-in{display:flex;align-items:center;gap:16px;padding:10px 0;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:#f3efdd}
+  .brand-mark{width:44px;height:44px;flex:none;border-radius:10px;background:var(--amber);display:grid;place-items:center}
+  .brand-name{font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:26px;letter-spacing:.02em;line-height:1;text-transform:uppercase}
+  .brand-sub{font-size:12.5px;color:#cfd6bd;letter-spacing:.08em;text-transform:uppercase}
+  nav{margin-left:auto;display:flex;gap:4px;flex-wrap:wrap}
+  nav a{color:#e9ecd9;text-decoration:none;font-weight:600;font-size:15.5px;padding:10px 12px;border-radius:8px;min-height:44px;display:inline-flex;align-items:center}
+  nav a:hover{background:rgba(255,255,255,.1)}
+  .call-btn{background:var(--amber);color:#221a04 !important;border-radius:10px;font-weight:700}
+  .call-btn:hover{background:#f2b13f}
+  .claim-btn{background:#fffdf6;color:#14301f !important;border:2px solid var(--amber);border-radius:10px;font-weight:800}
+  .claim-btn:hover{background:var(--amber);color:#221a04 !important}
+
+  /* Hero */
+  .hero{position:relative;background:var(--green-deep);color:#f5f1de;overflow:hidden}
+  .hero img.hero-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.5}
+  .hero::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,rgba(12,26,16,.92) 30%,rgba(12,26,16,.45) 70%,rgba(12,26,16,.25))}
+  .hero-in{position:relative;z-index:2;padding:72px 0 60px;max-width:680px}
+  .hero h1{font-family:"Barlow Condensed",sans-serif;font-size:clamp(52px,9vw,92px);line-height:.95;margin:0 0 14px;text-transform:uppercase;font-weight:700;letter-spacing:.01em}
+  .hero h1 .accent{color:var(--amber)}
+  .hero p.lede{font-size:20px;line-height:1.5;color:#e6ead2;margin:0 0 26px;max-width:560px}
+  .hero-ctas{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:30px}
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:13px 22px;border-radius:10px;font-weight:700;font-size:17px;text-decoration:none;min-height:48px;border:2px solid transparent;cursor:pointer}
+  .btn-amber{background:var(--amber);color:#221a04}
+  .btn-amber:hover{background:#f2b13f}
+  .btn-ghost{background:transparent;color:#f5f1de;border-color:rgba(245,241,222,.6)}
+  .btn-ghost:hover{border-color:#f5f1de}
+  .badges{display:flex;gap:8px;flex-wrap:wrap}
+  .badge{background:rgba(16,32,20,.75);border:1px solid rgba(245,241,222,.28);color:#eef0da;border-radius:999px;padding:7px 14px;font-size:14.5px;font-weight:600;backdrop-filter:blur(3px)}
+  .badge .star{color:var(--amber)}
+
+  /* Emergency strip */
+  .emergency{background:var(--amber);color:#241b02}
+  .emergency-in{display:flex;align-items:center;gap:14px;padding:14px 0;flex-wrap:wrap}
+  .emergency strong{font-family:"Barlow Condensed",sans-serif;font-size:22px;text-transform:uppercase;letter-spacing:.03em}
+  .emergency p{margin:0;font-weight:500}
+  .emergency a{margin-left:auto;color:#241b02;font-weight:700;text-decoration:none;background:#241b02;color:#ffd873;padding:10px 18px;border-radius:8px;min-height:44px;display:inline-flex;align-items:center}
+  @media (max-width:640px){ .emergency a{margin-left:0} }
+
+  section{padding:64px 0}
+  .kicker{font-family:"Barlow Condensed",sans-serif;color:var(--green-bright);font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:15px;margin:0 0 6px}
+  h2{font-family:"Barlow Condensed",sans-serif;font-size:clamp(34px,5vw,48px);line-height:1.02;margin:0 0 12px;text-transform:uppercase;font-weight:700}
+  .section-lede{color:var(--ink-soft);max-width:640px;margin:0 0 34px;font-size:18px}
+
+  /* Services */
+  .svc-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:22px}
+  @media (max-width:760px){ .svc-grid{grid-template-columns:1fr} }
+  .svc{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
+  .svc img{width:100%;height:210px;object-fit:cover}
+  .svc-body{padding:22px 24px 26px}
+  .svc h3{font-family:"Barlow Condensed",sans-serif;font-size:27px;margin:0 0 8px;text-transform:uppercase;letter-spacing:.01em}
+  .svc p{margin:0 0 12px;color:var(--ink-soft)}
+  .svc ul{margin:0;padding-left:20px;color:var(--ink-soft)}
+  .svc li{margin:4px 0}
+
+  /* Why / steps */
+  .why{background:var(--surface2);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .why-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:40px;align-items:center}
+  @media (max-width:820px){ .why-grid{grid-template-columns:1fr} }
+  .why img{border-radius:14px;box-shadow:var(--shadow);width:100%;height:100%;object-fit:cover;min-height:280px}
+  .steps{display:grid;gap:0;margin-top:8px}
+  .step{display:flex;gap:16px;padding:16px 0;border-bottom:1px dashed var(--line)}
+  .step:last-child{border-bottom:none}
+  .step-num{flex:none;width:44px;height:44px;border-radius:50%;background:var(--green);color:#fff;display:grid;place-items:center;font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:21px}
+  .step h3{margin:2px 0 4px;font-size:19px}
+  .step p{margin:0;color:var(--ink-soft)}
+
+  /* Reviews */
+  .rev-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  @media (max-width:860px){ .rev-grid{grid-template-columns:1fr} }
+  .rev{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:24px}
+  .rev .stars{color:var(--amber);font-size:19px;letter-spacing:2px;margin-bottom:10px}
+  .rev p{margin:0 0 14px;font-size:17.5px}
+  .rev .who{font-weight:700}
+  .rev .where{color:var(--muted);font-size:15px}
+  .rating-note{display:flex;align-items:center;gap:12px;margin-bottom:28px;flex-wrap:wrap}
+  .rating-badge{background:var(--green);color:#fff;border-radius:10px;padding:10px 16px;font-weight:700}
+  .rating-badge .star{color:var(--amber)}
+
+  /* Area */
+  .area{background:var(--green-deep);color:#eef0da}
+  .area h2{color:#f5f1de}
+  .area .section-lede{color:#c9d2b6}
+  .towns{display:flex;flex-wrap:wrap;gap:8px}
+  .town{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);padding:8px 15px;border-radius:999px;font-weight:600;font-size:15.5px}
+
+  /* Form + offer */
+  .contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:36px;align-items:start}
+  @media (max-width:860px){ .contact-grid{grid-template-columns:1fr} }
+  form{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:26px;box-shadow:var(--shadow)}
+  form h3{font-family:"Barlow Condensed",sans-serif;font-size:28px;margin:0 0 4px;text-transform:uppercase}
+  form .fine{color:var(--muted);font-size:15px;margin:0 0 18px}
+  label{display:block;font-weight:600;font-size:15.5px;margin:14px 0 6px}
+  input,select,textarea{width:100%;padding:11px 13px;border:1.5px solid var(--line);border-radius:9px;background:var(--bg);color:var(--ink);font:inherit;font-size:16.5px}
+  textarea{min-height:96px;resize:vertical}
+  input:focus,select,textarea:focus{outline:2px solid var(--green-bright);outline-offset:1px}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media (max-width:520px){ .form-row{grid-template-columns:1fr} }
+  .submit{width:100%;margin-top:20px;background:var(--green);color:#fff;border:none;font-size:18px;justify-content:center}
+  .submit:hover{background:var(--green-bright)}
+  .form-note{font-size:14.5px;color:var(--muted);margin-top:12px;text-align:center}
+  .info-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:26px}
+  .info-card h3{font-family:"Barlow Condensed",sans-serif;font-size:26px;margin:0 0 14px;text-transform:uppercase}
+  .info-card dl{margin:0;display:grid;gap:12px}
+  .info-card dt{font-size:13.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700}
+  .info-card dd{margin:2px 0 0;font-size:17.5px;font-weight:600}
+  .info-card dd a{color:var(--ink);text-decoration:none}
+  .info-card dd a:hover{color:var(--green-bright)}
+
+  .offer{margin-top:36px;background:var(--green-deep);color:#eef0da;border-radius:14px;padding:28px;display:grid;gap:8px}
+  .offer h3{font-family:"Barlow Condensed",sans-serif;font-size:28px;margin:0;text-transform:uppercase;color:#f5f1de}
+  .offer .price{font-size:19px}
+  .offer .price strong{color:var(--amber);font-size:24px}
+  .offer p{margin:0;color:#c9d2b6;max-width:640px}
+
+  footer{background:var(--green-deep);color:#c9d2b6;padding:36px 0 44px;font-size:15.5px}
+  footer .cols{display:flex;gap:28px;flex-wrap:wrap;justify-content:space-between}
+  footer strong{color:#f5f1de}
+  footer a{color:#e8c877}
+  .footer-claim-row{margin-top:24px}
+  .footer-claim{display:inline-flex;align-items:center;min-height:44px;padding:10px 20px;text-decoration:none;font-size:16px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap header-in">
+    <a class="brand" href="#top" aria-label="Arbor Addicts Tree Service home">
+      <span class="brand-mark" aria-hidden="true">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 2 5 11h4l-5 7h6v4h4v-4h6l-5-7h4L12 2Z" fill="#14301f"/></svg>
+      </span>
+      <span>
+        <span class="brand-name">Arbor Addicts</span><br />
+        <span class="brand-sub">Tree Service · Dunedin, FL</span>
+      </span>
+    </a>
+    <nav aria-label="Main">
+      <a href="#services">Services</a>
+      <a href="#reviews">Reviews</a>
+      <a href="#area">Service Area</a>
+      <a href="#estimate">Free Estimate</a>
+      <a class="call-btn" href="tel:+17276788371">Call (727) 678-8371</a>
+      <a class="claim-btn" href="https://square.link/u/cz1GGRh0" target="_blank" rel="noopener">Claim this site</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- HERO -->
+  <div class="hero">
+    <img class="hero-photo" src="assets/hero.webp" alt="Arbor Addicts crew trimming tall palm trees in a Florida residential neighborhood" />
+    <div class="wrap hero-in">
+      <h1>Big trees.<br /><span class="accent">Personal service.</span></h1>
+      <p class="lede">Tree removal, trimming, stump grinding, and storm cleanup across Pinellas &amp; Pasco Counties — from a family-owned crew based right here in Dunedin.</p>
+      <div class="hero-ctas">
+        <a class="btn btn-amber" href="#estimate">Get a Free Estimate</a>
+        <a class="btn btn-ghost" href="tel:+17276788371">Call (727) 678-8371</a>
+      </div>
+      <div class="badges">
+        <span class="badge">Family-owned since 2017</span>
+        <span class="badge">Licensed &amp; insured</span>
+        <span class="badge"><span class="star">★</span> 5.0 · 36 Google reviews</span>
+        <span class="badge">24/7 emergency response</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- EMERGENCY -->
+  <div class="emergency">
+    <div class="wrap emergency-in">
+      <strong>Storm damage?</strong>
+      <p>Tree on your roof or blocking your driveway? We respond 24/7 for storm damage and hazardous trees.</p>
+      <a href="tel:+17276788371">Call now: (727) 678-8371</a>
+    </div>
+  </div>
+
+  <!-- SERVICES -->
+  <section id="services">
+    <div class="wrap">
+      <p class="kicker">What we do</p>
+      <h2>Full-service tree care</h2>
+      <p class="section-lede">Residential and commercial properties across the greater Tampa Bay area. The crew that gives your estimate is the crew that shows up to do the work.</p>
+      <div class="svc-grid">
+
+        <article class="svc">
+          <img src="assets/crew.webp" alt="Tree crew rigging down a large tree in sections at dusk in a residential yard" />
+          <div class="svc-body">
+            <h3>Tree Removal</h3>
+            <p>Dead, diseased, storm-damaged, or just in the wrong place — we remove trees cleanly and safely, including tight backyard access and trees over homes, pools, and power lines.</p>
+            <ul>
+              <li>Section-by-section rigging, never dropped whole near structures</li>
+              <li>Crane-assisted removal for tall palms when needed</li>
+              <li>Honest read first: if trimming will do, we say so</li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="svc">
+          <img src="assets/palm.webp" alt="Arborists trimming a tall palm tree high above a Florida home" />
+          <div class="svc-body">
+            <h3>Trimming &amp; Pruning</h3>
+            <p>Expert trimming and pruning that keeps your trees healthy, safe, and looking right — including the palm care Florida properties need year-round.</p>
+            <ul>
+              <li>Palm tree trimming &amp; care</li>
+              <li>Canopy raising and storm-season prep cuts</li>
+              <li>Deadwood removal over roofs and driveways</li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="svc">
+          <img src="assets/stump.jpg" alt="Stump grinder reducing a tree stump below ground level in a backyard" />
+          <div class="svc-body">
+            <h3>Stump Grinding &amp; Removal</h3>
+            <p>We grind stumps below ground level so you can replant, sod, or just stop mowing around them. Quoted separately from removal, so you only pay for stump work you actually need.</p>
+            <ul>
+              <li>Same-day grinding often available with removal</li>
+              <li>Bundle with a removal and save a trip</li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="svc">
+          <img src="assets/hero.webp" alt="Tree service crew with bucket truck and chipper working on a residential street" />
+          <div class="svc-body">
+            <h3>Storm Prep &amp; Cleanup</h3>
+            <p>Florida weather is the job. We prepare trees before storm season and clean up fast after — including 24/7 emergency response for trees on roofs and hazardous leaners.</p>
+            <ul>
+              <li>Preventative storm preparation &amp; maintenance</li>
+              <li>Emergency storm cleanup, day or night</li>
+              <li>Thorough cleanup — yard left cleaner than we found it</li>
+            </ul>
+          </div>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- WHY / HOW -->
+  <section class="why">
+    <div class="wrap why-grid">
+      <div>
+        <p class="kicker">The same local crew, every time</p>
+        <h2>How it works</h2>
+        <p class="section-lede" style="margin-bottom:10px">Arbor Addicts is family-owned and based in Dunedin, running since 2017. No rotating cast of subcontractors — careful rigging around your home, straight answers, and a thorough cleanup when we're done.</p>
+        <div class="steps">
+          <div class="step">
+            <span class="step-num">1</span>
+            <div>
+              <h3>Call or request an estimate</h3>
+              <p>Tell us what's going on — a phone call or the quick form below, whichever is easier.</p>
+            </div>
+          </div>
+          <div class="step">
+            <span class="step-num">2</span>
+            <div>
+              <h3>Free on-site estimate</h3>
+              <p>We come look, give you an honest price, handle permits when needed, and answer every question before any work starts.</p>
+            </div>
+          </div>
+          <div class="step">
+            <span class="step-num">3</span>
+            <div>
+              <h3>Safe work, thorough cleanup</h3>
+              <p>We do the job right and leave your property cleaner than we found it.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <img src="assets/crew.webp" alt="Arbor Addicts crew working together on a tree removal with ropes and chipper" />
+    </div>
+  </section>
+
+  <!-- REVIEWS -->
+  <section id="reviews">
+    <div class="wrap">
+      <p class="kicker">What customers say</p>
+      <h2>Careful around your home. Thorough with the cleanup.</h2>
+      <div class="rating-note">
+        <span class="rating-badge"><span class="star">★</span> 5.0 on Google · 36 reviews</span>
+        <span style="color:var(--muted)">Plus an A+ BBB rating (BBB's own published rating; not BBB Accredited).</span>
+      </div>
+      <div class="rev-grid">
+        <article class="rev">
+          <div class="stars" aria-label="5 out of 5 stars">★★★★★</div>
+          <p>"I've used Arbor Addicts several times for tree services in Pinellas County. They're fast, clean, and professional — and their prices are fair. Highly recommended!"</p>
+          <div class="who">Jillian M.</div>
+          <div class="where">Clearwater, FL</div>
+        </article>
+        <article class="rev">
+          <div class="stars" aria-label="5 out of 5 stars">★★★★★</div>
+          <p>"These guys removed two large trees and ground the stumps the same day. Couldn't believe how clean the yard looked afterward!"</p>
+          <div class="who">Robert T.</div>
+          <div class="where">Clearwater, FL</div>
+        </article>
+        <article class="rev">
+          <div class="stars" aria-label="5 out of 5 stars">★★★★★</div>
+          <p>"I called for emergency storm cleanup, and Arbor Addicts arrived within hours. Friendly team, great service."</p>
+          <div class="who">Lauren D.</div>
+          <div class="where">Safety Harbor, FL</div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- AREA -->
+  <section class="area" id="area">
+    <div class="wrap">
+      <p class="kicker" style="color:var(--amber)">Where we work</p>
+      <h2>Proudly serving Pinellas &amp; Pasco County</h2>
+      <p class="section-lede">Based in Dunedin and on the road across both counties, six days a week — with 24/7 emergency response on top of that.</p>
+      <div class="towns">
+        <span class="town">Dunedin</span><span class="town">Clearwater</span><span class="town">Largo</span><span class="town">Palm Harbor</span><span class="town">St. Petersburg</span><span class="town">Seminole</span><span class="town">Safety Harbor</span><span class="town">Tarpon Springs</span><span class="town">Belleair</span><span class="town">Gulfport</span><span class="town">Oldsmar</span><span class="town">New Port Richey</span><span class="town">Holiday</span><span class="town">Port Richey</span><span class="town">Trinity</span><span class="town">Odessa</span><span class="town">Wesley Chapel</span><span class="town">Land O' Lakes</span><span class="town">Zephyrhills</span><span class="town">&amp; surrounding communities</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ESTIMATE + CONTACT -->
+  <section id="estimate">
+    <div class="wrap">
+      <p class="kicker">Free estimates</p>
+      <h2>Ready to get started?</h2>
+      <p class="section-lede">Tell us about your project and we'll get back to you fast — usually the same day.</p>
+      <div class="contact-grid">
+        <form id="estimateForm">
+          <h3>Request an estimate</h3>
+          <p class="fine">Fill this out and it opens a pre-filled email with your project details — just hit send.</p>
+          <div class="form-row">
+            <div>
+              <label for="f-name">Your name</label>
+              <input id="f-name" name="name" type="text" autocomplete="name" required />
+            </div>
+            <div>
+              <label for="f-phone">Phone</label>
+              <input id="f-phone" name="phone" type="tel" autocomplete="tel" required />
+            </div>
+          </div>
+          <label for="f-address">Property address</label>
+          <input id="f-address" name="address" type="text" autocomplete="street-address" />
+          <label for="f-service">What do you need?</label>
+          <select id="f-service" name="service">
+            <option>Tree removal</option>
+            <option>Tree trimming &amp; pruning</option>
+            <option>Palm tree care</option>
+            <option>Stump grinding &amp; removal</option>
+            <option>Storm prep &amp; cleanup</option>
+            <option>Emergency — tree down / hazardous</option>
+            <option>Not sure — need an honest look</option>
+          </select>
+          <label for="f-details">Tell us about the tree(s)</label>
+          <textarea id="f-details" name="details" placeholder="e.g. Large oak leaning toward the house after the last storm, backyard access through a side gate…"></textarea>
+          <button class="btn submit" type="submit">Send My Free Estimate Request</button>
+          <p class="form-note">Prefer to talk? Call <a href="tel:+17276788371">(727) 678-8371</a>, Mon–Sat 7 AM–6 PM.</p>
+        </form>
+
+        <div>
+          <div class="info-card">
+            <h3>Arbor Addicts Tree Service, Inc.</h3>
+            <dl>
+              <div><dt>Phone</dt><dd><a href="tel:+17276788371">(727) 678-8371</a></dd></div>
+              <div><dt>Address</dt><dd>1497 Main St #193, Dunedin, FL 34698</dd></div>
+              <div><dt>Hours</dt><dd>Mon–Sat · 7:00 AM – 6:00 PM</dd></div>
+              <div><dt>Emergency</dt><dd>24/7 response for storm damage &amp; hazardous trees</dd></div>
+              <div><dt>Credentials</dt><dd>Family-owned since 2017 · Licensed &amp; insured</dd></div>
+            </dl>
+          </div>
+
+          <div class="offer">
+            <h3>Like this website?</h3>
+            <p class="price">This demo was built for Arbor Addicts by Scale It. Make it yours for <strong>$70 one-time</strong> — first year of hosting included, then just $5/mo.</p>
+            <p>When you buy, it moves to your own domain, with your photos, your reviews, and estimate requests routed straight to you.</p>
+            <p style="margin-top:10px"><a class="btn btn-amber" href="https://square.link/u/cz1GGRh0" target="_blank" rel="noopener">Claim this site — $70 one-time</a></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap cols">
+    <div>
+      <strong>Arbor Addicts Tree Service, Inc.</strong><br />
+      Family-owned tree service serving Pinellas &amp; Pasco County since 2017.
+    </div>
+    <div>
+      <a href="tel:+17276788371">(727) 678-8371</a><br />
+      1497 Main St #193, Dunedin, FL 34698
+    </div>
+    <div>
+      Mon–Sat, 7:00 AM – 6:00 PM<br />
+      24/7 Emergency Response
+    </div>
+  </div>
+  <div class="wrap footer-claim-row">
+    <a class="claim-btn footer-claim" href="https://square.link/u/cz1GGRh0" target="_blank" rel="noopener">Claim this site</a>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('estimateForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var name = document.getElementById('f-name').value.trim();
+    var phone = document.getElementById('f-phone').value.trim();
+    var address = document.getElementById('f-address').value.trim();
+    var service = document.getElementById('f-service').value;
+    var details = document.getElementById('f-details').value.trim();
+    var subject = 'Free estimate request — ' + service + ' — ' + name;
+    var body = [
+      'New estimate request from the Arbor Addicts demo website',
+      '',
+      'Name: ' + name,
+      'Phone: ' + phone,
+      'Property address: ' + (address || '(not provided)'),
+      'Service needed: ' + service,
+      '',
+      'About the tree(s):',
+      details || '(no details provided)'
+    ].join('\n');
+    window.location.href = 'mailto:scaleitdesigns@gmail.com?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+  });
+</script>
+</body>
+</html>
