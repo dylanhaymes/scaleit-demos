@@ -870,6 +870,56 @@ await test('review fixes: power-up dock is a 3D tray with glossy discs', async (
   await page.close();
 });
 
+await test('review fixes 2: daily game-over heading uses the friendly date', async () => {
+  const { page } = await newPage();
+  await page.evaluate(() => window.__gb.startDaily('2026-11-11'));
+  await waitFor(async () => (await page.evaluate(() => window.__gb.state())).running, 5000, 'daily running');
+  await page.evaluate(() => window.__gb.setTimeLeft(0.3));
+  await waitFor(async () => (await page.locator('#revive.show').isVisible()) || (await page.locator('#over.show').isVisible()), 6000, 'game over');
+  if (await page.locator('#revive.show').isVisible()) await page.click('#btn-norevive');
+  await waitFor(async () => page.locator('#over.show').isVisible(), 5000, 'game-over panel');
+  const h = await page.locator('#over h2').textContent();
+  eq(h, 'Daily Nov 11 over', 'friendly game-over heading, got ' + h);
+  ok(!(await page.locator('#over').textContent()).includes('2026-'), 'no raw ISO date in the game-over panel');
+  await page.close();
+});
+
+await test('review fixes 2: RULES_TEXT describes the LEVEL bar above the TIME bar', async () => {
+  const { page } = await newPage();
+  await page.click('#btn-how');
+  await waitFor(async () => page.locator('#menu.show').isVisible(), 5000, 'rules screen');
+  const txt = await page.locator('#rules').textContent();
+  ok(txt.includes('above the TIME bar'), 'LEVEL bar described as above the TIME bar');
+  ok(!txt.includes('under the timer'), 'no stale "under the timer" wording');
+  await page.close();
+});
+
+await test('review fixes 2: dock is capped to board width with 56px discs on desktop', async () => {
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
+  const page = await ctx.newPage();
+  page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
+  page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
+  await page.addInitScript(() => { localStorage.setItem('gb_tut_done', '1'); });
+  await page.goto(`http://localhost:${PORT}/?test=1`);
+  await page.waitForSelector('#btn-play');
+  await startClassic(page);
+  const d = await page.evaluate(() => {
+    const dock = document.getElementById('powerups');
+    const box = dock.getBoundingClientRect();
+    const ring = getComputedStyle(document.querySelector('.pu-ring'));
+    const name = getComputedStyle(document.querySelector('.pu-name'));
+    const empty = getComputedStyle(document.querySelector('.pu.empty'));
+    return { w: box.width, left: box.left, ring: ring.width, name: name.fontSize, emptyOpacity: empty.opacity, emptyFilter: empty.filter };
+  });
+  ok(d.w <= 521 && d.w >= 500, 'dock capped at ~520px on desktop, got ' + d.w);
+  ok(Math.abs(d.left - (1280 - d.w) / 2) < 2, 'dock centred on desktop');
+  eq(d.ring, '56px', 'icon discs are 56px, got ' + d.ring);
+  eq(d.name, '14px', 'slot labels are 14px, got ' + d.name);
+  eq(d.emptyOpacity, '0.8', 'empty slots are softly dimmed, got ' + d.emptyOpacity);
+  ok(!d.emptyFilter.includes('grayscale(0.7'), 'empty slots are not heavily greyed, got ' + d.emptyFilter);
+  await ctx.close();
+});
+
 await test('console: 0 errors across all tests', async () => {
   eq(errors.length, 0, 'console/page errors: ' + errors.slice(0, 5).join(' | '));
 });

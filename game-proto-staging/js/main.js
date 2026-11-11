@@ -965,7 +965,7 @@ function finishGame() {
   $('ov-new').classList.toggle('hidden', !isBest);
   $('ov-xp').textContent = `+${gained} XP  ·  Player Level ${lvlAfter}${newRewards.length ? ` — unlocked: ${newRewards.join(', ')}!` : ''}`;
   $('best').textContent = modeBest();
-  $('over').querySelector('h2').textContent = daily ? `Daily ${S.dateKey} over` : 'Game over';
+  $('over').querySelector('h2').textContent = daily ? `Daily ${friendlyDate(S.dateKey)} over` : 'Game over';
   // Star rating, revealed one star at a time (CSS delays set below).
   const stars = (isBest || S.score >= 1000) ? 3 : S.score >= 400 ? 2 : 1;
   document.querySelectorAll('#ov-stars span').forEach((s, i) => {
