@@ -1,4 +1,4 @@
-import { N, dealTray, fits, fitsAnywhere, helperEligible, levelFor, RULES_TEXT } from './difficulty.js';
+import { N, dealTray, fits, fitsAnywhere, helperEligible, levelFor, RULES_TEXT, TIMER, POWERUPS, timeForClear, powerUpPoints } from './difficulty.js';
 import { Ads } from './ads.js';
 import { Analytics } from './analytics.js';
 import { Sfx, Music } from './audio.js';
@@ -23,16 +23,21 @@ const store = {
   dailyBest(k) { return this.dailyBests[k] || 0; },
   setDailyBest(k, v) { const m = this.dailyBests; m[k] = v; const keys = Object.keys(m).sort().slice(-60); localStorage.setItem('gb_daily_best', JSON.stringify(Object.fromEntries(keys.map((x) => [x, m[x]])))); },
 };
-const SAVE_KEY = 'gb_save', SAVE_V = 1;
+const SAVE_KEY = 'gb_save', SAVE_V = 2;
 
 // ---------- State ----------
 const S = {
   board: [], tray: [null, null, null], score: 0, shownScore: 0, combo: 0, sinceClear: 0, maxCombo: 0,
   lines: 0, placed: 0, revived: false, helperAvailable: false, running: false, gamesThisSession: 0,
   startBest: 0, startedAt: 0, mode: 'classic', dateKey: null, rng: Math.random,
+  timeLeft: TIMER.start, timerStarted: false, lowTonePlayed: false,
+  charges: { bomb: 0, sweep: 0, reshuffle: 0, petal: 0 }, earnIdx: 0,
+  armed: null, sweepMode: 'row',
 };
+const emptyCharges = () => ({ bomb: 0, sweep: 0, reshuffle: 0, petal: 0 });
+const totalCharges = () => Object.values(S.charges).reduce((a, b) => a + b, 0);
 const modeBest = () => (S.mode === 'daily' ? store.dailyBest(S.dateKey) : store.best);
-const fx = { particles: [], clearing: [], popups: [], shake: 0, placedFlash: [], trayIn: 0 };
+const fx = { particles: [], clearing: [], popups: [], shake: 0, placedFlash: [], trayIn: 0, glow: 0, shimmer: 0 };
 let L = {}; // layout
 let drag = null;
 
@@ -50,6 +55,10 @@ function layout() {
   const trayH = Math.min(cell * 3.4, h - boardSize - 30);
   const by = Math.max(10, (h - boardSize - trayH) / 2 - 6);
   L = { w, h, cell, bx, by, size: boardSize, trayY: by + boardSize + 16, trayH, slotW: w / 3, trayCell: cell * 0.55 };
+  // Position the glowing board frame (DOM, behind the canvas) around the board.
+  const glow = $('board-glow');
+  glow.style.left = (bx - 14) + 'px'; glow.style.top = (by - 14) + 'px';
+  glow.style.width = (boardSize + 28) + 'px'; glow.style.height = (boardSize + 28) + 'px';
 }
 window.addEventListener('resize', layout);
 
@@ -61,16 +70,14 @@ function shade(hex, amt) {
 }
 function rrect(x, y, w, h, r) { g.beginPath(); g.roundRect ? g.roundRect(x, y, w, h, r) : g.rect(x, y, w, h); }
 function block(x, y, s, color, alpha = 1, scale = 1) {
+  // Clean, solid, rounded blocks — no markings, lines, bevels, icons or
+  // textures. A very soft glow underneath is the only decoration.
   const pad = s * 0.06, ss = (s - pad * 2) * scale, o = (s - ss) / 2;
   x += o; y += o;
+  g.globalAlpha = alpha * 0.22;
+  g.fillStyle = color; rrect(x - 2, y - 2, ss + 4, ss + 4, ss * 0.24); g.fill();
   g.globalAlpha = alpha;
-  const grd = g.createLinearGradient(x, y, x, y + ss);
-  grd.addColorStop(0, shade(color, 0.12)); grd.addColorStop(1, shade(color, -0.12));
-  g.fillStyle = grd; rrect(x, y, ss, ss, ss * 0.22); g.fill();
-  g.fillStyle = 'rgba(255,255,255,0.28)'; rrect(x + ss * 0.12, y + ss * 0.1, ss * 0.76, ss * 0.22, ss * 0.11); g.fill();
-  g.fillStyle = 'rgba(0,0,0,0.18)'; rrect(x + ss * 0.08, y + ss * 0.8, ss * 0.84, ss * 0.12, ss * 0.06); g.fill();
-  // little petal mark
-  g.fillStyle = 'rgba(255,255,255,0.22)'; g.beginPath(); g.arc(x + ss * 0.5, y + ss * 0.55, ss * 0.1, 0, Math.PI * 2); g.fill();
+  g.fillStyle = color; rrect(x, y, ss, ss, ss * 0.22); g.fill();
   g.globalAlpha = 1;
 }
 
@@ -109,8 +116,55 @@ function update(dt) {
   for (const p of fx.placedFlash) p.t += dt;
   fx.placedFlash = fx.placedFlash.filter((p) => p.t < 0.25);
   fx.shake = Math.max(0, fx.shake - dt * 30);
+  fx.glow = Math.max(0, fx.glow - dt * 1.4);
+  fx.shimmer = Math.max(0, fx.shimmer - dt * 1.1);
   fx.trayIn = Math.min(1, fx.trayIn + dt * 4);
+  tickTimer(dt);
   if (S.shownScore < S.score) { S.shownScore = Math.min(S.score, S.shownScore + Math.max(1, (S.score - S.shownScore) * dt * 10)); $('score').textContent = Math.round(S.shownScore); }
+}
+
+// ---------- Timer ----------
+// Pauses during the tutorial, pause/menu, settings, game-over/revive/ad
+// overlays, and when the app is backgrounded (rAF also stops when hidden, and
+// dt is clamped, so no time jump on return).
+function timerPaused() {
+  if (!S.running || !S.timerStarted) return true;
+  if (Tutorial.active) return true;
+  if (document.hidden) return true;
+  for (const id of ['menu', 'settings', 'over', 'revive', 'ad']) if ($(id).classList.contains('show')) return true;
+  return false;
+}
+function tickTimer(dt) {
+  if (timerPaused()) return;
+  S.timeLeft -= dt;
+  if (S.timeLeft <= TIMER.lowSeconds && !S.lowTonePlayed) {
+    S.lowTonePlayed = true;
+    Music.lowTime();
+    if (Music.setUrgency) Music.setUrgency(true);
+  }
+  if (S.timeLeft <= 0) { S.timeLeft = 0; renderTimerBar(); onTimeout(); return; }
+  renderTimerBar();
+}
+let lastTimerShown = -1;
+function renderTimerBar() {
+  const secs = Math.max(0, Math.ceil(S.timeLeft));
+  const fill = $('timer-fill');
+  fill.style.width = Math.max(0, Math.min(100, (S.timeLeft / TIMER.cap) * 100)) + '%';
+  fill.classList.toggle('low', S.timeLeft <= TIMER.lowSeconds && S.running);
+  $('timerbar').classList.toggle('low', S.timeLeft <= TIMER.lowSeconds && S.running);
+  if (secs !== lastTimerShown) { lastTimerShown = secs; $('timer-text').textContent = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`; }
+}
+function onTimeout() {
+  if (!S.running) return;
+  if (Music.setUrgency) Music.setUrgency(false);
+  S.running = false; S.awaitingRevive = true;
+  Analytics.log('time_out', { score: S.score, placed: S.placed, lines: S.lines });
+  setTimeout(() => onNoMoves('timeout'), 450);
+}
+function setBoardGlow(kind) {
+  const el = $('board-glow');
+  if (kind === 'clear') { el.classList.remove('bloom'); void el.offsetWidth; el.classList.add('bloom'); setTimeout(() => el.classList.remove('bloom'), 700); }
+  if (kind === 'combo') { el.classList.remove('shimmer'); void el.offsetWidth; el.classList.add('shimmer'); setTimeout(() => el.classList.remove('shimmer'), 1000); }
 }
 function draw(t) {
   const { w, h, cell: s, bx, by, size } = L;
@@ -215,6 +269,15 @@ function startGame(mode = 'classic', dateKey = localDateKey()) {
   S.rng = mode === 'daily' ? dailyRng(dateKey) : Math.random;
   S.board = emptyBoard(); S.score = 0; S.shownScore = 0; S.combo = 0; S.sinceClear = 0; S.maxCombo = 0; S.lines = 0; S.placed = 0;
   S.revived = false; S.running = true; S.startBest = modeBest(); S.startedAt = Date.now();
+  // Timer: full bar every game. It starts now unless the first-game tutorial
+  // is about to run — then it starts when the tutorial finishes.
+  S.timeLeft = TIMER.start; S.lowTonePlayed = false;
+  const willTut = mode === 'classic' && !localStorage.getItem('gb_tut_done');
+  S.timerStarted = !willTut;
+  if (Music.setUrgency) Music.setUrgency(false);
+  // Power-ups never carry between games.
+  S.charges = emptyCharges(); S.earnIdx = 0; S.armed = null; S.sweepMode = 'row';
+  renderPowerups(); renderTimerBar();
   // Comeback helper is classic-only; the daily deal is identical for everyone.
   S.helperAvailable = mode === 'classic' && helperEligible(store.history, store.best);
   $('score').textContent = '0'; $('combo').textContent = ''; setModeUI();
@@ -222,7 +285,7 @@ function startGame(mode = 'classic', dateKey = localDateKey()) {
   S.gamesThisSession++;
   Analytics.log('game_start', { game: S.gamesThisSession, mode, best: modeBest(), helper_eligible: S.helperAvailable });
   saveGame();
-  if (mode === 'classic' && !localStorage.getItem('gb_tut_done')) Tutorial.start();
+  if (willTut) Tutorial.start();
 }
 
 // ---------- Save / restore a game in progress ----------
@@ -233,6 +296,7 @@ function saveGame() {
     board: S.board, tray: S.tray.map((p) => p && { id: p.shape.id, color: p.color, helper: !!p.helper }),
     score: S.score, combo: S.combo, sinceClear: S.sinceClear, maxCombo: S.maxCombo, lines: S.lines, placed: S.placed,
     revived: S.revived, helperAvailable: S.helperAvailable, startBest: S.startBest, elapsed: Date.now() - S.startedAt, savedAt: Date.now(),
+    timeLeft: S.timeLeft, charges: { ...S.charges }, earnIdx: S.earnIdx,
   };
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch {}
 }
@@ -240,7 +304,8 @@ function clearSave() { localStorage.removeItem(SAVE_KEY); }
 function readSave() {
   try {
     const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
-    if (!d || d.v !== SAVE_V || !Array.isArray(d.board) || d.board.length !== N || !Array.isArray(d.tray)) return null;
+    // v1 saves (no timer/charges) still restore, with timer + charges defaulted.
+    if (!d || (d.v !== SAVE_V && d.v !== 1) || !Array.isArray(d.board) || d.board.length !== N || !Array.isArray(d.tray)) return null;
     return d;
   } catch { return null; }
 }
@@ -252,6 +317,13 @@ function restoreGame(d) {
   S.tray = d.tray.map((p) => { if (!p || !SHAPES[p.id]) return null; const pc = makePiece(SHAPES[p.id]); pc.color = p.color; pc.helper = !!p.helper; return pc; });
   Object.assign(S, { score: d.score, shownScore: d.score, combo: d.combo, sinceClear: d.sinceClear, maxCombo: d.maxCombo, lines: d.lines, placed: d.placed,
     revived: !!d.revived, helperAvailable: !!d.helperAvailable, startBest: d.startBest, startedAt: Date.now() - (d.elapsed || 0), running: true });
+  S.timeLeft = typeof d.timeLeft === 'number' ? d.timeLeft : TIMER.start;
+  S.charges = { ...emptyCharges(), ...(d.charges || {}) };
+  S.earnIdx = d.earnIdx || 0; S.armed = null; S.lowTonePlayed = S.timeLeft <= TIMER.lowSeconds;
+  // A restored game is already past the tutorial (it closed mid-game), so the
+  // timer runs from the moment play resumes.
+  S.timerStarted = true;
+  renderPowerups(); renderTimerBar();
   if (!S.tray.some(Boolean)) deal();
   $('score').textContent = S.score; $('combo').textContent = S.combo >= 2 ? `🔥 Combo x${S.combo}` : ''; setModeUI();
   S.gamesThisSession++;
@@ -267,6 +339,7 @@ function place(slot, r, c) {
   const { rows, cols } = wouldClearNow();
   const lines = rows.length + cols.length;
   if (lines) {
+    const linesBefore = S.lines;
     S.combo++; S.sinceClear = 0; S.maxCombo = Math.max(S.maxCombo, S.combo); S.lines += lines;
     const cells = new Set();
     rows.forEach((rr) => { for (let i = 0; i < N; i++) cells.add(rr * N + i); });
@@ -280,8 +353,19 @@ function place(slot, r, c) {
     }
     const pts = clearPoints(lines, cells.size, S.combo);
     gained += pts;
+    // Timer: +6 s per line, +2 s per extra line on a multi-line clear, cap 120.
+    const bonus = timeForClear(lines);
+    S.timeLeft = Math.min(TIMER.cap, S.timeLeft + bonus);
+    renderTimerBar();
+    setBoardGlow('clear');
+    if (lines >= 2) setBoardGlow('combo');
+    // Power-ups: one charge per 3-line combo, plus one per 10-line milestone.
+    let grants = lines >= 3 ? 1 : 0;
+    for (let m = Math.floor(linesBefore / POWERUPS.linesMilestone) + 1; m <= Math.floor(S.lines / POWERUPS.linesMilestone); m++) grants++;
+    for (let i = 0; i < grants; i++) grantCharge();
     const cx = L.bx + (c + sh.w / 2) * L.cell, cy = L.by + (r + sh.h / 2) * L.cell;
     popup(`+${pts}`, cx, cy, '#ffffff', 30 + lines * 4);
+    popup(`+${bonus}s`, L.w / 2, L.by - 4, '#7cf0c9', 22);
     if (lines >= 2) popup(['', '', 'Double!', 'Triple!', 'Mega!', 'Bloom!'][Math.min(5, lines)], L.w / 2, L.by + L.size * 0.35, '#7cf0c9', 40);
     if (S.combo >= 2) { popup(`Combo x${S.combo}`, L.w / 2, L.by + L.size * 0.5, '#ff7ab6', 34); Sfx.combo(S.combo); Analytics.log('combo', { combo: S.combo }); }
     Sfx.clear(lines, S.combo); Haptics.medium();
@@ -310,6 +394,108 @@ function wouldClearNow() {
   return { rows, cols };
 }
 
+// ---------- Power-ups (earned only through play) ----------
+function grantCharge() {
+  if (totalCharges() >= POWERUPS.maxCharges) { Analytics.log('powerup_earn_blocked_full', {}); return false; }
+  const type = POWERUPS.earnOrder[S.earnIdx % POWERUPS.earnOrder.length];
+  S.earnIdx++;
+  S.charges[type]++;
+  renderPowerups();
+  const def = POWERUPS.defs[type];
+  toast(`${def.icon} ${def.name} earned!`);
+  Analytics.log('powerup_earned', { type, total: totalCharges() });
+  if (!localStorage.getItem('gb_powerup_tip')) {
+    localStorage.setItem('gb_powerup_tip', '1');
+    toast(`${def.icon} Power-up earned! Tap it, then tap its target. Tap again to cancel.`);
+  }
+  return true;
+}
+function renderPowerups() {
+  document.querySelectorAll('#powerups .pu').forEach((b) => {
+    const type = b.dataset.pu, n = S.charges[type] || 0;
+    b.querySelector('.pu-count').textContent = n;
+    b.classList.toggle('empty', n === 0);
+    b.classList.toggle('armed', S.armed === type);
+    b.disabled = n === 0 && S.armed !== type;
+  });
+  $('pu-target').classList.toggle('hidden', !S.armed);
+  $('pu-mode').classList.toggle('hidden', S.armed !== 'sweep');
+  $('pu-mode-row-btn').classList.toggle('on', S.sweepMode === 'row');
+  $('pu-mode-col-btn').classList.toggle('on', S.sweepMode === 'col');
+  $('pu-hint').textContent = S.armed === 'bomb' ? 'Tap a board cell — clears the 3x3 around it.'
+    : S.armed === 'sweep' ? `Tap a board cell — clears its ${S.sweepMode === 'row' ? 'row' : 'column'}.`
+    : '';
+}
+function armPowerup(type) {
+  if (!S.running) return;
+  if (S.armed === type) return cancelArmed();
+  if (!S.charges[type]) return;
+  if (type === 'reshuffle') return applyReshuffle();
+  if (type === 'petal') return applyPetal();
+  S.armed = type;
+  renderPowerups();
+  toast(type === 'bomb' ? '💣 Tap a board cell for the 3x3 blast.' : '↔ Tap a board cell to sweep its row or column.');
+}
+function cancelArmed() { S.armed = null; renderPowerups(); }
+function spendCharge(type) { S.charges[type]--; renderPowerups(); }
+function clearCellsWithFx(cells) {
+  // Power-up clears: 10 points per cell, no combo multiplier, and they never
+  // count toward earning more power-ups. No board-clear bonus either.
+  let n = 0;
+  for (const [r, c] of cells) {
+    if (!S.board[r] || !S.board[r][c]) continue;
+    const col = S.board[r][c];
+    fx.clearing.push({ r, c, color: col, t: -n * 0.012 });
+    burst(L.bx + (c + 0.5) * L.cell, L.by + (r + 0.5) * L.cell, col, 5);
+    S.board[r][c] = null; n++;
+  }
+  if (n) {
+    const pts = powerUpPoints(n);
+    S.score += pts;
+    $('score').textContent = S.score; S.shownScore = S.score;
+    popup(`+${pts}`, L.w / 2, L.by + L.size * 0.4, '#ffffff', 28);
+    setBoardGlow('clear');
+    Sfx.clear(1, 1); Haptics.medium();
+  }
+  return n;
+}
+function applyBomb(r, c) {
+  spendCharge('bomb'); cancelArmed();
+  const cells = [];
+  for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+    const rr = r + dr, cc = c + dc;
+    if (rr >= 0 && rr < N && cc >= 0 && cc < N) cells.push([rr, cc]);
+  }
+  const n = clearCellsWithFx(cells);
+  Analytics.log('powerup_used', { type: 'bomb', cells: n });
+  saveGame(); checkGameOver();
+}
+function applySweep(r, c) {
+  spendCharge('sweep'); cancelArmed();
+  const cells = [];
+  if (S.sweepMode === 'row') for (let cc = 0; cc < N; cc++) cells.push([r, cc]);
+  else for (let rr = 0; rr < N; rr++) cells.push([rr, c]);
+  const n = clearCellsWithFx(cells);
+  Analytics.log('powerup_used', { type: 'sweep', mode: S.sweepMode, cells: n });
+  saveGame(); checkGameOver();
+}
+function applyReshuffle() {
+  spendCharge('reshuffle');
+  deal(); // fair-deal tray rule applies to the new tray, same as always
+  toast('🔀 New tray dealt');
+  Analytics.log('powerup_used', { type: 'reshuffle' });
+  saveGame(); checkGameOver();
+}
+function applyPetal() {
+  spendCharge('petal');
+  S.timeLeft = Math.min(TIMER.cap, S.timeLeft + POWERUPS.timePetalSeconds);
+  renderTimerBar();
+  popup(`+${POWERUPS.timePetalSeconds}s`, L.w / 2, L.by - 4, '#ffd166', 26);
+  toast('🌸 +15 seconds');
+  Analytics.log('powerup_used', { type: 'petal', timeLeft: Math.round(S.timeLeft) });
+  saveGame();
+}
+
 function checkGameOver() {
   const alive = S.tray.filter(Boolean);
   if (alive.some((p) => fitsAnywhere(S.board, p.shape))) return;
@@ -318,8 +504,13 @@ function checkGameOver() {
 }
 
 let reviveTimer = null;
-function onNoMoves() {
+function onNoMoves(reason = 'no_moves') {
   Sfx.over();
+  if (Music.setUrgency) Music.setUrgency(false);
+  $('rv-title').textContent = reason === 'timeout' ? "Time's up!" : 'No space left!';
+  $('rv-why').textContent = reason === 'timeout'
+    ? 'The timer ran out. Watch a short ad to clear your 3 fullest rows, get a fresh tray, and refill the timer to 60 seconds.'
+    : 'Watch a short ad to clear your 3 fullest rows, get a fresh tray, and refill the timer to 60 seconds.';
   if (!S.revived && S.score > 0 && Ads.isRewardedReady()) {
     // Opt-in only. Offered at the same moment for every player; nothing about the
     // board or pieces was changed to get here.
@@ -341,7 +532,8 @@ async function takeRevive() {
   if (!r.rewarded) { Analytics.log('revive_declined', { reason: 'ad_closed_early' }); return finishGame(); }
   Analytics.log('revive_taken', { score: S.score });
   S.revived = true;
-  // Revive effect (fixed, documented): clear the 3 fullest rows, deal a fresh tray. No points awarded.
+  // Revive effect (fixed, documented): clear the 3 fullest rows, deal a fresh
+  // tray, and refill the timer to 60 seconds. No points awarded.
   const order = [...Array(N).keys()].sort((a, b) => S.board[b].filter(Boolean).length - S.board[a].filter(Boolean).length).slice(0, 3);
   for (const rr of order) for (let cc = 0; cc < N; cc++) if (S.board[rr][cc]) {
     fx.clearing.push({ r: rr, c: cc, color: S.board[rr][cc], t: 0 });
@@ -349,10 +541,14 @@ async function takeRevive() {
     S.board[rr][cc] = null;
   }
   S.awaitingRevive = false;
+  S.timeLeft = TIMER.reviveRefill; S.timerStarted = true; S.lowTonePlayed = false;
+  renderTimerBar();
   Sfx.revive(); S.running = true; deal(); saveGame(); checkGameOver();
 }
 function finishGame() {
   S.awaitingRevive = false; clearSave();
+  cancelArmed();
+  if (Music.setUrgency) Music.setUrgency(false);
   const daily = S.mode === 'daily';
   const prevBest = modeBest(), isBest = S.score > prevBest;
   if (isBest) { if (daily) store.setDailyBest(S.dateKey, S.score); else store.best = S.score; Sfx.best(); Analytics.log('new_high_score', { score: S.score, prev: prevBest, mode: S.mode }); }
@@ -374,6 +570,14 @@ cv.addEventListener('pointerdown', (e) => {
   Sfx.unlock();
   if (!S.running || drag) return;
   const rect = cv.getBoundingClientRect(), x = e.clientX - rect.left, y = e.clientY - rect.top;
+  // A power-up is armed: this tap targets the board instead of dragging.
+  if (S.armed) {
+    const c = Math.floor((x - L.bx) / L.cell), r = Math.floor((y - L.by) / L.cell);
+    if (r < 0 || r >= N || c < 0 || c >= N) { toast('Tap a board cell, or ✕ to cancel.'); return; }
+    if (S.armed === 'bomb') applyBomb(r, c);
+    else if (S.armed === 'sweep') applySweep(r, c);
+    return;
+  }
   const i = slotAt(x, y); if (i < 0) return;
   const lift = e.pointerType === 'mouse' ? 0 : L.cell * 1.8; // keep the piece visible above the finger
   drag = { slot: i, piece: S.tray[i], x, y: y - lift, lift, id: e.pointerId, scale: 0.6 };
@@ -428,6 +632,12 @@ $('btn-restart').onclick = () => { show('menu', false); if (S.running) { S.runni
 $('btn-log').onclick = () => { const el = $('log'); el.classList.toggle('hidden'); el.textContent = Analytics.all().slice(-60).map((e) => JSON.stringify(e)).join('\n'); };
 $('btn-revive').onclick = takeRevive;
 $('btn-norevive').onclick = () => declineRevive('declined');
+// Power-up buttons (under the board) + targeting controls.
+document.querySelectorAll('#powerups .pu').forEach((b) => { b.onclick = () => armPowerup(b.dataset.pu); });
+$('pu-cancel').onclick = cancelArmed;
+$('pu-mode-row-btn').onclick = () => { S.sweepMode = 'row'; renderPowerups(); };
+$('pu-mode-col-btn').onclick = () => { S.sweepMode = 'col'; renderPowerups(); };
+renderPowerups(); renderTimerBar();
 $('btn-again').onclick = async () => { show('over', false); await Ads.maybeInterstitialAtBreak(S.gamesThisSession); startGame(S.mode === 'daily' ? 'daily' : 'classic', localDateKey()); };
 $('btn-home').onclick = () => { show('over', false); refreshTitle(); show('title', true); };
 
@@ -460,7 +670,7 @@ const Tutorial = {
   },
   next() { if (this.step >= TUT_STEPS.length - 1) return this.finish('done'); this.step++; this.render(); },
   onPlaced() { if (this.step === 0) this.next(); },
-  finish(how) { if (!this.active) return; this.step = -1; localStorage.setItem('gb_tut_done', '1'); $('tut').classList.remove('show'); Analytics.log('tutorial_' + how, {}); },
+  finish(how) { if (!this.active) return; this.step = -1; localStorage.setItem('gb_tut_done', '1'); $('tut').classList.remove('show'); Analytics.log('tutorial_' + how, {}); if (S.running) S.timerStarted = true; },
 };
 $('tut-next').onclick = () => Tutorial.next();
 $('tut-skip').onclick = () => Tutorial.finish('skipped');
@@ -472,6 +682,7 @@ window.addEventListener('pagehide', saveGame);
 // ---------- Back button (Android, via native.js): close overlays, else pause ----------
 window.__gbBack = () => {
   for (const id of ['settings', 'menu']) if ($(id).classList.contains('show')) { show(id, false); return true; }
+  if (S.armed) { cancelArmed(); return true; }
   if (Tutorial.active) { Tutorial.finish('skipped'); return true; }
   if ($('ad').classList.contains('show')) return true; // never dismiss an ad via back here; the ad has its own close
   if ($('revive').classList.contains('show')) { declineRevive('back'); return true; }
@@ -491,11 +702,18 @@ else if ('serviceWorker' in navigator && location.protocol === 'https:') navigat
 // ---------- Test hooks (read-only layout + state; mutation only with ?test=1) ----------
 window.__gb = {
   layout: () => ({ ...L }),
-  state: () => ({ board: S.board.map((r) => r.map(Boolean)), tray: S.tray.map((p) => p && { id: p.shape.id, cells: p.shape.cells, w: p.shape.w, h: p.shape.h, helper: p.helper }), score: S.score, combo: S.combo, lines: S.lines, running: S.running, placed: S.placed, revived: S.revived, mode: S.mode, dateKey: S.dateKey, helperAvailable: S.helperAvailable, tutorialStep: Tutorial.step }),
+  state: () => ({ board: S.board.map((r) => r.map(Boolean)), tray: S.tray.map((p) => p && { id: p.shape.id, cells: p.shape.cells, w: p.shape.w, h: p.shape.h, helper: p.helper }), score: S.score, combo: S.combo, lines: S.lines, running: S.running, placed: S.placed, revived: S.revived, mode: S.mode, dateKey: S.dateKey, helperAvailable: S.helperAvailable, tutorialStep: Tutorial.step, timeLeft: Math.round(S.timeLeft * 10) / 10, timerStarted: S.timerStarted, charges: { ...S.charges }, armed: S.armed, sweepMode: S.sweepMode, musicOn: Music.on, timerPaused: timerPaused() }),
 };
 if (new URLSearchParams(location.search).has('test')) {
   window.__gb.setBoard = (rows) => { S.board = rows.map((row) => [...row].map((ch) => (ch === '#' ? '#5aa2ff' : null))); };
   window.__gb.startDaily = (k) => { show('title', false); clearSave(); startGame('daily', k); };
+  window.__gb.startGame = (mode, k) => { show('title', false); clearSave(); startGame(mode || 'classic', k || localDateKey()); };
   window.__gb.saveNow = saveGame;
   window.__gb.setTray = (ids) => { import('./pieces.js').then(({ SHAPES, makePiece }) => { S.tray = ids.map((i) => (i == null ? null : makePiece(SHAPES[i]))); }); };
+  window.__gb.setTimeLeft = (s) => { S.timeLeft = s; S.lowTonePlayed = s <= TIMER.lowSeconds; renderTimerBar(); };
+  window.__gb.setCharges = (c) => { S.charges = { ...emptyCharges(), ...c }; renderPowerups(); };
+  window.__gb.place = (slot, r, c) => place(slot, r, c);
+  window.__gb.armPowerup = (type) => armPowerup(type);
+  window.__gb.targetCell = (r, c) => { if (S.armed === 'bomb') applyBomb(r, c); else if (S.armed === 'sweep') applySweep(r, c); };
+  window.__gb.grantCharge = () => grantCharge();
 }

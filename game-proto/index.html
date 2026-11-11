@@ -23,7 +23,19 @@
       <button id="btn-menu" class="icon-btn" aria-label="Menu">☰</button>
     </div>
   </header>
-  <div id="stage"><canvas id="cv"></canvas></div>
+  <div id="timerbar"><div id="timer-fill"></div><span id="timer-text">1:30</span></div>
+  <div id="stage"><div id="board-glow"></div><canvas id="cv"></canvas></div>
+  <div id="powerups">
+    <button class="pu" data-pu="bomb" aria-label="Bloom Bomb">💣<span class="pu-name">Bomb</span><span class="pu-count">0</span></button>
+    <button class="pu" data-pu="sweep" aria-label="Line Sweep">↔<span class="pu-name">Sweep</span><span class="pu-count">0</span></button>
+    <button class="pu" data-pu="reshuffle" aria-label="Reshuffle">🔀<span class="pu-name">Tray</span><span class="pu-count">0</span></button>
+    <button class="pu" data-pu="petal" aria-label="Time Petal">🌸<span class="pu-name">+15s</span><span class="pu-count">0</span></button>
+  </div>
+  <div id="pu-target" class="hidden">
+    <span id="pu-hint"></span>
+    <span id="pu-mode" class="hidden"><button id="pu-mode-row-btn">Row</button><button id="pu-mode-col-btn">Column</button></span>
+    <button id="pu-cancel">✕ Cancel</button>
+  </div>
 </div>
 
 <!-- Title screen -->
@@ -42,9 +54,9 @@
 <!-- Revive offer (opt-in) -->
 <div id="revive" class="overlay">
   <div class="panel">
-    <h2>No space left!</h2>
+    <h2 id="rv-title">No space left!</h2>
     <p>Score <b id="rv-score">0</b></p>
-    <p class="small">Optional: watch a short ad to clear your 3 fullest rows and get a fresh tray. One revive per game.</p>
+    <p class="small" id="rv-why">Optional: watch a short ad to clear your 3 fullest rows and get a fresh tray. One revive per game.</p>
     <div class="ring"><span id="rv-count">6</span></div>
     <button id="btn-revive" class="btn big">▶ Watch ad to continue</button>
     <button id="btn-norevive" class="btn ghost">No thanks</button>

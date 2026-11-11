@@ -72,3 +72,39 @@ h2{margin:0 0 10px;font-size:26px}
 .tut-demo.clear span.gap{animation:tutfill 2s ease-in-out infinite,tutbloom 2s ease-in-out infinite}
 @keyframes tutfill{0%,30%{background:rgba(255,255,255,.12)}40%,100%{background:#ff7ab6}}
 @keyframes tutbloom{0%,45%{transform:scale(1);opacity:1}55%{transform:scale(1.15);background:#fff}80%,100%{transform:scale(.2);opacity:0}}
+
+/* ---- Timer bar: thin, calm, above the board ---- */
+#timerbar{position:relative;height:14px;margin:8px auto 2px;width:min(92%,520px);background:rgba(255,255,255,.08);border-radius:999px;overflow:visible;flex:none}
+#timer-fill{height:100%;width:75%;border-radius:999px;background:linear-gradient(90deg,#7cf0c9,#5aa2ff,#a879ff,#ff7ab6);transition:width .3s linear}
+#timer-fill.low{background:linear-gradient(90deg,#ffb347,#ff7ab6)}
+#timer-text{position:absolute;right:0;top:-4px;transform:translateY(-100%);font-size:11px;font-weight:800;color:var(--muted);letter-spacing:.08em}
+#timerbar.low{animation:timerpulse 1s ease-in-out infinite}
+@keyframes timerpulse{0%,100%{opacity:1}50%{opacity:.55}}
+
+/* ---- Board glow: softly animated gradient frame behind the canvas ---- */
+#board-glow{position:absolute;border-radius:26px;pointer-events:none;z-index:0;
+  background:linear-gradient(135deg,rgba(124,240,201,.45),rgba(90,162,255,.35) 35%,rgba(168,121,255,.45) 65%,rgba(255,122,182,.45));
+  background-size:220% 220%;animation:glowdrift 14s ease-in-out infinite;
+  box-shadow:0 0 24px rgba(124,240,201,.25),0 0 48px rgba(168,121,255,.18);opacity:.75;transition:box-shadow .3s,opacity .3s}
+@keyframes glowdrift{0%,100%{background-position:0% 0%}50%{background-position:100% 100%}}
+#board-glow.bloom{opacity:1;box-shadow:0 0 34px rgba(124,240,201,.65),0 0 70px rgba(255,122,182,.45)}
+#board-glow.shimmer{animation:glowdrift 14s ease-in-out infinite,shimmer 1s ease-in-out}
+@keyframes shimmer{0%,100%{filter:brightness(1)}50%{filter:brightness(1.5)}}
+#cv{z-index:1}
+
+/* ---- Power-ups: small on-brand buttons under the board ---- */
+#powerups{display:flex;gap:6px;justify-content:center;padding:6px 10px 8px;flex:none}
+.pu{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;gap:4px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:var(--ink);
+  border-radius:999px;padding:7px 4px;font-size:14px;font-weight:800;cursor:pointer}
+.pu-name{font-size:11px;white-space:nowrap}
+.pu-count{min-width:16px;height:16px;border-radius:999px;background:var(--gold);color:#3a2600;font-size:10px;font-weight:900;
+  display:inline-flex;align-items:center;justify-content:center;padding:0 3px}
+.pu.empty{opacity:.45}
+.pu.armed{background:linear-gradient(180deg,#9dfbd9,#4fd6a8);color:#1a1440;border-color:transparent}
+.pu.armed .pu-count{background:#1a1440;color:#9dfbd9}
+.pu:disabled{cursor:default}
+#pu-target{display:flex;align-items:center;justify-content:center;gap:8px;padding:4px 12px 8px;font-size:12px;color:var(--muted);flex:none;min-height:26px}
+#pu-target.hidden{display:none}
+#pu-mode button{background:rgba(255,255,255,.1);border:0;color:var(--ink);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:800}
+#pu-mode button.on{background:var(--accent2);color:#1a1440}
+#pu-cancel{background:rgba(255,255,255,.1);border:0;color:var(--ink);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:800}
