@@ -8,7 +8,15 @@ A fair, ad-funded 8×8 block puzzle. It runs as static HTML and JS, with no buil
 - `js/scoring.js`: the scoring table (the only source of points). Power-up clears score 10 points per cell, no combo multiplier.
 - `js/ads.js`: ad adapter with `showRewarded()` and `showInterstitial()`. It uses a mock overlay today; sketches for AdMob and AdSense H5 are in comments.
 - `js/analytics.js`: event log in `localStorage.gb_events`.
-- `js/audio.js`: WebAudio-synthesized sounds + an original synthesized ambient music track (on by default, toggle in Settings, remembered).
+- `js/audio.js`: WebAudio-synthesized sounds + an original synthesized
+  upbeat music track (120 BPM marimba loop, 96 s, clean seam; on by default,
+  toggle in Settings, remembered; ducks under SFX; a light shaker layer
+  fades in during the timer's last 10 s).
+- `js/sprites.js`: pre-rendered glossy 3D-style sprites — blocks (256 px,
+  ~3x cell size, downscaled for crisp 2x/3x DPR), board well with sculpted
+  gradient frame, night-garden background, petal particles. The frame loop
+  only blits; background + board live on a static canvas layer redrawn on
+  resize.
 - `js/haptics.js`, `js/rng.js` (seeded daily challenge), `js/brand.js`, `js/pieces.js`.
 - `CREDITS.md`: music is original, synthesized in-app — no licensed assets.
 

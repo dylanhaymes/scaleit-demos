@@ -5,7 +5,8 @@ let ctx = null, master = null;
 // turned music off (gb_music === '0') stays off.
 let muted = localStorage.getItem('gb_sfx') ? localStorage.getItem('gb_sfx') === '0' : localStorage.getItem('gb_muted') === '1';
 let musicOn = localStorage.getItem('gb_music') !== '0';
-let musicBus = null, musicTimer = null, musicMelodyTimer = null, musicStep = 0;
+let musicBus = null, urgencyBus = null, schedTimer = null, duckTimer = null;
+let schedStart = 0, schedNextEighth = 0, urgencyOn = false;
 
 function ac() {
   if (!ctx) {
@@ -73,87 +74,175 @@ export const Sfx = {
   best() { [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f, i) => tone(f, 0.3, { type: 'triangle', vol: 0.18, delay: i * 0.09 })); },
 };
 
-// ---- Music: an original, calm, looping night-garden track, synthesized ----
-// (no audio assets, no third-party music — see CREDITS.md). A slow low-passed
-// pad (Cmaj7 - Am7 - Fmaj7 - G6, one chord every 6 s) with a sparse, gentle
-// pentatonic melody drifting above it — one soft chime every few seconds, a
-// slow random walk so it never quite repeats. Quiet by default; it ducks
-// briefly under clear/combo sound effects and pauses when the app is hidden.
-const CHORDS = [[261.63, 329.63, 392, 493.88], [220, 261.63, 329.63, 392], [174.61, 220, 261.63, 329.63], [196, 246.94, 293.66, 329.63]];
-const CHORD_SECS = 6;
-// Pentatonic melody notes (C major pentatonic, two octaves), slow random walk.
-const MELODY = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.5];
-let melodyIdx = 3, duckTimer = null;
-function chime(freq, t) {
-  const c = ctx;
-  const o = c.createOscillator(), g = c.createGain();
-  o.type = 'sine'; o.frequency.value = freq;
-  const o2 = c.createOscillator(), g2 = c.createGain(); // faint octave shimmer
-  o2.type = 'sine'; o2.frequency.value = freq * 2;
-  g.gain.setValueAtTime(0.0001, t);
-  g.gain.linearRampToValueAtTime(0.035, t + 0.08);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + 2.8);
-  g2.gain.setValueAtTime(0.0001, t);
-  g2.gain.linearRampToValueAtTime(0.012, t + 0.08);
-  g2.gain.exponentialRampToValueAtTime(0.0001, t + 1.8);
-  o.connect(g); g.connect(musicBus); o2.connect(g2); g2.connect(musicBus);
-  o.start(t); o.stop(t + 3); o2.start(t); o2.stop(t + 2);
+// ---- Music: an original, bouncy, upbeat night-garden track, synthesized ----
+// (no audio assets, no third-party music — see CREDITS.md). 120 BPM, marimba
+// plucks + light claps + simple mid-range bass + a playful pentatonic melody.
+// The whole track is ONE deterministic 96-second loop (48 bars, 192 beats):
+// the event list is built once from a fixed seed, and the scheduler plays it
+// on an absolute beat grid that never resets — so the seam is clean by
+// construction (every note ends before the loop boundary, and the pattern
+// repeats identically). Melody stays mid-range (392–659 Hz, centred 392–
+// 523 Hz), below most SFX chime energy (659–1760 Hz), so it does not collide
+// with the clear/combo sounds. Quiet by default; ducks under SFX; pauses
+// when the app is hidden. In the timer's last 10 s, a light shaker layer
+// fades in on every eighth note (same tempo — no speed-up, just urgency).
+export const BPM = 120;
+const BEAT = 60 / BPM; // 0.5 s
+const EIGHTH = BEAT / 2; // 0.25 s
+const LOOP_BEATS = 192; // 96 s loop
+const LOOP_SECONDS = LOOP_BEATS * BEAT;
+const CHORD_SEQ = ['C', 'Am', 'F', 'G']; // one chord per 4 bars, cycling
+const CHORD_ROOT = { C: 130.81, Am: 110.0, F: 174.61, G: 196.0 };
+const MEL = [392.0, 440.0, 523.25, 587.33, 659.25]; // C pentatonic, mid-range
+
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
-function melodyTick() {
-  // Step the walk by -2..+2, stay in range; sometimes rest (no note).
-  melodyIdx += Math.floor(Math.random() * 5) - 2;
-  melodyIdx = Math.max(0, Math.min(MELODY.length - 1, melodyIdx));
-  if (Math.random() < 0.75) chime(MELODY[melodyIdx], ctx.currentTime + 0.05);
-}
-function padChord(freqs, t) {
-  const c = ctx;
-  for (const f of freqs) {
-    for (const det of [-4, 4]) {
-      const o = c.createOscillator(), g = c.createGain();
-      o.type = 'sine'; o.frequency.value = f / 2; o.detune.value = det;
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.linearRampToValueAtTime(0.05, t + 2);
-      g.gain.linearRampToValueAtTime(0.0001, t + CHORD_SECS + 1.5);
-      o.connect(g); g.connect(musicBus); o.start(t); o.stop(t + CHORD_SECS + 1.6);
+// Build the loop once: 384 eighth-note slots, each a list of note events.
+function buildLoop() {
+  const rng = mulberry32(20261111);
+  const slots = Array.from({ length: LOOP_BEATS * 2 }, () => []);
+  let melIdx = 2;
+  for (let bar = 0; bar < 48; bar++) {
+    const root = CHORD_ROOT[CHORD_SEQ[Math.floor(bar / 4) % 4]];
+    // Bass: beats 1 and 3, plus a fifth on the last beat of every 4th bar.
+    slots[bar * 8].push({ kind: 'bass', freq: root, dur: 0.45, vol: 0.5 });
+    slots[bar * 8 + 4].push({ kind: 'bass', freq: root, dur: 0.45, vol: 0.42 });
+    if (bar % 4 === 3) slots[bar * 8 + 6].push({ kind: 'bass', freq: root * 1.5, dur: 0.3, vol: 0.3 });
+    // Light claps: beats 2 and 4.
+    slots[bar * 8 + 2].push({ kind: 'clap', dur: 0.08, vol: 0.05 });
+    slots[bar * 8 + 6].push({ kind: 'clap', dur: 0.08, vol: 0.05 });
+    // Playful melody: random walk, ~62% of eighths.
+    for (let e = 0; e < 8; e++) {
+      if (rng() < 0.62) {
+        melIdx += Math.floor(rng() * 5) - 2;
+        melIdx = Math.max(0, Math.min(MEL.length - 1, melIdx));
+        slots[bar * 8 + e].push({ kind: 'pluck', freq: MEL[melIdx], dur: 0.32, vol: 0.3 });
+      }
     }
   }
+  return slots;
 }
+const LOOP = buildLoop();
+
+function envGain(t, vol, dur, attack = 0.004) {
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(Math.max(0.001, vol), t + attack);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  return g;
+}
+function pluck(freq, t, dur, vol) {
+  // Marimba: sine fundamental + a quiet 4th harmonic, fast decay.
+  const g = envGain(t, vol, dur);
+  const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = freq;
+  const o2 = ctx.createOscillator(); o2.type = 'sine'; o2.frequency.value = freq * 4.02;
+  const g2 = ctx.createGain(); g2.gain.value = 0.12;
+  o.connect(g); o2.connect(g2); g2.connect(g); g.connect(musicBus);
+  o.start(t); o.stop(t + dur + 0.02); o2.start(t); o2.stop(t + dur + 0.02);
+}
+function bassNote(freq, t, dur, vol) {
+  const g = envGain(t, vol, dur, 0.01);
+  const o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = freq;
+  const o2 = ctx.createOscillator(); o2.type = 'sine'; o2.frequency.value = freq / 2;
+  const g2 = ctx.createGain(); g2.gain.value = 0.5;
+  o.connect(g); o2.connect(g2); g2.connect(g); g.connect(musicBus);
+  o.start(t); o.stop(t + dur + 0.02); o2.start(t); o2.stop(t + dur + 0.02);
+}
+function noiseHit(t, dur, vol, type, freq, q = 1) {
+  const buf = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * dur)), ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+  const s = ctx.createBufferSource(); s.buffer = buf;
+  const f = ctx.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
+  const g = ctx.createGain(); g.gain.value = vol;
+  s.connect(f); f.connect(g); g.connect(musicBus);
+  s.start(t);
+}
+function shakerTick(t) {
+  // Urgency-layer tick: short bright shaker, routed through the urgency bus
+  // (whose gain fades in/out), on every eighth note while the timer is low.
+  const buf = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * 0.05)), ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+  const s = ctx.createBufferSource(); s.buffer = buf;
+  const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 6000;
+  const g = ctx.createGain(); g.gain.value = 0.12;
+  s.connect(f); f.connect(g); g.connect(urgencyBus);
+  s.start(t);
+}
+function scheduleEighth(n, t) {
+  for (const ev of LOOP[n % LOOP.length]) {
+    if (ev.kind === 'pluck') pluck(ev.freq, t, ev.dur, ev.vol);
+    else if (ev.kind === 'bass') bassNote(ev.freq, t, ev.dur, ev.vol);
+    else if (ev.kind === 'clap') noiseHit(t, ev.dur, ev.vol, 'bandpass', 1600, 1);
+  }
+  if (urgencyOn) shakerTick(t);
+}
+
 export const Music = {
   get on() { return musicOn; },
+  get bpm() { return BPM; },
+  get loopSeconds() { return LOOP_SECONDS; },
+  get urgency() { return urgencyOn; },
+  get loopEvents() { return LOOP.reduce((a, s) => a + s.length, 0); },
   set(on) { musicOn = !!on; localStorage.setItem('gb_music', musicOn ? '1' : '0'); musicOn ? this.start() : this.stop(); return musicOn; },
   start() {
-    const c = ac(); if (!c || musicTimer) return;
+    const c = ac(); if (!c || schedTimer) return;
     if (!musicBus) {
-      const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900;
-      musicBus = c.createGain(); musicBus.gain.value = 0.35;
+      const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2600;
+      musicBus = c.createGain(); musicBus.gain.value = 0.32;
       musicBus.connect(lp); lp.connect(master);
+      urgencyBus = c.createGain(); urgencyBus.gain.value = 0.0001;
+      urgencyBus.connect(master);
     }
-    musicBus.gain.setTargetAtTime(0.35, c.currentTime, 0.5);
-    const tick = () => { padChord(CHORDS[musicStep++ % CHORDS.length], ctx.currentTime + 0.05); };
-    tick(); musicTimer = setInterval(tick, CHORD_SECS * 1000);
-    // Melody chimes on their own slow clock, offset from the chord changes.
-    melodyTick(); musicMelodyTimer = setInterval(melodyTick, 3400);
+    musicBus.gain.setTargetAtTime(0.32, c.currentTime, 0.5);
+    if (urgencyOn) urgencyBus.gain.setTargetAtTime(0.5, c.currentTime, 0.5);
+    schedStart = c.currentTime + 0.05;
+    schedNextEighth = 0;
+    schedTimer = setInterval(() => this._sched(), 100);
+    this._sched();
+  },
+  _sched() {
+    if (!ctx) return;
+    const ahead = ctx.currentTime + 0.45;
+    while (schedStart + schedNextEighth * EIGHTH < ahead) {
+      scheduleEighth(schedNextEighth, schedStart + schedNextEighth * EIGHTH);
+      schedNextEighth++;
+    }
   },
   stop() {
-    clearInterval(musicTimer); musicTimer = null;
-    clearInterval(musicMelodyTimer); musicMelodyTimer = null;
+    clearInterval(schedTimer); schedTimer = null;
     if (musicBus && ctx) musicBus.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.4);
+    if (urgencyBus && ctx) urgencyBus.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.3);
   },
   // Duck the music briefly under a sound effect, then ease back up.
   duck() {
-    if (!musicBus || !ctx || !musicTimer) return;
+    if (!musicBus || !ctx || !schedTimer) return;
     musicBus.gain.setTargetAtTime(0.12, ctx.currentTime, 0.1);
     clearTimeout(duckTimer);
-    duckTimer = setTimeout(() => { if (musicBus && ctx) musicBus.gain.setTargetAtTime(0.35, ctx.currentTime, 0.5); }, 900);
+    duckTimer = setTimeout(() => { if (musicBus && ctx) musicBus.gain.setTargetAtTime(0.32, ctx.currentTime, 0.5); }, 900);
   },
-  // Last-10-seconds urgency layer. No-op in this build — the upbeat track in
-  // Design Update 2 adds the extra percussion layer here.
-  setUrgency(on) {},
+  // Last-10-seconds urgency layer: a light shaker fades in on every eighth
+  // note. Same tempo — no speed-up, just urgency.
+  setUrgency(on) {
+    on = !!on;
+    if (on === urgencyOn) return; // no-op on repeat calls (called every tick)
+    urgencyOn = on;
+    if (urgencyBus && ctx) urgencyBus.gain.setTargetAtTime(on ? 0.5 : 0.0001, ctx.currentTime, 0.8);
+  },
   // Soft low tone when the timer drops to its last 10 seconds. Calm, no alarm.
   lowTime() {
     if (muted) return;
     tone(196, 0.6, { type: 'sine', vol: 0.12, slide: 0.9 });
   },
-  pause() { if (musicTimer) { this.stop(); this._paused = true; } },
+  pause() { if (schedTimer) { this.stop(); this._paused = true; } },
   resume() { if (this._paused && musicOn) { this._paused = false; this.start(); } },
 };

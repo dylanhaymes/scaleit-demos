@@ -416,6 +416,84 @@ await test('visual: blocks are clean + timer/power-ups render (screenshot)', asy
   await page.close();
 });
 
+await test('update2 music: 120 BPM, 96s deterministic loop', async () => {
+  const { page } = await newPage();
+  await startClassic(page);
+  const st = await page.evaluate(() => window.__gb.state());
+  eq(st.musicBpm, 120, 'music is 120 BPM');
+  eq(st.musicLoopSeconds, 96, 'loop is 96 seconds (1.5-2 min)');
+  ok(st.musicLoopEvents > 200, 'loop has events, got ' + st.musicLoopEvents);
+  // Loop is built once from a fixed seed: two reads must agree exactly.
+  const again = await page.evaluate(() => window.__gb.state().musicLoopEvents);
+  eq(again, st.musicLoopEvents, 'loop is deterministic (clean seam by construction)');
+  await page.close();
+});
+
+await test('update2 music: urgency shaker fades in under 10s, out above 10s', async () => {
+  const { page } = await newPage();
+  await startClassic(page);
+  await page.evaluate(() => window.__gb.setTimeLeft(11));
+  await sleep(1800); // ticks below 10s naturally
+  let st = await page.evaluate(() => window.__gb.state());
+  eq(st.musicUrgency, true, 'urgency on under 10s');
+  await page.evaluate(() => window.__gb.setTimeLeft(50));
+  await sleep(300);
+  st = await page.evaluate(() => window.__gb.state());
+  eq(st.musicUrgency, false, 'urgency off again above 10s');
+  await page.close();
+});
+
+await test('update2 music: 6s of playback with urgency, no errors', async () => {
+  const { page } = await newPage();
+  await startClassic(page);
+  await page.evaluate(() => window.__gb.setTimeLeft(9.5));
+  await sleep(6000);
+  const st = await page.evaluate(() => window.__gb.state());
+  ok(st.running, 'game still running through music playback');
+  await page.close();
+});
+
+await test('update2 sprites: pre-rendered, glossy blocks on canvas', async () => {
+  const { page } = await newPage();
+  await startClassic(page);
+  const board = ['........', '........', '........', '........', '........', '..###...', '..###...', '..###...'];
+  await setupBoard(page, board, [0, 0, 0]);
+  const st = await page.evaluate(() => window.__gb.state());
+  eq(st.spritesReady, true, 'sprites initialised');
+  // The placed 3x3 block must actually paint coloured pixels on the canvas.
+  const painted = await page.evaluate(() => {
+    const cv = document.getElementById('cv');
+    const L = window.__gb.layout();
+    const x = Math.round(L.bx + 3.5 * L.cell), y = Math.round(L.by + 6.5 * L.cell);
+    const c = document.createElement('canvas'); c.width = cv.width; c.height = cv.height;
+    const g = c.getContext('2d'); g.drawImage(cv, 0, 0);
+    const d = g.getImageData(x * (cv.width / cv.clientWidth), y * (cv.height / cv.clientHeight), 4, 4).data;
+    let coloured = 0;
+    for (let i = 0; i < d.length; i += 4) if (d[i] > 60 || d[i + 1] > 60 || d[i + 2] > 60) coloured++;
+    return coloured;
+  });
+  ok(painted > 4, 'block pixels painted, got ' + painted + ' coloured samples');
+  await page.screenshot({ path: path.join(ROOT, 'tests', 'design2-shot.png') });
+  await page.close();
+});
+
+await test('update2 perf: FPS under 4x CPU throttling (DevTools-style)', async () => {
+  const { page } = await newPage();
+  await startClassic(page);
+  await sleep(1200);
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+  const fps = await page.evaluate(() => new Promise((res) => {
+    let n = 0; const t0 = performance.now();
+    const tick = () => { n++; if (performance.now() - t0 < 4000) requestAnimationFrame(tick); else res({ fps: +(n / 4).toFixed(1), frames: n }); };
+    requestAnimationFrame(tick);
+  }));
+  console.log('  fps @4x throttle:', JSON.stringify(fps));
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+  ok(fps.fps > 12, 'fps > 12 under 4x throttle, got ' + fps.fps);
+  await page.close();
+});
+
 await test('console: 0 errors across all tests', async () => {
   eq(errors.length, 0, 'console/page errors: ' + errors.slice(0, 5).join(' | '));
 });

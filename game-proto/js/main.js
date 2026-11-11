@@ -7,9 +7,11 @@ import { COMBO_GRACE, BOARD_CLEAR_BONUS, clearPoints } from './scoring.js';
 import { dailyRng, localDateKey } from './rng.js';
 import { SHAPES, makePiece } from './pieces.js';
 import { APP_NAME } from './brand.js';
+import { Sprites } from './sprites.js';
 
 const $ = (id) => document.getElementById(id);
 const cv = $('cv'), g = cv.getContext('2d');
+const cvb = $('cv-board'), gb = cvb.getContext('2d'); // static layer: background + board well, drawn only on resize
 
 // Scoring table lives in js/scoring.js (the only source of points).
 
@@ -45,7 +47,9 @@ function emptyBoard() { return Array.from({ length: N }, () => Array(N).fill(nul
 
 // ---------- Layout ----------
 function layout() {
-  const dpr = Math.min(3, window.devicePixelRatio || 1);
+  // DPR capped at 2: block sprites are rendered at ~3x cell size and
+  // downscaled, so they stay crisp at 2x/3x without a 3x canvas.
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
   const w = cv.clientWidth, h = cv.clientHeight;
   cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
   g.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -55,6 +59,15 @@ function layout() {
   const trayH = Math.min(cell * 3.4, h - boardSize - 30);
   const by = Math.max(10, (h - boardSize - trayH) / 2 - 6);
   L = { w, h, cell, bx, by, size: boardSize, trayY: by + boardSize + 16, trayH, slotW: w / 3, trayCell: cell * 0.55 };
+  // Static layer: pre-rendered background + board well, drawn once here (on
+  // resize/startup) instead of every frame — the frame loop then only blits
+  // blocks, tray, particles and popups.
+  if (Sprites.ready) {
+    cvb.width = Math.round(w * dpr); cvb.height = Math.round(h * dpr);
+    gb.setTransform(dpr, 0, 0, dpr, 0, 0);
+    gb.drawImage(Sprites.background(w, h), 0, 0, w, h);
+    gb.drawImage(Sprites.board(boardSize, cell), bx - 14, by - 14, boardSize + 28, boardSize + 28);
+  }
   // Position the glowing board frame (DOM, behind the canvas) around the board.
   const glow = $('board-glow');
   glow.style.left = (bx - 14) + 'px'; glow.style.top = (by - 14) + 'px';
@@ -63,22 +76,16 @@ function layout() {
 window.addEventListener('resize', layout);
 
 // ---------- Drawing helpers ----------
-function shade(hex, amt) {
-  const n = parseInt(hex.slice(1), 16);
-  const f = (v) => Math.max(0, Math.min(255, Math.round(v + amt * 255)));
-  return `rgb(${f(n >> 16)},${f((n >> 8) & 255)},${f(n & 255)})`;
-}
+// Blocks are pre-rendered glossy 3D sprites (js/sprites.js) — blitted, never
+// drawn with per-frame gradients/shadows. No markings, icons, lines or
+// textures on the blocks themselves.
 function rrect(x, y, w, h, r) { g.beginPath(); g.roundRect ? g.roundRect(x, y, w, h, r) : g.rect(x, y, w, h); }
 function block(x, y, s, color, alpha = 1, scale = 1) {
-  // Clean, solid, rounded blocks — no markings, lines, bevels, icons or
-  // textures. A very soft glow underneath is the only decoration.
   const pad = s * 0.06, ss = (s - pad * 2) * scale, o = (s - ss) / 2;
-  x += o; y += o;
-  g.globalAlpha = alpha * 0.22;
-  g.fillStyle = color; rrect(x - 2, y - 2, ss + 4, ss + 4, ss * 0.24); g.fill();
-  g.globalAlpha = alpha;
-  g.fillStyle = color; rrect(x, y, ss, ss, ss * 0.22); g.fill();
-  g.globalAlpha = 1;
+  const cx = x + o + ss / 2, cy = y + o + ss / 2;
+  if (!Sprites.ready) { g.globalAlpha = alpha; g.fillStyle = color; rrect(x + o, y + o, ss, ss, ss * 0.22); g.fill(); g.globalAlpha = 1; return; }
+  const sprite = color === '#ffffff' ? Sprites.white() : Sprites.block(color);
+  Sprites.drawBlock(g, sprite, cx, cy, ss, alpha, 1);
 }
 
 function pieceAt(piece, x, y, s, alpha = 1) { for (const [r, c] of piece.shape.cells) block(x + c * s, y + r * s, s, piece.color, alpha); }
@@ -137,10 +144,10 @@ function timerPaused() {
 function tickTimer(dt) {
   if (timerPaused()) return;
   S.timeLeft -= dt;
+  if (Music.setUrgency) Music.setUrgency(S.timeLeft <= TIMER.lowSeconds);
   if (S.timeLeft <= TIMER.lowSeconds && !S.lowTonePlayed) {
     S.lowTonePlayed = true;
     Music.lowTime();
-    if (Music.setUrgency) Music.setUrgency(true);
   }
   if (S.timeLeft <= 0) { S.timeLeft = 0; renderTimerBar(); onTimeout(); return; }
   renderTimerBar();
@@ -169,15 +176,10 @@ function setBoardGlow(kind) {
 function draw(t) {
   const { w, h, cell: s, bx, by, size } = L;
   g.clearRect(0, 0, w, h);
+  // Background + board well live on the static #cv-board layer (drawn in
+  // layout()); this loop only draws what moves.
   g.save();
   if (fx.shake > 0) g.translate((Math.random() - 0.5) * fx.shake, (Math.random() - 0.5) * fx.shake);
-  // board frame
-  g.fillStyle = 'rgba(0,0,0,0.25)'; rrect(bx - 8, by - 8 + 6, size + 16, size + 16, 18); g.fill();
-  g.fillStyle = '#231d58'; rrect(bx - 8, by - 8, size + 16, size + 16, 18); g.fill();
-  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
-    g.fillStyle = (r + c) % 2 ? '#2c2570' : '#2a236a';
-    rrect(bx + c * s + s * 0.05, by + r * s + s * 0.05, s * 0.9, s * 0.9, s * 0.18); g.fill();
-  }
   // preview
   let prev = null;
   if (drag) { const d = dropCell(); if (d && d.ok) prev = { ...d, ...wouldClear(drag.piece.shape, d.r, d.c) }; }
@@ -214,21 +216,24 @@ function draw(t) {
     pieceAt(p, cx - (sh.w * ts) / 2, cy - (sh.h * ts) / 2, ts, canFit ? 1 : 0.35);
     if (p.helper) { g.fillStyle = '#ffd166'; g.font = `bold ${Math.round(ts * 0.9)}px system-ui`; g.textAlign = 'center'; g.fillText('✦', cx, cy - (sh.h * ts) / 2 - 6); }
   }
-  // dragged piece (full size, lifted)
+  // dragged piece (full size, lifted) — the sprite already carries its soft
+  // contact shadow, so no per-frame canvas shadow is set here.
   if (drag) {
     const sh = drag.piece.shape, sc = drag.scale;
     const ds = s * sc;
-    g.shadowColor = 'rgba(0,0,0,0.4)'; g.shadowBlur = 18; g.shadowOffsetY = 10;
     pieceAt(drag.piece, drag.x - (sh.w * ds) / 2, drag.y - (sh.h * ds) / 2, ds, 0.95);
-    g.shadowColor = 'transparent'; g.shadowBlur = 0; g.shadowOffsetY = 0;
     drag.scale += (1 - drag.scale) * 0.35;
   }
-  // particles (petals + sparks)
+  // particles: glossy 3D-style petals (pre-rendered sprites) + tiny sparks
   for (const p of fx.particles) {
     g.save(); g.translate(p.x, p.y); g.rotate(p.rot); g.globalAlpha = Math.min(1, p.life * 2);
-    g.fillStyle = p.color;
-    if (p.petal) { g.beginPath(); g.ellipse(0, 0, p.size, p.size * 0.5, 0, 0, Math.PI * 2); g.fill(); }
-    else { g.fillRect(-p.size / 2, -p.size / 2, p.size, p.size); }
+    if (p.petal && Sprites.ready) {
+      const sp = Sprites.petal(p.color), d = p.size * 3.4;
+      g.drawImage(sp, -d / 2, -d / 2, d, d);
+    } else {
+      g.fillStyle = p.color;
+      g.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+    }
     g.restore();
   }
   // popups
@@ -692,6 +697,7 @@ window.__gbBack = () => {
 };
 
 S.board = emptyBoard();
+Sprites.init();
 layout();
 Ads.init();
 requestAnimationFrame(frame);
@@ -702,7 +708,7 @@ else if ('serviceWorker' in navigator && location.protocol === 'https:') navigat
 // ---------- Test hooks (read-only layout + state; mutation only with ?test=1) ----------
 window.__gb = {
   layout: () => ({ ...L }),
-  state: () => ({ board: S.board.map((r) => r.map(Boolean)), tray: S.tray.map((p) => p && { id: p.shape.id, cells: p.shape.cells, w: p.shape.w, h: p.shape.h, helper: p.helper }), score: S.score, combo: S.combo, lines: S.lines, running: S.running, placed: S.placed, revived: S.revived, mode: S.mode, dateKey: S.dateKey, helperAvailable: S.helperAvailable, tutorialStep: Tutorial.step, timeLeft: Math.round(S.timeLeft * 10) / 10, timerStarted: S.timerStarted, charges: { ...S.charges }, armed: S.armed, sweepMode: S.sweepMode, musicOn: Music.on, timerPaused: timerPaused() }),
+  state: () => ({ board: S.board.map((r) => r.map(Boolean)), tray: S.tray.map((p) => p && { id: p.shape.id, cells: p.shape.cells, w: p.shape.w, h: p.shape.h, helper: p.helper }), score: S.score, combo: S.combo, lines: S.lines, running: S.running, placed: S.placed, revived: S.revived, mode: S.mode, dateKey: S.dateKey, helperAvailable: S.helperAvailable, tutorialStep: Tutorial.step, timeLeft: Math.round(S.timeLeft * 10) / 10, timerStarted: S.timerStarted, charges: { ...S.charges }, armed: S.armed, sweepMode: S.sweepMode, musicOn: Music.on, musicBpm: Music.bpm, musicLoopSeconds: Music.loopSeconds, musicLoopEvents: Music.loopEvents, musicUrgency: Music.urgency, spritesReady: Sprites.ready, timerPaused: timerPaused() }),
 };
 if (new URLSearchParams(location.search).has('test')) {
   window.__gb.setBoard = (rows) => { S.board = rows.map((row) => [...row].map((ch) => (ch === '#' ? '#5aa2ff' : null))); };
