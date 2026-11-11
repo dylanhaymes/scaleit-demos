@@ -46,6 +46,7 @@ html,body{margin:0;height:100%;background:linear-gradient(160deg,#fff8e0 0%,#ffe
 /* ---- In-game level row ---- */
 #level-row{display:flex;align-items:center;gap:8px;margin:6px auto 0;width:min(92%,520px);flex:none}
 #level-label{font-family:var(--display);font-size:13px;font-weight:800;color:#7a3c00;letter-spacing:.06em;white-space:nowrap}
+#level-xp{font-family:var(--display);font-size:12px;font-weight:800;color:#7a3c00;white-space:nowrap}
 .xp-pill{flex:1;height:14px;border-radius:999px;background:rgba(255,255,255,.75);border:2px solid #f5c86b;overflow:hidden;position:relative;box-shadow:inset 0 2px 4px rgba(122,60,0,.2)}
 .xp-pill>div{height:100%;width:0%;border-radius:999px;background:linear-gradient(90deg,#2fd65a,#ffd21f,#ff8a1e);transition:width .35s ease;position:relative;overflow:hidden}
 .xp-pill>div::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.65) 50%,transparent 70%);background-size:200% 100%;animation:shine 2.6s linear infinite}
@@ -68,14 +69,14 @@ html,body{margin:0;height:100%;background:linear-gradient(160deg,#fff8e0 0%,#ffe
 h2{margin:0 0 10px;font-size:28px;font-family:var(--display);font-weight:800;color:#7a3c00}
 
 /* ---- Chunky 3D buttons with press-down + bounce ---- */
-.btn{display:block;width:100%;border:0;border-radius:18px;padding:14px;margin-top:10px;font-size:17px;font-weight:800;font-family:var(--display);color:#1a1440;background:linear-gradient(180deg,#b8ffe0,#4fd6a8 55%,#37b98c);box-shadow:0 6px 0 #2a9a76,0 10px 20px rgba(0,0,0,.25),inset 0 2px 0 rgba(255,255,255,.7);cursor:pointer}
+.btn{display:block;width:100%;border:0;border-radius:18px;padding:16px;margin-top:10px;font-size:21px;font-weight:800;font-family:var(--display);color:#1a1440;background:linear-gradient(180deg,#b8ffe0,#4fd6a8 55%,#37b98c);box-shadow:0 6px 0 #2a9a76,0 10px 20px rgba(0,0,0,.25),inset 0 2px 0 rgba(255,255,255,.7);cursor:pointer}
 .btn:active{transform:translateY(4px);box-shadow:0 2px 0 #2a9a76,0 4px 10px rgba(0,0,0,.25),inset 0 2px 0 rgba(255,255,255,.7)}
-.btn.big{font-size:20px;padding:16px}
+.btn.big{font-size:24px;padding:18px}
 .btn.ghost{background:linear-gradient(180deg,#fff,#ffe9b8);color:var(--ink);box-shadow:0 5px 0 #d9a441,0 8px 16px rgba(122,60,0,.2),inset 0 2px 0 #fff}
 .btn.ghost:active{box-shadow:0 1px 0 #d9a441,0 3px 8px rgba(122,60,0,.2),inset 0 2px 0 #fff}
 .btn.daily{background:linear-gradient(180deg,#ffe9a8,#ffb347 55%,#f09a1f);box-shadow:0 6px 0 #b97a1f,0 10px 20px rgba(0,0,0,.25),inset 0 2px 0 rgba(255,255,255,.7);color:#5a3c00}
 .btn.daily:active{box-shadow:0 2px 0 #b97a1f,0 4px 10px rgba(0,0,0,.25),inset 0 2px 0 rgba(255,255,255,.7)}
-.btn.daily small{display:block;font-size:12px;font-weight:700;opacity:.75}
+.btn.daily small{display:block;font-size:14px;font-weight:700;opacity:.75}
 .btn.daily img{width:20px;height:20px;vertical-align:-4px}
 .small{font-size:13px;color:var(--muted)}
 .final{display:flex;flex-direction:column;margin:10px 0}
@@ -88,11 +89,9 @@ h2{margin:0 0 10px;font-size:28px;font-family:var(--display);font-weight:800;col
 .ad{background:#000;z-index:50}
 .ad-box{position:relative;width:min(380px,100%);height:min(640px,90vh);background:repeating-linear-gradient(45deg,#222 0 20px,#2a2a2a 20px 40px);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:20px}
 .ad-tag{position:absolute;top:10px;left:10px;background:#ffd166;color:#000;font-weight:800;padding:2px 8px;border-radius:4px;font-size:12px}
-.ad-kind{color:#aaa;font-size:13px;text-transform:uppercase;letter-spacing:.2em}
 .ad-body{font-size:22px;font-weight:800;color:#fff}
-.ad-body small{font-size:12px;color:#aaa;font-weight:500}
 .ad-count{font-size:40px;font-weight:800;color:#ffd166}
-#ad-close{width:auto;padding:10px 22px}
+#ad-close{width:auto;padding:12px 26px;font-size:21px}
 #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:rgba(58,42,26,.92);color:#fff;padding:8px 14px;border-radius:999px;font-size:13px;font-weight:600;opacity:0;transition:opacity .3s;z-index:60;pointer-events:none}
 #toast.show{opacity:1}
 
@@ -121,7 +120,7 @@ h2{margin:0 0 10px;font-size:28px;font-family:var(--display);font-weight:800;col
 .tut.show{display:block}
 .tut-card{pointer-events:auto;position:absolute;left:50%;top:calc(env(safe-area-inset-top) + 64px);transform:translateX(-50%);width:min(340px,92vw);background:linear-gradient(180deg,#fffdf4,#ffefd0);border:3px solid #f5c86b;border-radius:20px;padding:14px 16px 12px;box-shadow:0 14px 40px rgba(122,60,0,.4);text-align:center;font-size:15px;line-height:1.4;color:var(--ink);animation:pop .3s cubic-bezier(.2,1.6,.4,1)}
 .tut-card b{color:#e83e8c}
-.tut-row{display:flex;gap:8px}.tut-row .btn{margin-top:10px;padding:10px}
+.tut-row{display:flex;gap:8px}.tut-row .btn{margin-top:10px;padding:12px}
 .tut-dots{display:flex;gap:6px;justify-content:center;margin-bottom:8px}
 .tut-dots i{width:8px;height:8px;border-radius:50%;background:rgba(122,60,0,.2)}.tut-dots i.on{background:var(--accent)}
 .tut-hand{position:absolute;left:0;top:0;transform:translate(var(--fx),var(--fy));animation:tutdrag 2.2s ease-in-out infinite;display:none;filter:drop-shadow(0 6px 8px rgba(0,0,0,.35))}
@@ -137,13 +136,15 @@ h2{margin:0 0 10px;font-size:28px;font-family:var(--display);font-weight:800;col
 @keyframes tutfill{0%,30%{background:rgba(122,60,0,.12)}40%,100%{background:#ff5da2}}
 @keyframes tutbloom{0%,45%{transform:scale(1);opacity:1}55%{transform:scale(1.15);background:#fff}80%,100%{transform:scale(.2);opacity:0}}
 
-/* ---- Timer bar: glossy 3D pill with shine sweep, green→yellow→red ---- */
-#timerbar{position:relative;height:18px;margin:8px auto 2px;width:min(92%,520px);background:rgba(255,255,255,.8);border:2px solid #f5c86b;border-radius:999px;overflow:visible;flex:none;box-shadow:inset 0 2px 4px rgba(122,60,0,.2)}
+/* ---- Timer bar: its own LABELED row, time printed ON the bar ---- */
+#timer-wrap{display:flex;align-items:center;gap:8px;margin:8px auto 0;width:min(92%,520px);flex:none}
+#timer-label{font-family:var(--display);font-size:13px;font-weight:800;color:#7a3c00;letter-spacing:.06em;white-space:nowrap}
+#timerbar{position:relative;flex:1;height:24px;margin:0;background:rgba(255,255,255,.8);border:2px solid #f5c86b;border-radius:999px;overflow:visible;box-shadow:inset 0 2px 4px rgba(122,60,0,.2)}
 #timer-fill{height:100%;width:80%;border-radius:999px;background:linear-gradient(180deg,#8ff5b0,#2fd65a 55%,#1fae46);box-shadow:inset 0 2px 0 rgba(255,255,255,.6),inset 0 -2px 0 rgba(0,0,0,.12),0 2px 8px rgba(47,214,90,.4);transition:width .3s linear;position:relative;overflow:hidden}
 #timer-fill::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.7) 50%,transparent 70%);background-size:200% 100%;animation:shine 2.6s linear infinite}
 #timer-fill.mid{background:linear-gradient(180deg,#ffe98a,#ffd21f 55%,#f5a623);box-shadow:inset 0 2px 0 rgba(255,255,255,.6),inset 0 -2px 0 rgba(0,0,0,.12),0 2px 8px rgba(245,166,35,.4)}
 #timer-fill.low{background:linear-gradient(180deg,#ff9a9a,#ff4d4d 55%,#d92b2b);box-shadow:inset 0 2px 0 rgba(255,255,255,.6),inset 0 -2px 0 rgba(0,0,0,.12),0 2px 8px rgba(255,77,77,.5)}
-#timer-text{position:absolute;right:0;top:-4px;transform:translateY(-100%);font-size:12px;font-weight:800;font-family:var(--display);color:var(--ink-soft);letter-spacing:.06em}
+#timer-text{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:14px;font-weight:800;font-family:var(--display);color:#1a1440;-webkit-text-stroke:.5px rgba(255,255,255,.9);text-shadow:0 1px 0 rgba(255,255,255,.8);letter-spacing:.04em;z-index:2;pointer-events:none}
 #timerbar.low{animation:timerpulse .8s ease-in-out infinite}
 @keyframes timerpulse{0%,100%{opacity:1}50%{opacity:.6}}
 /* Big countdown numbers from 20 s. */
@@ -162,22 +163,29 @@ h2{margin:0 0 10px;font-size:28px;font-family:var(--display);font-weight:800;col
 @keyframes shimmer{0%,100%{filter:brightness(1)}50%{filter:brightness(1.4)}}
 #cv{z-index:1}
 
-/* ---- Power-ups: chunky 3D buttons with progress rings ---- */
-#powerups{display:flex;gap:8px;justify-content:center;padding:8px 10px 8px;flex:none}
-.pu{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:linear-gradient(180deg,#fff,#ffe9b8);border:2px solid #f5c86b;color:var(--ink);
-  border-radius:16px;padding:6px 2px 5px;font-size:14px;font-weight:800;font-family:var(--display);cursor:pointer;box-shadow:0 4px 0 #d9a441,0 6px 12px rgba(122,60,0,.2),inset 0 2px 0 #fff;position:relative}
-.pu:active{transform:translateY(3px);box-shadow:0 1px 0 #d9a441,0 3px 8px rgba(122,60,0,.2),inset 0 2px 0 #fff}
-.pu-ring{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+/* ---- Power-ups: a chunky 3D tray; each slot a glossy candy disc ---- */
+#powerups{display:flex;gap:8px;justify-content:center;padding:10px 8px;flex:none;margin:8px 10px 2px;
+  background:linear-gradient(180deg,#ffe9b8,#ffd98a 60%,#f5c86b);border:3px solid #f5c86b;border-radius:22px;
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.85),inset 0 -3px 6px rgba(122,60,0,.18),0 6px 0 #d9a441,0 10px 18px rgba(122,60,0,.28)}
+.pu{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:linear-gradient(180deg,#fffdf4,#ffefd0);border:2px solid #f5c86b;color:var(--ink);
+  border-radius:16px;padding:8px 2px 6px;font-size:14px;font-weight:800;font-family:var(--display);cursor:pointer;box-shadow:0 5px 0 #d9a441,0 8px 14px rgba(122,60,0,.25),inset 0 2px 0 #fff;position:relative}
+.pu:active{transform:translateY(3px);box-shadow:0 2px 0 #d9a441,0 4px 8px rgba(122,60,0,.25),inset 0 2px 0 #fff}
+.pu-ring{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;
   background:conic-gradient(#2fd65a calc(var(--ring,0)*1%),#f0dfb8 0);
-  box-shadow:inset 0 2px 4px rgba(122,60,0,.25)}
-.pu-ring img{width:30px;height:30px;display:block;background:#fff;border-radius:50%;padding:2px}
-.pu-name{font-size:11px;white-space:nowrap;line-height:1.1}
-.pu-progress{font-size:9px;font-weight:700;color:var(--muted);line-height:1.1}
+  box-shadow:inset 0 3px 6px rgba(122,60,0,.3),0 3px 8px rgba(122,60,0,.3),0 0 0 2px rgba(255,255,255,.7)}
+.pu-ring img{width:38px;height:38px;display:block;border-radius:50%;padding:2px;filter:drop-shadow(0 3px 3px rgba(0,0,0,.35))}
+/* Glossy candy disc behind each icon, tinted per power-up (same 3D treatment as the blocks). */
+.pu[data-pu="bomb"] .pu-ring img{background:radial-gradient(circle at 35% 28%,#fff 0%,#ffd9a8 42%,#ff8a1e 78%,#e0641e 100%)}
+.pu[data-pu="sweep"] .pu-ring img{background:radial-gradient(circle at 35% 28%,#fff 0%,#ffc7de 42%,#ff5da2 78%,#e83e8c 100%)}
+.pu[data-pu="reshuffle"] .pu-ring img{background:radial-gradient(circle at 35% 28%,#fff 0%,#b8ffe0 42%,#2fd65a 78%,#1fae46 100%)}
+.pu[data-pu="star"] .pu-ring img{background:radial-gradient(circle at 35% 28%,#fff 0%,#ffe98a 42%,#ffd21f 78%,#f5a623 100%)}
+.pu-name{font-size:12px;white-space:nowrap;line-height:1.1}
+.pu-progress{font-size:10px;font-weight:700;color:var(--muted);line-height:1.1}
 .pu-count{position:absolute;top:-7px;right:-4px;min-width:20px;height:20px;border-radius:999px;background:var(--gold);color:#5a3c00;font-size:11px;font-weight:800;font-family:var(--display);
   display:inline-flex;align-items:center;justify-content:center;padding:0 5px;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.3)}
 .pu.empty{opacity:.5;filter:grayscale(.7)}
 .pu.earned{animation:pupulse 1.2s ease-in-out infinite}
-@keyframes pupulse{0%,100%{box-shadow:0 4px 0 #d9a441,0 6px 12px rgba(122,60,0,.2),0 0 0 0 rgba(255,210,31,.7)}50%{box-shadow:0 4px 0 #d9a441,0 6px 12px rgba(122,60,0,.2),0 0 0 8px rgba(255,210,31,0)}}
+@keyframes pupulse{0%,100%{box-shadow:0 5px 0 #d9a441,0 8px 14px rgba(122,60,0,.25),0 0 0 0 rgba(255,210,31,.8)}50%{box-shadow:0 5px 0 #d9a441,0 8px 14px rgba(122,60,0,.25),0 0 0 10px rgba(255,210,31,0)}}
 .pu.burst{animation:puburst .5s cubic-bezier(.2,1.8,.4,1)}
 @keyframes puburst{0%{transform:scale(1)}40%{transform:scale(1.18) rotate(-3deg)}100%{transform:scale(1)}}
 /* Charge expiry: last 5 s the filled slot pulses/blinks; on expiry it poofs away. */
@@ -190,9 +198,9 @@ h2{margin:0 0 10px;font-size:28px;font-family:var(--display);font-weight:800;col
 .pu:disabled{cursor:default}
 #pu-target{display:flex;align-items:center;justify-content:center;gap:8px;padding:4px 12px 8px;font-size:12px;color:var(--ink-soft);flex:none;min-height:26px;font-weight:600}
 #pu-target.hidden{display:none}
-#pu-mode button{background:#fff;border:2px solid #f5c86b;color:var(--ink);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:800;font-family:var(--display)}
+#pu-mode button{background:#fff;border:2px solid #f5c86b;color:var(--ink);border-radius:999px;padding:6px 12px;font-size:14px;font-weight:800;font-family:var(--display)}
 #pu-mode button.on{background:var(--accent2);color:#1a1440;border-color:#2a9a76}
-#pu-cancel{background:#fff;border:2px solid #f5c86b;color:var(--ink);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:800;font-family:var(--display)}
+#pu-cancel{background:#fff;border:2px solid #f5c86b;color:var(--ink);border-radius:999px;padding:6px 12px;font-size:14px;font-weight:800;font-family:var(--display)}
 
 /* ---- Big-moment banner, edge flash, fly layer ---- */
 #banner{position:fixed;left:50%;top:34%;transform:translate(-50%,-50%);z-index:40;pointer-events:none;text-align:center}

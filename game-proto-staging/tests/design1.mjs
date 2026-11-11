@@ -805,6 +805,71 @@ await test('autosave: timeout never auto-uses a charge (star kept, revive offere
   await page.close();
 });
 
+await test('review fixes: menu buttons have large type (>= 21px)', async () => {
+  const { page } = await newPage();
+  const sizes = await page.evaluate(() => [...document.querySelectorAll('.btn')].map((b) => parseFloat(getComputedStyle(b).fontSize)));
+  ok(sizes.length >= 8, 'panel buttons present, got ' + sizes.length);
+  ok(sizes.every((s) => s >= 21), 'all .btn >= 21px, got ' + sizes.join(','));
+  const big = await page.evaluate(() => parseFloat(getComputedStyle(document.getElementById('btn-play')).fontSize));
+  ok(big >= 24, 'Play button >= 24px, got ' + big);
+  await page.close();
+});
+
+await test('review fixes: no builder copy in the player UI', async () => {
+  const { page } = await newPage();
+  const bodyText = await page.evaluate(() => document.body.innerText);
+  for (const s of ['120 BPM', 'BPM', 'Mock ad', 'AdMob', 'AdSense', 'js/ads.js', 'analytics log', '2026-11-11', 'seeded', 'generator']) {
+    ok(!bodyText.includes(s), 'no builder copy "' + s + '" in UI');
+  }
+  const date = await page.evaluate(() => document.getElementById('daily-date').textContent);
+  ok(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{1,2}$/.test(date), 'daily date is friendly, got ' + date);
+  eq(await page.evaluate(() => document.querySelector('.ad-body').textContent.trim()), 'Advertisement', 'mock ad shows only Advertisement');
+  ok(await page.evaluate(() => document.getElementById('btn-log').classList.contains('hidden')), 'analytics log hidden by default');
+  await page.close();
+});
+
+await test('review fixes: analytics log returns with ?debug=1', async () => {
+  const { ctx, page } = await newPage();
+  await page.goto(`http://localhost:${PORT}/?test=1&debug=1`);
+  await page.waitForSelector('#btn-play');
+  ok(await page.evaluate(() => !document.getElementById('btn-log').classList.contains('hidden')), 'log button visible with ?debug=1');
+  await ctx.close();
+});
+
+await test('review fixes: timer is its own labelled bar, time on it; level bar separate + labelled', async () => {
+  const { page } = await newPage();
+  await startClassic(page);
+  eq(await page.evaluate(() => document.getElementById('timer-label').textContent), 'TIME', 'timer label');
+  eq(await page.evaluate(() => document.getElementById('level-label').textContent), 'LEVEL 1', 'level label');
+  const geom = await page.evaluate(() => {
+    const bar = document.getElementById('timerbar').getBoundingClientRect();
+    const txt = document.getElementById('timer-text').getBoundingClientRect();
+    const lvl = document.getElementById('level-row').getBoundingClientRect();
+    return { bar, txt, lvl, xp: document.getElementById('level-xp').textContent };
+  });
+  ok(geom.txt.top >= geom.bar.top && geom.txt.bottom <= geom.bar.bottom, 'time text sits ON the timer bar');
+  ok(geom.txt.left >= geom.bar.left && geom.txt.right <= geom.bar.right, 'time text inside bar horizontally');
+  ok(geom.bar.top > geom.lvl.bottom, 'timer bar is below the level row, not overlapping it');
+  ok(/^\d+\/15$/.test(geom.xp), 'level XP progress labelled (15 per level), got ' + geom.xp);
+  await page.close();
+});
+
+await test('review fixes: power-up dock is a 3D tray with glossy discs', async () => {
+  const { page } = await newPage();
+  await startClassic(page);
+  const dock = await page.evaluate(() => {
+    const cs = getComputedStyle(document.getElementById('powerups'));
+    const img = document.querySelector('.pu[data-pu="bomb"] .pu-ring img');
+    const ics = getComputedStyle(img);
+    return { dockBg: cs.backgroundImage, dockShadow: cs.boxShadow, discBg: ics.backgroundImage, ring: getComputedStyle(document.querySelector('.pu-ring')).width };
+  });
+  ok(dock.dockBg.includes('gradient'), 'dock has a gradient tray background');
+  ok(dock.dockShadow !== 'none', 'dock has depth shadow');
+  ok(dock.discBg.includes('radial-gradient'), 'slot icon sits on a glossy radial disc, got ' + dock.discBg.slice(0, 40));
+  ok(parseFloat(dock.ring) >= 46, 'ring is large (>= 46px), got ' + dock.ring);
+  await page.close();
+});
+
 await test('console: 0 errors across all tests', async () => {
   eq(errors.length, 0, 'console/page errors: ' + errors.slice(0, 5).join(' | '));
 });

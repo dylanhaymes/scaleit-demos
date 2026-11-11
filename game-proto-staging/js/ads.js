@@ -17,7 +17,6 @@ const MockProvider = {
   _show(kind, seconds) {
     return new Promise((resolve) => {
       const ov = $('ad'), cnt = $('ad-count'), close = $('ad-close');
-      $('ad-kind').textContent = kind === 'rewarded' ? 'Rewarded ad (mock)' : 'Interstitial ad (mock)';
       let left = seconds, done = false;
       cnt.textContent = left;
       close.textContent = kind === 'rewarded' ? 'Close (no reward)' : 'Skip';

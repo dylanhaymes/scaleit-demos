@@ -472,6 +472,7 @@ function renderLevel() {
   $('level-label').textContent = `LEVEL ${S.level}`;
   const into = S.placed % LEVEL_EVERY;
   $('level-fill').style.width = (S.level >= 11 ? 100 : (into / LEVEL_EVERY) * 100) + '%';
+  $('level-xp').textContent = S.level >= 11 ? 'MAX' : `${into}/${LEVEL_EVERY}`;
 }
 function renderPlayerCard() {
   const p = playerProgress(store.xp);
@@ -1019,9 +1020,12 @@ function show(id, on) { $(id).classList.toggle('show', on); }
 $('rules').innerHTML = '<ol>' + RULES_TEXT.map((r) => `<li>${r}</li>`).join('') + '</ol>';
 document.title = APP_NAME;
 $('title').querySelector('.logo').innerHTML = APP_NAME.replace(/bloom$/i, '<span>$&</span>');
+// Friendly daily date for the player ("Nov 11", never the 2026-11-11 key).
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function friendlyDate(key) { const [, m, d] = key.split('-'); return `${MONTHS[+m - 1]} ${+d}`; }
 function refreshTitle() {
   $('title-best').textContent = store.best; $('title-daily-best').textContent = store.dailyBest(localDateKey());
-  $('daily-date').textContent = localDateKey();
+  $('daily-date').textContent = friendlyDate(localDateKey());
   const sv = readSave();
   $('btn-play').textContent = sv ? (sv.mode === 'daily' ? '▶ Continue daily' : '▶ Continue') : 'Play';
   $('btn-new').classList.toggle('hidden', !sv);
@@ -1055,6 +1059,9 @@ $('btn-menu').onclick = () => { show('menu', true); Analytics.log('menu_open', {
 $('btn-resume').onclick = () => show('menu', false);
 $('btn-restart').onclick = () => { show('menu', false); if (S.running) { S.running = false; Analytics.log('game_abandon', { score: S.score }); } clearSave(); startGame(S.mode === 'daily' ? 'daily' : 'classic', S.dateKey || localDateKey()); };
 $('btn-log').onclick = () => { const el = $('log'); el.classList.toggle('hidden'); el.textContent = Analytics.all().slice(-60).map((e) => JSON.stringify(e)).join('\n'); };
+// Hidden debug path only: the analytics log stays out of the player UI
+// unless the page is opened with ?debug=1.
+if (new URLSearchParams(location.search).has('debug')) $('btn-log').classList.remove('hidden');
 $('btn-revive').onclick = takeRevive;
 $('btn-norevive').onclick = () => declineRevive('declined');
 // Power-up buttons (under the board) + targeting controls.

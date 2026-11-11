@@ -26,8 +26,8 @@
       <button id="btn-menu" class="icon-btn" aria-label="Menu"><img alt="" data-icon="menu"></button>
     </div>
   </header>
-  <div id="level-row"><span id="level-label">LEVEL 1</span><div class="xp-pill"><div id="level-fill"></div></div></div>
-  <div id="timerbar"><div id="timer-fill"></div><span id="timer-text">2:00</span></div>
+  <div id="level-row"><span id="level-label">LEVEL 1</span><div class="xp-pill"><div id="level-fill"></div></div><span id="level-xp">0/10</span></div>
+  <div id="timer-wrap"><span id="timer-label">TIME</span><div id="timerbar"><div id="timer-fill"></div><span id="timer-text">2:00</span></div></div>
   <div id="countdown" class="hidden">20</div>
   <div id="stage"><div id="board-glow"></div><canvas id="cv-board"></canvas><canvas id="cv"></canvas></div>
   <div id="powerups">
@@ -104,7 +104,7 @@
     <p class="small">Your score is exactly what you earned. Ads never change the board, the pieces, or your score.</p>
     <button id="btn-resume" class="btn big">Back</button>
     <button id="btn-restart" class="btn ghost">Restart game</button>
-    <button id="btn-log" class="btn ghost">Show analytics log</button>
+    <button id="btn-log" class="btn ghost hidden">Show analytics log</button>
     <pre id="log" class="hidden"></pre>
   </div>
 </div>
@@ -113,7 +113,7 @@
 <div id="settings" class="overlay">
   <div class="panel">
     <h2>Settings</h2>
-    <label class="toggle"><span>Music <small>(bouncy 120 BPM)</small></span><input type="checkbox" id="set-music"></label>
+    <label class="toggle"><span>Music</span><input type="checkbox" id="set-music"></label>
     <label class="toggle"><span>Sound effects</span><input type="checkbox" id="set-sfx"></label>
     <label class="toggle"><span>Vibration</span><input type="checkbox" id="set-haptics"></label>
     <label class="toggle"><span>Reduce motion</span><input type="checkbox" id="set-motion"></label>
@@ -147,12 +147,11 @@
   </div>
 </div>
 
-<!-- Mock ad overlay (replaced by a real provider later) -->
+<!-- Ad overlay: the player only ever sees "Advertisement". -->
 <div id="ad" class="overlay ad">
   <div class="ad-box">
     <div class="ad-tag">Ad</div>
-    <div class="ad-kind" id="ad-kind">Rewarded</div>
-    <div class="ad-body">Mock ad placeholder<br><small>AdMob / AdSense for Games plugs in via js/ads.js</small></div>
+    <div class="ad-body">Advertisement</div>
     <div class="ad-count" id="ad-count">5</div>
     <button id="ad-close" class="btn ghost">Close</button>
   </div>
