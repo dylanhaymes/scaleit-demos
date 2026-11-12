@@ -129,12 +129,20 @@ function layout() {
   const w = cv.clientWidth, h = cv.clientHeight;
   cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
   g.setTransform(dpr, 0, 0, dpr, 0, 0);
-  const boardSize = Math.floor(Math.min(w * 0.92, h * 0.62, 520));
+  // Board as large as fits while the HUD, the full power-up dock and safe
+  // edges still fit: width-bound (frame kept inside the canvas, bx >= 15),
+  // height-bound at 70% of the stage so the tray still has room, capped
+  // at 640 so very tall desktops don't grow a giant board.
+  const boardSize = Math.floor(Math.min(w - 30, h * 0.70, 640));
   const cell = boardSize / N;
   const bx = (w - boardSize) / 2;
   const trayH = Math.min(cell * 3.4, h - boardSize - 30);
   const by = Math.max(10, (h - boardSize - trayH) / 2 - 6);
-  L = { w, h, cell, bx, by, size: boardSize, trayY: by + boardSize + 16, trayH, slotW: w / 3, trayCell: cell * 0.55 };
+  // Tray slots live within the board's width (trayX..trayX+size), not spread
+  // across the full canvas — on wide screens w/3 slots floated far apart.
+  // Tray tiles rest LARGE: 85% of a board cell (was 55%), capped per piece
+  // by trayCellFor() so wide/tall pieces never overflow their slot.
+  L = { w, h, cell, bx, by, size: boardSize, trayX: bx, trayY: by + boardSize + 16, trayH, slotW: boardSize / 3, trayCell: cell * 0.85 };
   // Static layer: pre-rendered background + board well, drawn once here (on
   // resize/startup) instead of every frame — the frame loop then only blits
   // blocks, tray, particles and popups.
@@ -165,6 +173,13 @@ function block(x, y, s, color, alpha = 1, scale = 1) {
 }
 
 function pieceAt(piece, x, y, s, alpha = 1) { for (const [r, c] of piece.shape.cells) block(x + c * s, y + r * s, s, piece.color, alpha); }
+
+// Resting tray tile size for one piece: as large as fits its slot — 85% of a
+// board cell, but capped so a wide (5-long) or tall (5-high) piece never
+// overflows its slot or the tray height.
+function trayCellFor(sh) {
+  return Math.min(L.cell * 0.85, (L.slotW * 0.96) / sh.w, (L.trayH * 0.92) / sh.h);
+}
 
 // ---------- Placement / preview ----------
 function dropCell() {
@@ -328,15 +343,18 @@ function draw(t) {
   // tray — idle bob (off when reduced motion or while dragging that slot)
   for (let i = 0; i < 3; i++) {
     const p = S.tray[i]; if (!p || (drag && drag.slot === i)) continue;
-    const ts = L.trayCell, sh = p.shape;
+    const sh = p.shape, ts = trayCellFor(sh);
     const bob = reducedMotion() ? 0 : Math.sin(t * 2 + i * 1.7) * 3;
     const flip = fx.trayFlip > 0 ? Math.abs(Math.cos(fx.trayFlip * Math.PI)) : 1;
-    const cx = L.slotW * (i + 0.5), cy = L.trayY + L.trayH / 2 + bob + (1 - easeOut(fx.trayIn)) * 80;
+    const cx = L.trayX + L.slotW * (i + 0.5), cy = L.trayY + L.trayH / 2 + bob + (1 - easeOut(fx.trayIn)) * 80;
     const canFit = fitsAnywhere(S.board, sh);
     pieceAt(p, cx - (sh.w * ts) / 2, cy - (sh.h * ts) / 2, ts * flip, canFit ? 1 : 0.35);
     if (p.helper && Sprites.ready) {
-      const d = ts * 1.1;
-      g.drawImage(Sprites.star('#ffd21f'), cx - d / 2, cy - (sh.h * ts) / 2 - d - 2, d, d);
+      // Helper star as a corner badge on the piece (no room above it now
+      // that tray tiles are large — a star above would cover board cells).
+      const d = ts * 0.95;
+      const hx = cx + (sh.w * ts) / 2 - d * 0.25, hy = cy - (sh.h * ts) / 2 + d * 0.25;
+      g.drawImage(Sprites.star('#ffd21f'), hx - d / 2, hy - d / 2, d, d);
     }
   }
   // dragged piece (full size, lifted) — the sprite already carries its soft
@@ -685,7 +703,10 @@ function renderPowerups() {
   // charge is held, milestone progress while the slot is empty).
   document.querySelectorAll('#powerups .pu').forEach((b) => {
     const type = b.dataset.pu, n = S.charges[type] || 0;
-    b.querySelector('.pu-count').textContent = n;
+    const countEl = b.querySelector('.pu-count');
+    countEl.textContent = n;
+    // No badge on an empty slot — four "0" badges are clutter.
+    countEl.classList.toggle('hidden', n === 0);
     b.classList.toggle('empty', n === 0);
     b.classList.toggle('earned', n > 0);
     b.classList.toggle('armed', S.armed === type);
@@ -965,7 +986,11 @@ function finishGame() {
   $('ov-new').classList.toggle('hidden', !isBest);
   $('ov-xp').textContent = `+${gained} XP  ·  Player Level ${lvlAfter}${newRewards.length ? ` — unlocked: ${newRewards.join(', ')}!` : ''}`;
   $('best').textContent = modeBest();
-  $('over').querySelector('h2').textContent = daily ? `Daily ${friendlyDate(S.dateKey)} over` : 'Game over';
+  $('over').querySelector('h2').textContent = daily ? 'Daily challenge over' : 'Game over';
+  // The date never goes in the heading — it sits in smaller text underneath.
+  const ovDate = $('ov-date');
+  if (daily) { ovDate.textContent = friendlyDate(S.dateKey); ovDate.classList.remove('hidden'); }
+  else ovDate.classList.add('hidden');
   // Star rating, revealed one star at a time (CSS delays set below).
   const stars = (isBest || S.score >= 1000) ? 3 : S.score >= 400 ? 2 : 1;
   document.querySelectorAll('#ov-stars span').forEach((s, i) => {
@@ -981,7 +1006,8 @@ function finishGame() {
 // ---------- Input ----------
 function slotAt(x, y) {
   if (y < L.trayY - 10 || y > L.trayY + L.trayH + 20) return -1;
-  const i = Math.floor(x / L.slotW); return S.tray[i] ? i : -1;
+  const i = Math.floor((x - L.trayX) / L.slotW);
+  return (i < 0 || i > 2) ? -1 : (S.tray[i] ? i : -1);
 }
 cv.addEventListener('pointerdown', (e) => {
   Sfx.unlock();
@@ -997,7 +1023,10 @@ cv.addEventListener('pointerdown', (e) => {
   }
   const i = slotAt(x, y); if (i < 0) return;
   const lift = e.pointerType === 'mouse' ? 0 : L.cell * 1.8; // keep the piece visible above the finger
-  drag = { slot: i, piece: S.tray[i], x, y: y - lift, lift, id: e.pointerId, scale: 0.6 };
+  // Pick up at the piece's resting tray size, then ease to full board-cell
+  // size while dragging (a slight smooth grow, never a pop).
+  const startScale = trayCellFor(S.tray[i].shape) / L.cell;
+  drag = { slot: i, piece: S.tray[i], x, y: y - lift, lift, id: e.pointerId, scale: startScale, startScale };
   cv.setPointerCapture(e.pointerId);
   Sfx.pick();
 });
@@ -1094,7 +1123,7 @@ const Tutorial = {
     if (this.step === 0) {
       const r = cv.getBoundingClientRect();
       const slot = Math.max(0, S.tray.findIndex(Boolean));
-      const fx0 = r.left + L.slotW * (slot + 0.5) - 14, fy0 = r.top + L.trayY + L.trayH / 2 - 6;
+      const fx0 = r.left + L.trayX + L.slotW * (slot + 0.5) - 14, fy0 = r.top + L.trayY + L.trayH / 2 - 6;
       const tx = r.left + L.bx + L.size / 2 - 14, ty = r.top + L.by + L.size / 2;
       hand.style.setProperty('--fx', fx0 + 'px'); hand.style.setProperty('--fy', fy0 + 'px');
       hand.style.setProperty('--tx', tx + 'px'); hand.style.setProperty('--ty', ty + 'px');
@@ -1137,14 +1166,16 @@ else if ('serviceWorker' in navigator && location.protocol === 'https:') navigat
 // ---------- Test hooks (read-only layout + state; mutation only with ?test=1) ----------
 window.__gb = {
   layout: () => ({ ...L }),
-  state: () => ({ board: S.board.map((r) => r.map(Boolean)), tray: S.tray.map((p) => p && { id: p.shape.id, cells: p.shape.cells, w: p.shape.w, h: p.shape.h, helper: p.helper }), score: S.score, combo: S.combo, lines: S.lines, running: S.running, placed: S.placed, revived: S.revived, mode: S.mode, dateKey: S.dateKey, helperAvailable: S.helperAvailable, tutorialStep: Tutorial.step, timeLeft: Math.round(S.timeLeft * 10) / 10, timerStarted: S.timerStarted, charges: { ...S.charges }, chargeSecs: Object.fromEntries(Object.entries(S.chargeClocks).map(([t, arr]) => [t, arr.length ? Math.round(arr[0] * 10) / 10 : null])), autoSaving: S.autoSaving, armed: S.armed, sweepMode: S.sweepMode, musicOn: Music.on, musicBpm: Music.bpm, musicLoopSeconds: Music.loopSeconds, musicLoopEvents: Music.loopEvents, musicUrgency: Music.urgency, spritesReady: Sprites.ready, timerPaused: timerPaused(), level: S.level, xp: store.xp, playerLevel: playerLevelFor(store.xp), reducedMotion: reducedMotion(), countdownVisible: !$('countdown').classList.contains('hidden'), countdownText: $('countdown').textContent }),
+  state: () => ({ board: S.board.map((r) => r.map(Boolean)), tray: S.tray.map((p) => p && { id: p.shape.id, cells: p.shape.cells, w: p.shape.w, h: p.shape.h, helper: p.helper }), score: S.score, combo: S.combo, lines: S.lines, running: S.running, placed: S.placed, revived: S.revived, mode: S.mode, dateKey: S.dateKey, helperAvailable: S.helperAvailable, tutorialStep: Tutorial.step, timeLeft: Math.round(S.timeLeft * 10) / 10, timerStarted: S.timerStarted, charges: { ...S.charges }, chargeSecs: Object.fromEntries(Object.entries(S.chargeClocks).map(([t, arr]) => [t, arr.length ? Math.round(arr[0] * 10) / 10 : null])), autoSaving: S.autoSaving, armed: S.armed, sweepMode: S.sweepMode, musicOn: Music.on, musicBpm: Music.bpm, musicLoopSeconds: Music.loopSeconds, musicLoopEvents: Music.loopEvents, musicUrgency: Music.urgency, spritesReady: Sprites.ready, timerPaused: timerPaused(), level: S.level, xp: store.xp, playerLevel: playerLevelFor(store.xp), reducedMotion: reducedMotion(), countdownVisible: !$('countdown').classList.contains('hidden'), countdownText: $('countdown').textContent,
+    layout: { size: L.size, cell: Math.round(L.cell * 10) / 10, bx: Math.round(L.bx * 10) / 10, by: Math.round(L.by * 10) / 10, trayX: Math.round(L.trayX * 10) / 10, trayY: Math.round(L.trayY * 10) / 10, trayH: Math.round(L.trayH * 10) / 10, slotW: Math.round(L.slotW * 10) / 10, trayCellMax: Math.round(L.trayCell * 10) / 10, stageW: L.w, stageH: L.h },
+    dragScale: drag ? Math.round(drag.scale * 100) / 100 : null, dragStartScale: drag ? Math.round(drag.startScale * 100) / 100 : null }),
 };
 if (new URLSearchParams(location.search).has('test')) {
   window.__gb.setBoard = (rows) => { S.board = rows.map((row) => [...row].map((ch) => (ch === '#' ? '#5aa2ff' : null))); };
   window.__gb.startDaily = (k) => { show('title', false); clearSave(); startGame('daily', k); };
   window.__gb.startGame = (mode, k) => { show('title', false); clearSave(); startGame(mode || 'classic', k || localDateKey()); };
   window.__gb.saveNow = saveGame;
-  window.__gb.setTray = (ids) => { import('./pieces.js').then(({ SHAPES, makePiece }) => { S.tray = ids.map((i) => (i == null ? null : makePiece(SHAPES[i]))); }); };
+  window.__gb.setTray = (ids) => { S.tray = ids.map((i) => (i == null ? null : makePiece(SHAPES[i]))); };
   window.__gb.setTimeLeft = (s) => { S.timeLeft = s; S.lowTonePlayed = s <= TIMER.lowSeconds; renderTimerBar(); };
   window.__gb.setCharges = (c) => {
     S.charges = { ...emptyCharges(), ...c };

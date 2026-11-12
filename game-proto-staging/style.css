@@ -183,7 +183,9 @@ h2{margin:0 0 10px;font-size:28px;font-family:var(--display);font-weight:800;col
 .pu-progress{font-size:12px;font-weight:700;color:var(--muted);line-height:1.1}
 .pu-count{position:absolute;top:-7px;right:-4px;min-width:20px;height:20px;border-radius:999px;background:var(--gold);color:#5a3c00;font-size:11px;font-weight:800;font-family:var(--display);
   display:inline-flex;align-items:center;justify-content:center;padding:0 5px;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.3)}
-.pu.empty{opacity:.8;filter:grayscale(.35)}
+/* Empty slot: keep its colour, half saturation only — no grayscale, no
+   opacity washout. The disc still reads as its power-up, just quieter. */
+.pu.empty{filter:saturate(.5)}
 .pu.earned{animation:pupulse 1.2s ease-in-out infinite}
 @keyframes pupulse{0%,100%{box-shadow:0 5px 0 #d9a441,0 8px 14px rgba(122,60,0,.25),0 0 0 0 rgba(255,210,31,.8)}50%{box-shadow:0 5px 0 #d9a441,0 8px 14px rgba(122,60,0,.25),0 0 0 10px rgba(255,210,31,0)}}
 .pu.burst{animation:puburst .5s cubic-bezier(.2,1.8,.4,1)}

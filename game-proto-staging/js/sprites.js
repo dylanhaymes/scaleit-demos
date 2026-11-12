@@ -250,6 +250,30 @@ function gloss(c, x, y, r) {
   c.fillStyle = hi;
   c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill();
 }
+// Small glossy candy block for action icons — same lighting as the big
+// board blocks (bright top, saturated middle, deeper base, specular gloss,
+// light top edge / dark base bevel), just at icon scale.
+function miniBlock(c, x, y, s, color) {
+  const r = s * 0.22;
+  c.save();
+  c.shadowColor = 'rgba(90,40,0,0.35)'; c.shadowBlur = 4; c.shadowOffsetY = 2;
+  c.fillStyle = color; rr(c, x, y, s, s, r); c.fill();
+  c.restore();
+  const grd = c.createLinearGradient(0, y, 0, y + s);
+  grd.addColorStop(0, shade(color, 0.3));
+  grd.addColorStop(0.45, color);
+  grd.addColorStop(1, shade(color, -0.26));
+  c.fillStyle = grd; rr(c, x, y, s, s, r); c.fill();
+  const hi = c.createRadialGradient(x + s * 0.3, y + s * 0.2, 1, x + s * 0.3, y + s * 0.2, s * 0.6);
+  hi.addColorStop(0, 'rgba(255,255,255,0.75)');
+  hi.addColorStop(0.5, 'rgba(255,255,255,0.15)');
+  hi.addColorStop(1, 'rgba(255,255,255,0)');
+  c.fillStyle = hi; rr(c, x, y, s, s, r); c.fill();
+  c.strokeStyle = 'rgba(255,255,255,0.55)'; c.lineWidth = 1.5;
+  c.beginPath(); c.moveTo(x + r, y + 1.5); c.lineTo(x + s - r, y + 1.5); c.stroke();
+  c.strokeStyle = 'rgba(0,0,0,0.18)'; c.lineWidth = 1.5;
+  c.beginPath(); c.moveTo(x + r, y + s - 1.5); c.lineTo(x + s - r, y + s - 1.5); c.stroke();
+}
 function iconCanvas(name) {
   const S = 96, cv = document.createElement('canvas');
   cv.width = cv.height = S;
@@ -346,23 +370,53 @@ function iconCanvas(name) {
       break;
     }
     case 'eraser': {
-      c.save(); c.translate(cx, cy); c.rotate(-0.5);
-      paint(grad('#ffb3d1', '#ff5da2')); outline();
-      rr(c, -30, -16, 60, 32, 8); c.fill(); c.stroke();
-      c.fillStyle = '#2f8cff'; rr(c, -30, -16, 20, 32, 8); c.fill();
+      // Sweep: a short row of glossy blocks with a bright beam cutting
+      // through them — reads as "clears a line" at a glance, even at 56px.
+      miniBlock(c, 14, 37, 22, '#2f8cff');
+      miniBlock(c, 38, 37, 22, '#2fd65a');
+      miniBlock(c, 62, 37, 22, '#ff8a1e');
+      // The sweep beam: a glowing white-gold streak, angled across the row.
+      c.save();
+      c.translate(cx, cy); c.rotate(-0.3);
+      c.shadowColor = 'rgba(255,255,255,0.9)'; c.shadowBlur = 8;
+      const beam = c.createLinearGradient(-44, 0, 44, 0);
+      beam.addColorStop(0, 'rgba(255,255,255,0.05)');
+      beam.addColorStop(0.55, 'rgba(255,255,255,0.75)');
+      beam.addColorStop(1, 'rgba(255,255,255,0.95)');
+      c.fillStyle = beam; rr(c, -44, -8, 88, 16, 8); c.fill();
+      const core = c.createLinearGradient(-44, 0, 44, 0);
+      core.addColorStop(0, 'rgba(255,255,255,0.1)');
+      core.addColorStop(0.6, 'rgba(255,255,255,0.95)');
+      core.addColorStop(1, '#fff8e0');
+      c.fillStyle = core; rr(c, -44, -3.5, 88, 7, 3.5); c.fill();
       c.restore();
+      // Sparkles where the beam exits the row.
+      paint(grad('#ffe98a', '#f5a623'));
+      starPath(c, 84, 30, 7, 3); c.fill();
+      starPath(c, 12, 66, 5, 2); c.fill();
       gloss(c, cx, cy, 30);
       break;
     }
     case 'shuffle': {
-      c.save(); c.translate(cx - 8, cy - 6); c.rotate(-0.18);
-      paint(grad('#ffffff', '#ffe9b8')); outline();
-      rr(c, -20, -26, 40, 52, 8); c.fill(); c.stroke();
+      // Shuffle Tray: three small glossy blocks (like real tray pieces),
+      // the middle one bounced up, with a refresh arc swooping over them —
+      // reads as "new pieces" at a glance, even at 56px.
+      miniBlock(c, 16, 52, 20, '#ff4d4d');
+      miniBlock(c, 38, 42, 20, '#ffd21f');
+      miniBlock(c, 60, 52, 20, '#9b4dff');
+      // Refresh arc: a white swoosh over the blocks, arrowhead at the end.
+      c.save();
+      c.strokeStyle = '#ffffff'; c.lineWidth = 6; c.lineCap = 'round';
+      c.shadowColor = 'rgba(255,255,255,0.8)'; c.shadowBlur = 6;
+      c.beginPath(); c.moveTo(18, 46); c.quadraticCurveTo(48, 6, 78, 46); c.stroke();
       c.restore();
-      c.save(); c.translate(cx + 10, cy + 8); c.rotate(0.18);
-      paint(grad('#b8ffe0', '#2fd65a')); outline();
-      rr(c, -20, -26, 40, 52, 8); c.fill(); c.stroke();
+      c.save();
+      c.translate(78, 46); c.rotate(0.95); // tangent of the arc at its end
+      c.fillStyle = '#ffffff';
+      c.beginPath(); c.moveTo(12, 0); c.lineTo(-3, -7); c.lineTo(-3, 7); c.closePath(); c.fill();
       c.restore();
+      paint(grad('#ffe98a', '#f5a623'));
+      starPath(c, 48, 22, 6, 2.5); c.fill();
       gloss(c, cx, cy, 32);
       break;
     }

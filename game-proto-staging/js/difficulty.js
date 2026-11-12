@@ -26,14 +26,16 @@
  *    one piece is swapped for a "helper" piece that fits and completes a row or
  *    column if any such piece exists. It is marked with a ✦ in the tray and
  *    logged as helper_piece_dealt. It is never taken away or tied to ads.
- * 6. Daily challenge: same rules 1-3 and the same scoring, but pieces come from
+ * 5. Daily challenge: same rules 1-3 and the same scoring, but pieces come from
  *    a seeded generator whose seed is only the local date (YYYY-MM-DD). Same
  *    date + same moves = same pieces for everyone. The comeback helper (rule 4)
  *    is off in the daily so every player faces the identical deal. The daily
  *    has its own best score per date; it does not count toward rule 4 history.
- * 5. Score is never adjusted: points come only from the scoring table in
- *    main.js. High score is the exact highest final score.
- * 6. Timer: every game starts with TIMER.start seconds (see TIMER below).
+ * 6. Score is never adjusted: points come only from the scoring table in
+ *    scoring.js (1 per cell placed, 10 per cleared cell x lines x combo,
+ *    +300 for clearing the whole board). High score is the exact highest
+ *    final score.
+ * 7. Timer: every game starts with TIMER.start seconds (see TIMER below).
  *    Clearing lines adds time (TIMER.perLine per line, plus TIMER.extraPerLine
  *    per extra line on a multi-line clear), capped at TIMER.cap. Time out ends
  *    the game like no-moves-left; a revive refills to TIMER.reviveRefill. The
@@ -41,7 +43,7 @@
  *    app is backgrounded. Same numbers for everyone, stored here — never in
  *    ads.js, never per-player. From 20 s a big countdown shows and a gentle
  *    tick sounds each second (faster in the last 5 s).
- * 7. Power-ups: earned only through play (POWERUPS below) — one charge per
+ * 8. Power-ups: earned only through play (POWERUPS below) — one charge per
  *    3-line combo and per 10 lines cleared, at most POWERUPS.maxCharges held.
  *    Never sold, never ad-gated, same rules for everyone, reset every game.
  *    Each charge lasts POWERUPS.chargeLifetimeSeconds seconds of PLAY time
@@ -52,7 +54,7 @@
  *    room for a tray piece, then the Sweep on the fullest row or column.
  *    The choice is deterministic and the same for everyone. Timeout never
  *    auto-uses a charge: it ends the game like no-moves-left.
- * 8. Levels: the in-game level is levelFor(pieces placed) — the same ramp as
+ * 9. Levels: the in-game level is levelFor(pieces placed) — the same ramp as
  *    rule 1, so difficulty stays transparent. Levelling up adds
  *    TIMER.levelUpBonus seconds and a celebration. The lifetime player level
  *    (see js/progress.js) is XP from lines, combos and games played; it only
@@ -60,6 +62,7 @@
  *    for any player. No random rewards, no loot boxes, no near-misses.
  */
 import { SHAPES, makePiece } from './pieces.js';
+import { BOARD_CLEAR_BONUS } from './scoring.js';
 
 export const N = 8;
 
@@ -117,8 +120,9 @@ export const RULES_TEXT = [
   `Fair deal: if none of a new tray's 3 pieces fits anywhere, the tray is re-rolled (up to ${FAIR_REROLLS} tries).`,
   `Comeback helper: after ${HELPER.lossesNeeded} games in a row under half your best, your next game gets one helper piece (marked ✦) that fits and clears a line when the board gets crowded. Once per game.`,
   'Daily challenge: same rules and scoring, but everyone plays the same pieces for the same moves today. No helper piece in the daily. It keeps its own best score per day.',
-  `How the timer works: every game starts with ${TIMER.start} seconds on the labelled TIME bar above the board. Each line you clear adds ${TIMER.perLine} seconds, plus ${TIMER.extraPerLine} more per extra line on a multi-line clear (2 lines = +${timeForClear(2)} s, 3 lines = +${timeForClear(3)} s). The bar caps at ${TIMER.cap} seconds. From ${TIMER.lowSeconds} seconds a big countdown shows and a gentle tick sounds. When it runs out, the game ends, just like having no moves left — and the same optional revive is offered, which also refills the timer to ${TIMER.reviveRefill} seconds. Levelling up mid-game adds ${TIMER.levelUpBonus} seconds. The timer pauses during the tutorial, pause, settings, and ads. The same numbers apply to everyone.`,
-  `Power-ups, earned only by playing: clear 3 lines at once, or reach every ${POWERUPS.linesMilestone} lines, and you earn one charge (at most ${POWERUPS.maxCharges} held). Each charge lasts ${POWERUPS.chargeLifetimeSeconds} seconds of play time — use it fast, or it fades away with a soft poof and no points. The ring on a filled slot drains as its oldest charge runs down (seconds left shown, pulsing under 5 s). If you run out of moves while holding a charge, the game uses one to save you automatically — Reshuffle first, then the Bomb on the 3x3 that makes the most room for a tray piece, then the Sweep on the fullest row or column — with a "SAVED!" banner. Boom Bomb clears a 3x3 area, Eraser Sweep clears one row or column you choose, Shuffle Tray deals a new tray, Time Star adds ${POWERUPS.timeStarSeconds} seconds. Tap a power-up, then tap its target — tap again or the ✕ to cancel. Power-up clears score 10 points per cell with no combo multiplier and never earn more power-ups. Charges reset every game. Nothing here is sold or tied to ads.`,
+  `How the timer works: every game starts with ${TIMER.start} seconds on the labelled TIME bar above the board. Each line you clear adds ${TIMER.perLine} seconds, plus ${TIMER.extraPerLine} more per extra line on a multi-line clear (2 lines = +${timeForClear(2)} s, 3 lines = +${timeForClear(3)} s). The bar caps at ${TIMER.cap} seconds. From ${TIMER.lowSeconds} seconds a big countdown shows and a gentle tick sounds. When it runs out, the game ends, just like having no moves left — and the same optional revive is offered once per game, which also refills the timer to ${TIMER.reviveRefill} seconds. Levelling up mid-game adds ${TIMER.levelUpBonus} seconds. The timer pauses during the tutorial, pause, settings, ads, and when the app is in the background. The same numbers apply to everyone.`,
+  `Scoring: 1 point per cell placed; clearing lines scores 10 points per cleared cell, times the lines cleared at once, times your combo. Clearing the whole board earns a +${BOARD_CLEAR_BONUS} bonus. Your score is exactly what you earned.`,
+  `Power-ups, earned only by playing: clear 3 lines at once, or reach every ${POWERUPS.linesMilestone} lines, and you earn one charge (at most ${POWERUPS.maxCharges} held). Power-ups last 30 seconds, so use them fast! If you run out of moves, a held power-up saves you automatically. An expired charge fades away with a soft poof and no points. The ring on a filled slot drains as its oldest charge runs down (seconds left shown, pulsing under 5 s). If you run out of moves while holding a charge, the game uses one to save you automatically — Reshuffle first, then the Bomb on the 3x3 that makes the most room for a tray piece, then the Sweep on the fullest row or column — with a "SAVED!" banner. Boom Bomb clears a 3x3 area, Eraser Sweep clears one row or column you choose, Shuffle Tray deals a new tray, Time Star adds ${POWERUPS.timeStarSeconds} seconds. Tap a power-up, then tap its target — tap again or the ✕ to cancel. Power-up clears score 10 points per cell with no combo multiplier and never earn more power-ups. Charges reset every game. Nothing here is sold or tied to ads.`,
   `Levels: your in-game level starts at Level 1 and rises by 1 every ${LEVEL_EVERY} pieces you place (max Level 11) — the labelled LEVEL bar above the TIME bar shows your progress to the next level, and levelling up adds ${TIMER.levelUpBonus} seconds plus a celebration. Your lifetime player level grows from XP (10 per line, 5 per max combo, 25 per game played) and only ever unlocks cosmetic stickers, block skins, board frames and backgrounds — it never changes difficulty, pieces or timing for anyone.`,
   'Ads never touch difficulty, pieces, or score. Watching an ad only ever gives the revive you chose.',
 ];

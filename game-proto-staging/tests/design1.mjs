@@ -8,7 +8,17 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { chromium } from '/home/hatch/.cache/giil/node_modules/playwright/index.mjs';
+
+// Playwright resolution (portable — no machine-specific path required):
+// PLAYWRIGHT_MODULE env var, a local `playwright` install, or the shared
+// cache fallback. Same for the browser binary: CHROMIUM_PATH, a known
+// cache location that exists, or Playwright's own default.
+let chromium;
+for (const cand of [process.env.PLAYWRIGHT_MODULE, 'playwright', '/home/hatch/.cache/giil/node_modules/playwright/index.mjs']) {
+  if (!cand) continue;
+  try { ({ chromium } = await import(cand)); break; } catch { /* try next */ }
+}
+if (!chromium) throw new Error('Playwright not found: set PLAYWRIGHT_MODULE or install playwright');
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = 8903;
@@ -44,9 +54,13 @@ async function waitFor(fn, timeout = 8000, label = 'condition') {
   }
 }
 
+const chromiumPath = process.env.CHROMIUM_PATH
+  || ['/home/hatch/.cache/ms-playwright/chromium-1254/chrome-linux64/chrome'].find((p) => fs.existsSync(p));
 const browser = await chromium.launch({
-  executablePath: '/home/hatch/.cache/ms-playwright/chromium-1254/chrome-linux64/chrome',
-  args: ['--autoplay-policy=no-user-gesture-required'],
+  ...(chromiumPath ? { executablePath: chromiumPath } : {}),
+  // --no-sandbox: required on this VM — the Chromium sandbox dies with
+  // SIGTRAP (rc=133) under the VM's seccomp/NoNewPrivs filter.
+  args: ['--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage', '--autoplay-policy=no-user-gesture-required'],
 });
 
 async function newPage({ fresh = true } = {}) {
@@ -70,14 +84,14 @@ async function startClassic(page) {
 // Board: 8 strings of 8 chars, '#' = filled. Tray: shape ids (0 = single cell, 3 = '###', 11 = 2x2).
 async function setupBoard(page, rows, tray = [0, 0, 0]) {
   await page.evaluate(({ rows, tray }) => { window.__gb.setBoard(rows); window.__gb.setTray(tray); }, { rows, tray });
-  await sleep(150); // let setTray's async import land
+  await sleep(150); // let the frame settle
 }
 const EMPTY = ['........', '........', '........', '........', '........', '........', '........', '........'];
 const ROW7 = ['........', '........', '........', '........', '........', '........', '........', '#######.'];
 async function dragPiece(page, slot, r, c) {
   const box = await page.locator('#cv').boundingBox();
   const L = await page.evaluate(() => window.__gb.layout());
-  const from = { x: box.x + L.slotW * (slot + 0.5), y: box.y + L.trayY + L.trayH / 2 };
+  const from = { x: box.x + L.trayX + L.slotW * (slot + 0.5), y: box.y + L.trayY + L.trayH / 2 };
   const to = { x: box.x + L.bx + (c + 0.5) * L.cell, y: box.y + L.by + (r + 0.5) * L.cell };
   await page.mouse.move(from.x, from.y);
   await page.mouse.down();
@@ -90,7 +104,7 @@ async function dragPiece(page, slot, r, c) {
 async function dragToPoint(page, slot, px, py) {
   const box = await page.locator('#cv').boundingBox();
   const L = await page.evaluate(() => window.__gb.layout());
-  const from = { x: box.x + L.slotW * (slot + 0.5), y: box.y + L.trayY + L.trayH / 2 };
+  const from = { x: box.x + L.trayX + L.slotW * (slot + 0.5), y: box.y + L.trayY + L.trayH / 2 };
   const to = { x: box.x + px, y: box.y + py };
   await page.mouse.move(from.x, from.y);
   await page.mouse.down();
@@ -870,7 +884,7 @@ await test('review fixes: power-up dock is a 3D tray with glossy discs', async (
   await page.close();
 });
 
-await test('review fixes 2: daily game-over heading uses the friendly date', async () => {
+await test('review fixes 2: daily game-over heading is "Daily challenge over"', async () => {
   const { page } = await newPage();
   await page.evaluate(() => window.__gb.startDaily('2026-11-11'));
   await waitFor(async () => (await page.evaluate(() => window.__gb.state())).running, 5000, 'daily running');
@@ -879,8 +893,16 @@ await test('review fixes 2: daily game-over heading uses the friendly date', asy
   if (await page.locator('#revive.show').isVisible()) await page.click('#btn-norevive');
   await waitFor(async () => page.locator('#over.show').isVisible(), 5000, 'game-over panel');
   const h = await page.locator('#over h2').textContent();
-  eq(h, 'Daily Nov 11 over', 'friendly game-over heading, got ' + h);
+  eq(h, 'Daily challenge over', 'heading, got ' + h);
+  ok(!h.includes('Nov 11') && !h.includes('2026-'), 'no date in the heading text');
   ok(!(await page.locator('#over').textContent()).includes('2026-'), 'no raw ISO date in the game-over panel');
+  // The date lives in its own smaller sub-element under the heading.
+  eq(await page.locator('#ov-date').textContent(), 'Nov 11', 'date shown separately under the heading');
+  const sizes = await page.evaluate(() => ({
+    date: parseFloat(getComputedStyle(document.getElementById('ov-date')).fontSize),
+    head: parseFloat(getComputedStyle(document.querySelector('#over h2')).fontSize),
+  }));
+  ok(sizes.date < sizes.head, 'date text is smaller than the heading');
   await page.close();
 });
 
@@ -915,9 +937,122 @@ await test('review fixes 2: dock is capped to board width with 56px discs on des
   ok(Math.abs(d.left - (1280 - d.w) / 2) < 2, 'dock centred on desktop');
   eq(d.ring, '56px', 'icon discs are 56px, got ' + d.ring);
   eq(d.name, '14px', 'slot labels are 14px, got ' + d.name);
-  eq(d.emptyOpacity, '0.8', 'empty slots are softly dimmed, got ' + d.emptyOpacity);
-  ok(!d.emptyFilter.includes('grayscale(0.7'), 'empty slots are not heavily greyed, got ' + d.emptyFilter);
+  eq(d.emptyOpacity, '1', 'empty slots keep full opacity, got ' + d.emptyOpacity);
+  ok(d.emptyFilter.includes('saturate(0.5)'), 'empty slots keep colour at half saturation, got ' + d.emptyFilter);
+  ok(!d.emptyFilter.includes('grayscale'), 'empty slots use no grayscale, got ' + d.emptyFilter);
   await ctx.close();
+});
+
+await test('review fixes 3: empty dock slots hide the count badge', async () => {
+  const { page } = await newPage();
+  await startClassic(page);
+  const hidden0 = await page.evaluate(() => [...document.querySelectorAll('.pu .pu-count')].every((el) => el.classList.contains('hidden')));
+  ok(hidden0, 'no count badges on empty slots');
+  await page.evaluate(() => window.__gb.setCharges({ bomb: 1 }));
+  const shown = await page.evaluate(() => {
+    const b = document.querySelector('.pu[data-pu="bomb"] .pu-count');
+    return !b.classList.contains('hidden') && b.textContent === '1';
+  });
+  ok(shown, 'badge shows "1" once a charge is held');
+  await page.close();
+});
+
+await test('review fixes 3: desktop tray is a row under the board within board width', async () => {
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
+  const page = await ctx.newPage();
+  page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
+  page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
+  await page.addInitScript(() => { localStorage.setItem('gb_tut_done', '1'); });
+  await page.goto(`http://localhost:${PORT}/?test=1`);
+  await page.waitForSelector('#btn-play');
+  await startClassic(page);
+  const L = await page.evaluate(() => window.__gb.layout());
+  eq(L.trayX, L.bx, 'tray starts at the board left edge');
+  approx(L.slotW, L.size / 3, 1, 'slots divide the board width');
+  ok(L.trayY > L.by + L.size, 'tray sits directly under the board');
+  ok(L.trayX + 3 * L.slotW <= L.bx + L.size + 1, 'tray row stays within the board width');
+  // A real drag from the desktop tray still lands on the board.
+  await setupBoard(page, ROW7, [0, 0, 0]);
+  await dragPiece(page, 0, 7, 7);
+  const st = await page.evaluate(() => window.__gb.state());
+  eq(st.lines, 1, 'desktop tray drag clears a line');
+  await ctx.close();
+});
+
+await test('polish 1: larger board + larger tray tiles on phone and desktop', async () => {
+  for (const [name, vp] of [['phone', { width: 390, height: 844 }], ['desktop', { width: 1280, height: 800 }]]) {
+    const ctx = await browser.newContext({ viewport: vp, deviceScaleFactor: name === 'phone' ? 2 : 1 });
+    const page = await ctx.newPage();
+    page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
+    page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
+    await page.addInitScript(() => { localStorage.setItem('gb_tut_done', '1'); });
+    await page.goto(`http://localhost:${PORT}/?test=1`);
+    await page.waitForSelector('#btn-play');
+    await startClassic(page);
+    const L = await page.evaluate(() => window.__gb.state().layout);
+    ok(L.size >= 350, name + ': board is large, got ' + L.size);
+    ok(L.bx >= 14, name + ': board frame stays inside the canvas, bx=' + L.bx);
+    approx(L.trayCellMax / L.cell, 0.85, 0.02, name + ': resting tray tiles are 85% of a board cell');
+    ok(3 * L.trayCellMax <= L.slotW, name + ': a 3-wide tray piece fits its slot');
+    ok(L.trayY + L.trayH <= L.stageH + 1, name + ': tray row fits inside the stage');
+    ok(L.trayY > L.by + L.size, name + ': tray sits under the board');
+    await ctx.close();
+  }
+});
+
+await test('polish 1: drag starts at resting tray size and eases to board-cell size', async () => {
+  const { page } = await newPage();
+  await startClassic(page);
+  await setupBoard(page, EMPTY, [3, 0, 0]); // '###', 3-wide — rests at 0.85x cell
+  const box = await page.locator('#cv').boundingBox();
+  const L = await page.evaluate(() => window.__gb.layout());
+  const from = { x: box.x + L.trayX + L.slotW * 0.5, y: box.y + L.trayY + L.trayH / 2 };
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  const atPickup = await page.evaluate(() => window.__gb.state());
+  approx(atPickup.dragStartScale, 0.85, 0.02, 'drag starts at resting tray size, got ' + atPickup.dragStartScale);
+  await sleep(600);
+  const held = await page.evaluate(() => window.__gb.state());
+  approx(held.dragScale, 1, 0.02, 'held piece eases to full board-cell size, got ' + held.dragScale);
+  await page.mouse.up();
+  await sleep(150);
+  const after = await page.evaluate(() => window.__gb.state());
+  eq(after.dragScale, null, 'drag ends on release');
+  eq(after.placed, 0, 'an invalid drop does not place');
+  await page.close();
+});
+
+await test('review fixes 3: Sweep + Tray icons are the new action art', async () => {
+  const { page } = await newPage();
+  await startClassic(page);
+  const art = await page.evaluate(async () => {
+    async function sample(sel) {
+      const img = document.querySelector(sel);
+      const cv = document.createElement('canvas'); cv.width = cv.height = 96;
+      const g = cv.getContext('2d');
+      await new Promise((res) => { if (img.complete) res(); else img.onload = res; });
+      g.drawImage(img, 0, 0);
+      const d = g.getImageData(0, 0, 96, 96).data;
+      let white = 0, opaque = 0; const buckets = new Set();
+      for (let i = 0; i < d.length; i += 16) { // every 4th pixel
+        const r = d[i], gg = d[i + 1], b = d[i + 2], a = d[i + 3];
+        if (a < 40) continue;
+        opaque++;
+        if (r > 225 && gg > 225 && b > 225) white++;
+        // Bucket saturated block colours (ignore near-white beam/gloss).
+        const mx = Math.max(r, gg, b), mn = Math.min(r, gg, b);
+        if (mx - mn > 60 && mx > 120) buckets.add(`${Math.round(r / 64)}-${Math.round(gg / 64)}-${Math.round(b / 64)}`);
+      }
+      return { white, opaque, colors: buckets.size };
+    }
+    return { sweep: await sample('.pu[data-pu="sweep"] .pu-ring img'), tray: await sample('.pu[data-pu="reshuffle"] .pu-ring img') };
+  });
+  ok(art.sweep.opaque > 500, 'sweep icon is drawn, got ' + art.sweep.opaque + ' opaque samples');
+  ok(art.sweep.white > 30, 'sweep beam is bright white, got ' + art.sweep.white);
+  ok(art.sweep.colors >= 2, 'sweep shows block colours, got ' + art.sweep.colors);
+  ok(art.tray.opaque > 500, 'tray icon is drawn, got ' + art.tray.opaque + ' opaque samples');
+  ok(art.tray.colors >= 3, 'tray shows three block colours, got ' + art.tray.colors);
+  await page.close();
 });
 
 await test('console: 0 errors across all tests', async () => {
