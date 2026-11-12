@@ -1,4 +1,4 @@
-import { N, dealTray, fits, fitsAnywhere, helperEligible, levelFor, RULES_TEXT, TIMER, POWERUPS, timeForClear, powerUpPoints, LEVEL_EVERY } from './difficulty.js';
+import { N, dealTray, fits, fitsAnywhere, helperEligible, levelFor, TIMER, POWERUPS, timeForClear, powerUpPoints, LEVEL_EVERY } from './difficulty.js';
 import { xpForGame, playerLevelFor, playerProgress, nextReward, rewardsForLevel } from './progress.js';
 import { Ads } from './ads.js';
 import { Analytics } from './analytics.js';
@@ -131,9 +131,11 @@ function layout() {
   g.setTransform(dpr, 0, 0, dpr, 0, 0);
   // Board as large as fits while the HUD, the full power-up dock and safe
   // edges still fit: width-bound (frame kept inside the canvas, bx >= 15),
-  // height-bound at 70% of the stage so the tray still has room, capped
-  // at 640 so very tall desktops don't grow a giant board.
-  const boardSize = Math.floor(Math.min(w - 30, h * 0.70, 640));
+  // height-bound at 72% of the stage so the tray still has room, capped
+  // at 640 so very tall desktops don't grow a giant board. (72%, not 70%:
+  // the fixed 36px armed-descriptor slot below the stage reserves vertical
+  // space, and the board must stay >= 350px on desktop.)
+  const boardSize = Math.floor(Math.min(w - 30, h * 0.72, 640));
   const cell = boardSize / N;
   const bx = (w - boardSize) / 2;
   const trayH = Math.min(cell * 3.4, h - boardSize - 30);
@@ -236,7 +238,7 @@ function update(dt) {
   tickTimer(dt);
   if (S.shownScore < S.score) {
     S.shownScore = Math.min(S.score, S.shownScore + Math.max(1, (S.score - S.shownScore) * dt * 10));
-    $('score').textContent = Math.round(S.shownScore);
+    renderScore(Math.round(S.shownScore));
     $('score').classList.add('rolling');
   } else $('score').classList.remove('rolling');
 }
@@ -269,14 +271,15 @@ function tickTimer(dt) {
     lastTickSecond = secs;
     if (secs > 0) Sfx.tick(secs);
     const cd = $('countdown');
-    cd.textContent = secs;
-    cd.classList.remove('hidden');
+    renderCountdown(secs);
+    cd.classList.add('on');
+    cd.classList.toggle('urgent', secs <= 5);
     cd.classList.remove('pop'); void cd.offsetWidth; cd.classList.add('pop');
   } else if (S.timeLeft > TIMER.lowSeconds) {
-    $('countdown').classList.add('hidden');
+    $('countdown').classList.remove('on');
     lastTickSecond = -1;
   }
-  if (S.timeLeft <= 0) { S.timeLeft = 0; $('countdown').classList.add('hidden'); renderTimerBar(); onTimeout(); return; }
+  if (S.timeLeft <= 0) { S.timeLeft = 0; $('countdown').classList.remove('on'); renderTimerBar(); onTimeout(); return; }
   renderTimerBar();
 }
 let lastTimerShown = -1;
@@ -335,10 +338,22 @@ function draw(t) {
       block(bx + c * s, by + r * s, s, drag.piece.color, inLine ? 0.9 : 0.42);
     }
   }
-  // clearing animation: flash white then shrink
+  // Clearing animation: staggered glossy pop — each block swells with a
+  // bounce ease, flashes white-gold at the peak, then shrinks away with a
+  // sparkle burst (burst() is fired per cell when the clear is dealt).
+  // Staggered starts (t < 0) draw the block normally until its turn.
   for (const k of fx.clearing) {
-    const p = k.t / 0.45;
-    block(bx + k.c * s, by + k.r * s, s, k.t < 0.08 ? '#ffffff' : k.color, 1 - p, 1 - p * 0.8);
+    if (k.t < 0) { block(bx + k.c * s, by + k.r * s, s, k.color, 1, 1); continue; }
+    const p = Math.min(1, k.t / 0.45);
+    let scale, alpha, color;
+    if (reducedMotion()) { scale = 1 - p * 0.8; alpha = 1 - p; color = k.color; }
+    else if (p < 0.35) {
+      scale = 1 + 0.28 * easeOutBack(p / 0.35); alpha = 1; color = p < 0.15 ? '#ffffff' : k.color;
+    } else {
+      const q = (p - 0.35) / 0.65;
+      scale = 1.28 * (1 - q * q); alpha = 1 - q; color = k.color;
+    }
+    block(bx + k.c * s, by + k.r * s, s, color, alpha, scale);
   }
   // tray — idle bob (off when reduced motion or while dragging that slot)
   for (let i = 0; i < 3; i++) {
@@ -357,6 +372,8 @@ function draw(t) {
       g.drawImage(Sprites.star('#ffd21f'), hx - d / 2, hy - d / 2, d, d);
     }
   }
+  // Tutorial: highlight the exact target cells + the expected tray piece.
+  if (Tutorial.active) Tutorial.drawHighlights(g, t);
   // dragged piece (full size, lifted) — the sprite already carries its soft
   // contact shadow, so no per-frame canvas shadow is set here.
   if (drag) {
@@ -407,6 +424,7 @@ function draw(t) {
   g.restore();
 }
 const easeOut = (x) => 1 - Math.pow(1 - x, 3);
+const easeOutBack = (x) => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); };
 
 function burst(x, y, color, n = 10) {
   if (reducedMotion()) n = Math.min(n, 4);
@@ -433,11 +451,27 @@ function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add
 let bannerTimer = null;
 function showBanner(text, ms = 1100) {
   const b = $('banner');
-  $('banner-text').textContent = text;
+  $('banner-badge').classList.add('hidden');
+  const span = $('banner-text');
+  span.classList.remove('hidden');
+  span.textContent = text;
   b.classList.remove('hidden');
   S.bannerUntil = Date.now() + ms; // charge clocks pause while a banner shows
-  const span = $('banner-text');
   span.style.animation = 'none'; void span.offsetWidth; span.style.animation = '';
+  clearTimeout(bannerTimer);
+  bannerTimer = setTimeout(() => b.classList.add('hidden'), ms);
+}
+// NEW BEST celebration: the same glossy gold medallion as the game-over
+// panel, shown big with a spring pop + sparkle burst (jackpotBurst at the
+// call site). Not a text banner — a whole badge that appears.
+function showBestBadge(ms = 1500) {
+  const b = $('banner');
+  $('banner-text').classList.add('hidden');
+  const badge = $('banner-badge');
+  badge.classList.remove('hidden');
+  b.classList.remove('hidden');
+  S.bannerUntil = Date.now() + ms;
+  badge.style.animation = 'none'; void badge.offsetWidth; badge.style.animation = '';
   clearTimeout(bannerTimer);
   bannerTimer = setTimeout(() => b.classList.add('hidden'), ms);
 }
@@ -502,7 +536,7 @@ function renderPlayerCard() {
 
 function setModeUI() {
   $('best-label').textContent = S.mode === 'daily' ? 'DAILY BEST' : 'BEST';
-  $('best').textContent = modeBest();
+  renderBest(modeBest());
 }
 function startGame(mode = 'classic', dateKey = localDateKey()) {
   S.mode = mode; S.dateKey = mode === 'daily' ? dateKey : null;
@@ -512,7 +546,7 @@ function startGame(mode = 'classic', dateKey = localDateKey()) {
   // Timer: full bar every game. It starts now unless the first-game tutorial
   // is about to run — then it starts when the tutorial finishes.
   S.timeLeft = TIMER.start; S.lowTonePlayed = false; lastTickSecond = -1;
-  $('countdown').classList.add('hidden');
+  $('countdown').classList.remove('on'); lastCdShown = '';
   const willTut = mode === 'classic' && !localStorage.getItem('gb_tut_done');
   S.timerStarted = !willTut;
   if (Music.setUrgency) Music.setUrgency(false);
@@ -522,7 +556,7 @@ function startGame(mode = 'classic', dateKey = localDateKey()) {
   renderPowerups(); renderTimerBar(); renderLevel();
   // Comeback helper is classic-only; the daily deal is identical for everyone.
   S.helperAvailable = mode === 'classic' && helperEligible(store.history, store.best);
-  $('score').textContent = '0'; $('combo').textContent = ''; setModeUI();
+  renderScore(0); renderCombo(); setModeUI();
   deal();
   S.gamesThisSession++;
   Analytics.log('game_start', { game: S.gamesThisSession, mode, best: modeBest(), helper_eligible: S.helperAvailable });
@@ -532,6 +566,7 @@ function startGame(mode = 'classic', dateKey = localDateKey()) {
 
 // ---------- Save / restore a game in progress ----------
 function saveGame() {
+  if (Tutorial.active) return; // never persist a scripted tutorial board
   if (!S.running && !S.awaitingRevive) return;
   const data = {
     v: SAVE_V, mode: S.mode, dateKey: S.dateKey, rngState: S.rng.getState ? S.rng.getState() : null,
@@ -578,7 +613,7 @@ function restoreGame(d) {
   S.timerStarted = true;
   renderPowerups(); renderTimerBar();
   if (!S.tray.some(Boolean)) deal();
-  $('score').textContent = S.score; $('combo').textContent = S.combo >= 2 ? `Combo x${S.combo}` : ''; setModeUI();
+  renderScore(S.score); renderCombo(); setModeUI();
   S.gamesThisSession++;
   Analytics.log('game_restored', { mode: S.mode, score: S.score, placed: S.placed });
   checkGameOver();
@@ -639,9 +674,9 @@ function place(slot, r, c) {
     if (S.sinceClear >= COMBO_GRACE) S.combo = 0;
   }
   S.score += gained;
-  $('combo').textContent = S.combo >= 2 ? `Combo x${S.combo}` : '';
+  renderCombo();
   const sc = $('score'); sc.classList.add('bump'); setTimeout(() => sc.classList.remove('bump'), 120);
-  if (S.score > modeBest()) $('best').textContent = S.score;
+  if (S.score > modeBest()) renderBest(S.score);
   if (S.tray.every((p) => !p)) deal();
   Tutorial.onPlaced();
   // In-game level: levelFor(pieces placed) + 1, so the game starts at
@@ -713,15 +748,24 @@ function renderPowerups() {
     b.disabled = n === 0 && S.armed !== type;
   });
   renderChargeClocks();
-  $('pu-target').classList.toggle('hidden', !S.armed);
+  // The reserved slot stays in the layout whether armed or not (class
+  // 'off' hides the chip via visibility, so the box keeps its size and the
+  // board never moves). Never display:none here — that was the arm-crop.
+  $('pu-target').classList.toggle('off', !S.armed);
   $('pu-mode').classList.toggle('hidden', S.armed !== 'sweep');
   $('pu-mode-row-btn').classList.toggle('on', S.sweepMode === 'row');
   $('pu-mode-col-btn').classList.toggle('on', S.sweepMode === 'col');
-  $('pu-hint').textContent = S.armed === 'bomb' ? 'Tap a board cell — clears the 3x3 around it.'
-    : S.armed === 'sweep' ? `Tap a board cell — clears its ${S.sweepMode === 'row' ? 'row' : 'column'}.`
+  $('pu-hint').textContent = S.armed === 'bomb' ? 'Tap a cell — 3x3 blast!'
+    : S.armed === 'sweep' ? 'Tap a cell:'
     : '';
 }
 function armPowerup(type) {
+  if (Tutorial.active) {
+    // The power-up step's tap on the highlighted slot advances the
+    // tutorial; no power-up ever fires during the walkthrough.
+    if (Tutorial.current && Tutorial.current.spot === 'dock' && type === 'star') Tutorial.advanceFromDock();
+    return;
+  }
   if (!S.running || S.autoSaving) return;
   if (S.armed === type) return cancelArmed();
   if (!S.charges[type]) return;
@@ -729,7 +773,8 @@ function armPowerup(type) {
   if (type === 'star') return applyStar();
   S.armed = type;
   renderPowerups();
-  toast(type === 'bomb' ? 'Tap a board cell for the 3x3 blast.' : 'Tap a board cell to sweep its row or column.');
+  // No toast here: the chip above the dock IS the armed descriptor — a
+  // second dark pill on top of it was the collision Dylan saw.
 }
 function cancelArmed() { S.armed = null; renderPowerups(); }
 function clearCellsWithFx(cells) {
@@ -746,7 +791,7 @@ function clearCellsWithFx(cells) {
   if (n) {
     const pts = powerUpPoints(n);
     S.score += pts;
-    $('score').textContent = S.score; S.shownScore = S.score;
+    renderScore(S.score); S.shownScore = S.score;
     popup(`+${pts}`, L.w / 2, L.by + L.size * 0.4, '#ffffff', 28);
     setBoardGlow('clear');
     Sfx.clear(1, 1); Haptics.medium();
@@ -905,6 +950,7 @@ async function tryAutoSaveNoFit() {
   return false;
 }
 function checkGameOver() {
+  if (Tutorial.active) return; // the scripted walkthrough never ends early
   if (!S.running || S.autoSaving) return;
   const alive = S.tray.filter(Boolean);
   if (alive.some((p) => fitsAnywhere(S.board, p.shape))) return;
@@ -982,24 +1028,31 @@ function finishGame() {
   const lvlAfter = playerLevelFor(store.xp);
   const newRewards = rewardsForLevel(lvlAfter).filter((r) => !rewardsForLevel(lvlBefore).includes(r));
   Analytics.log('game_over', { mode: S.mode, score: S.score, lines: S.lines, max_combo: S.maxCombo, placed: S.placed, revived: S.revived, secs: Math.round((Date.now() - S.startedAt) / 1000), xp_gained: gained, player_level: lvlAfter });
-  $('ov-score').textContent = S.score; $('ov-best').textContent = modeBest(); $('ov-lines').textContent = S.lines; $('ov-combo').textContent = S.maxCombo;
+  renderOvScore(S.score); $('ov-best').textContent = modeBest(); $('ov-lines').textContent = S.lines; $('ov-combo').textContent = S.maxCombo;
   $('ov-new').classList.toggle('hidden', !isBest);
   $('ov-xp').textContent = `+${gained} XP  ·  Player Level ${lvlAfter}${newRewards.length ? ` — unlocked: ${newRewards.join(', ')}!` : ''}`;
-  $('best').textContent = modeBest();
+  renderBest(modeBest());
   $('over').querySelector('h2').textContent = daily ? 'Daily challenge over' : 'Game over';
   // The date never goes in the heading — it sits in smaller text underneath.
   const ovDate = $('ov-date');
   if (daily) { ovDate.textContent = friendlyDate(S.dateKey); ovDate.classList.remove('hidden'); }
   else ovDate.classList.add('hidden');
-  // Star rating, revealed one star at a time (CSS delays set below).
+  // Star rating, revealed one star at a time once the panel is up.
   const stars = (isBest || S.score >= 1000) ? 3 : S.score >= 400 ? 2 : 1;
-  document.querySelectorAll('#ov-stars span').forEach((s, i) => {
-    s.classList.remove('lit');
-    if (i < stars) setTimeout(() => s.classList.add('lit'), 250 + i * 350);
-  });
-  if (isBest) { jackpotBurst(); showBanner('NEW BEST!', 1500); }
+  const showPanel = () => {
+    document.querySelectorAll('#ov-stars span').forEach((s, i) => {
+      s.classList.remove('lit');
+      if (i < stars) setTimeout(() => s.classList.add('lit'), 250 + i * 350);
+    });
+    $('over').classList.add('show');
+  };
+  // A new best gets its own beat: the badge pops over the board first (the
+  // same medallion as the panel badge), then the panel opens with the badge
+  // inside it. Showing both at once stacks two badges on top of each other
+  // — that was the doubled-badge look in the game-over screenshot.
+  if (isBest) { jackpotBurst(); showBestBadge(1500); setTimeout(showPanel, 1500); }
+  else showPanel();
   if (lvlAfter > lvlBefore) showBanner(`PLAYER LEVEL ${lvlAfter}!`, 1600);
-  $('over').classList.add('show');
   renderPlayerCard();
 }
 
@@ -1013,10 +1066,16 @@ cv.addEventListener('pointerdown', (e) => {
   Sfx.unlock();
   if (!S.running || drag || S.autoSaving) return;
   const rect = cv.getBoundingClientRect(), x = e.clientX - rect.left, y = e.clientY - rect.top;
+  if (Tutorial.active) {
+    // Scripted tutorial: only the expected slot can be picked up; the
+    // power-up step takes no drags at all.
+    const st = Tutorial.current;
+    if (!st || st.slot == null || slotAt(x, y) !== st.slot) return;
+  }
   // A power-up is armed: this tap targets the board instead of dragging.
   if (S.armed) {
     const c = Math.floor((x - L.bx) / L.cell), r = Math.floor((y - L.by) / L.cell);
-    if (r < 0 || r >= N || c < 0 || c >= N) { toast('Tap a board cell, or ✕ to cancel.'); return; }
+    if (r < 0 || r >= N || c < 0 || c >= N) { /* tap outside the board while armed: nothing — the chip already says what to do. */ return; }
     if (S.armed === 'bomb') applyBomb(r, c);
     else if (S.armed === 'sweep') applySweep(r, c);
     return;
@@ -1039,14 +1098,13 @@ function endDrag(e) {
   if (!drag || e.pointerId !== drag.id) return;
   const d = dropCell(), slot = drag.slot;
   drag = null;
-  if (d && d.ok) place(slot, d.r, d.c); else Sfx.invalid();
+  if (d && d.ok && (!Tutorial.active || Tutorial.acceptsDrop(slot, d.r, d.c))) place(slot, d.r, d.c); else Sfx.invalid();
 }
 cv.addEventListener('pointerup', endDrag);
 cv.addEventListener('pointercancel', endDrag);
 
 // ---------- UI wiring ----------
 function show(id, on) { $(id).classList.toggle('show', on); }
-$('rules').innerHTML = '<ol>' + RULES_TEXT.map((r) => `<li>${r}</li>`).join('') + '</ol>';
 document.title = APP_NAME;
 $('title').querySelector('.logo').innerHTML = APP_NAME.replace(/bloom$/i, '<span>$&</span>');
 // Friendly daily date for the player ("Nov 11", never the 2026-11-11 key).
@@ -1064,16 +1122,21 @@ function refreshTitle() {
 function initIcons() {
   document.querySelectorAll('img[data-icon]').forEach((img) => { img.src = Sprites.iconURL(img.dataset.icon); });
 }
-refreshTitle(); $('best').textContent = store.best;
+refreshTitle(); renderBest(store.best);
 let sessionLogged = false;
 function leaveTitle() { Sfx.unlock(); show('title', false); if (!sessionLogged) { sessionLogged = true; Analytics.log('session_start', { ua_mobile: /Mobi/.test(navigator.userAgent) }); } }
 $('btn-play').onclick = () => { leaveTitle(); const sv = readSave(); if (sv) restoreGame(sv); else startGame('classic'); };
 $('btn-new').onclick = () => { const sv = readSave(); if (sv) Analytics.log('game_abandon', { score: sv.score, mode: sv.mode }); clearSave(); leaveTitle(); startGame('classic'); };
 $('btn-daily').onclick = () => { const sv = readSave(); if (sv) Analytics.log('game_abandon', { score: sv.score, mode: sv.mode }); clearSave(); leaveTitle(); startGame('daily', localDateKey()); };
-$('btn-how').onclick = () => show('menu', true);
 // Settings
-const syncSettings = () => { $('set-music').checked = Music.on; $('set-sfx').checked = !Sfx.muted; $('set-haptics').checked = Haptics.enabled; $('set-motion').checked = reducedMotion(); };
-$('btn-settings').onclick = () => { syncSettings(); show('settings', true); };
+const syncSettings = () => { $('set-music').checked = Music.on; $('set-sfx').checked = !Sfx.muted; $('set-haptics').checked = Haptics.enabled; $('set-motion').checked = reducedMotion(); syncSoundBtn(); };
+// Master sound switch on the title screen: shows the real mute state (a
+// player who once turned sound off stays off — this makes it visible and
+// one-tap fixable instead of silent with no clue). Toggles music + SFX
+// together; Settings keeps the separate toggles.
+const soundOn = () => Music.on && !Sfx.muted;
+function syncSoundBtn() { const img = $('sound-img'); if (!img) return; img.src = Sprites.iconURL(soundOn() ? 'sound' : 'mute'); $('btn-sound').setAttribute('aria-label', soundOn() ? 'Sound on — tap to mute' : 'Sound off — tap to unmute'); }
+$('btn-sound').onclick = () => { const on = !soundOn(); Music.set(on); Sfx.setOn(on); syncSoundBtn(); };
 $('btn-title-settings').onclick = () => { syncSettings(); show('settings', true); };
 $('set-music').onchange = (e) => Music.set(e.target.checked);
 $('set-sfx').onchange = (e) => Sfx.setOn(e.target.checked);
@@ -1082,9 +1145,11 @@ $('set-motion').onchange = (e) => { localStorage.setItem('gb_motion', e.target.c
 function applyMotionClass() { document.body.classList.toggle('reduced-motion', reducedMotion()); }
 $('btn-set-close').onclick = () => show('settings', false);
 $('btn-pu-first').onclick = () => show('pu-first', false);
-$('btn-set-rules').onclick = () => { show('settings', false); show('menu', true); };
-$('btn-tut-again').onclick = () => { show('settings', false); localStorage.removeItem('gb_tut_done'); if (S.running) Tutorial.start(); };
-$('btn-menu').onclick = () => { show('menu', true); Analytics.log('menu_open', {}); };
+$('btn-tut-again').onclick = () => { show('settings', false); localStorage.removeItem('gb_tut_done'); if (S.running) Tutorial.start(); else { leaveTitle(); startGame('classic'); } };
+$('btn-menu').onclick = () => { if (Tutorial.active) return; show('menu', true); Analytics.log('menu_open', {}); };
+// Settings lives inside the pause menu now (the top-right gear is gone;
+// the hamburger is the single top-right control).
+$('btn-menu-settings').onclick = () => { show('menu', false); syncSettings(); show('settings', true); };
 $('btn-resume').onclick = () => show('menu', false);
 $('btn-restart').onclick = () => { show('menu', false); if (S.running) { S.running = false; Analytics.log('game_abandon', { score: S.score }); } clearSave(); startGame(S.mode === 'daily' ? 'daily' : 'classic', S.dateKey || localDateKey()); };
 $('btn-log').onclick = () => { const el = $('log'); el.classList.toggle('hidden'); el.textContent = Analytics.all().slice(-60).map((e) => JSON.stringify(e)).join('\n'); };
@@ -1102,38 +1167,185 @@ renderPowerups(); renderTimerBar();
 $('btn-again').onclick = async () => { show('over', false); await Ads.maybeInterstitialAtBreak(S.gamesThisSession); startGame(S.mode === 'daily' ? 'daily' : 'classic', localDateKey()); };
 $('btn-home').onclick = () => { show('over', false); refreshTitle(); show('title', true); };
 
-// ---------- First-game tutorial: 3 steps, shown once, skippable ----------
+// ---------- Scripted first-game tutorial: 5 steps, shown once ----------
+// A guided walkthrough, not a dismissable text box: pre-selected pieces,
+// a prepared board, highlights on the exact cells and the exact piece,
+// locked input (only the scripted move can be made; a wrong drop snaps
+// back). The caption is one short line over the score row — never over
+// the board — and each step advances by itself on the right move. Small
+// Skip in the corner returns to the menu. On finish: "Nice! You're
+// ready." then a fresh real game (fresh board, normal timer, random tray).
+const TUT_PALETTE = ['#ff4d4d', '#ff8a1e', '#ffd21f', '#2fd65a', '#2f8cff', '#9b4dff', '#ff5da2'];
+function tutBoard(rows) {
+  return rows.map((row, r) => [...row].map((ch, c) => (ch === '#' ? TUT_PALETTE[(r * 3 + c) % TUT_PALETTE.length] : null)));
+}
+const TUT_EMPTY = ['........', '........', '........', '........', '........', '........', '........', '........'];
+// Shape ids (js/pieces.js): 0 = single cell, 1 = '##', 3 = '###'.
 const TUT_STEPS = [
-  'Step 1 of 3 — <b>Drag a piece</b> from the tray onto the board. Try it now!',
-  'Step 2 of 3 — <b>Fill a whole row or column</b> to clear it. Cleared blocks burst into gold stars and score points.',
-  'Step 3 of 3 — <b>Clear again within 3 moves</b> for a combo multiplier. <b>Fair deal:</b> every new tray has at least one piece that fits, and the rules never change based on ads.',
+  { // 1 — Place.
+    text: 'Drag this piece onto the highlighted squares.',
+    board: TUT_EMPTY,
+    tray: [1, 0, 0],
+    slot: 0, target: { r: 7, c: 3 }, cells: [[7, 3], [7, 4]],
+  },
+  { // 2 — Clear a line.
+    text: 'Fill a whole row or column to clear it.',
+    board: ['........', '........', '........', '........', '........', '........', '........', '#######.'],
+    tray: [0, 0, 0],
+    slot: 0, target: { r: 7, c: 7 }, cells: [[7, 7]],
+  },
+  { // 3 — Combo: one single cell completes row 6 AND column 3.
+    text: 'Clear more than one at a time for a combo.',
+    board: ['...#....', '...#....', '...#....', '...#....', '...#....', '...#....', '###.####', '...#....'],
+    tray: [0, 0, 0],
+    slot: 0, target: { r: 6, c: 3 }, cells: [[6, 3]],
+  },
+  { // 4 — Time: clear a line and watch the TIME bar gain seconds.
+    text: 'You have two minutes. Clearing lines adds time.',
+    board: ['........', '........', '........', '........', '........', '#####..#', '........', '........'],
+    tray: [1, 0, 0],
+    slot: 0, target: { r: 5, c: 5 }, cells: [[5, 5], [5, 6]],
+    spot: 'timer',
+  },
+  { // 5 — Power-ups: the dock itself is spotlighted; tap the star slot.
+    text: 'Earn power-ups with a 3-line combo, or every 10 lines.',
+    board: null, // keep the board from step 4
+    tray: [0, 0, 0],
+    slot: null, target: null, cells: null,
+    spot: 'dock', grant: 'star',
+  },
 ];
 const Tutorial = {
   step: -1,
   get active() { return this.step >= 0; },
-  start() { this.step = 0; Analytics.log('tutorial_start', {}); $('tut').classList.add('show'); this.render(); },
+  get current() { return this.step >= 0 ? TUT_STEPS[this.step] : null; },
+  start() {
+    // Fresh tutorial session: reset the in-progress game, then step 0.
+    S.board = tutBoard(TUT_EMPTY);
+    S.score = 0; S.shownScore = 0; S.combo = 0; S.sinceClear = 0; S.maxCombo = 0; S.lines = 0; S.placed = 0;
+    S.charges = emptyCharges(); S.chargeClocks = emptyChargeClocks(); S.earnIdx = 0; S.armed = null; S.sweepMode = 'row';
+    S.level = 1; S.timeLeft = TIMER.start; S.lowTonePlayed = false; lastTickSecond = -1;
+    $('countdown').classList.remove('on'); lastCdShown = '';
+    S.timerStarted = false;
+    renderPowerups(); renderTimerBar(); renderLevel(); renderScore(0); renderCombo(); setModeUI();
+    this.step = 0;
+    Analytics.log('tutorial_start', {});
+    $('tut').classList.add('show');
+    this.render();
+  },
   render() {
-    $('tut-text').innerHTML = TUT_STEPS[this.step];
-    $('tut').querySelectorAll('.tut-dots i').forEach((d, i) => d.classList.toggle('on', i <= this.step));
-    $('tut-next').textContent = this.step === TUT_STEPS.length - 1 ? 'Got it' : 'Next';
-    const hand = $('tut-hand'), demo = $('tut-demo');
-    hand.classList.toggle('on', this.step === 0);
-    demo.classList.toggle('on', this.step >= 1); demo.classList.toggle('clear', this.step >= 1);
-    demo.innerHTML = this.step >= 1 ? '<span></span>'.repeat(7) + '<span class="gap"></span>' : '';
-    if (this.step === 0) {
+    const st = this.current; if (!st) return;
+    this.clearSpotlights();
+    if (st.board) S.board = tutBoard(st.board);
+    if (st.tray) S.tray = st.tray.map((i) => (i == null ? null : makePiece(SHAPES[i])));
+    if (st.grant) {
+      S.charges[st.grant] = (S.charges[st.grant] || 0) + 1;
+      S.chargeClocks[st.grant] = [POWERUPS.chargeLifetimeSeconds];
+      renderPowerups();
+    }
+    $('tut-text').textContent = st.text;
+    $('tut-dots').querySelectorAll('i').forEach((d, i) => d.classList.toggle('on', i <= this.step));
+    // Hand: animates the drag from the expected slot to the target cells
+    // (aimed at the centre of the target cells, so a 2-wide piece lands
+    // with its origin on the first highlighted cell).
+    const hand = $('tut-hand');
+    if (st.slot != null && st.cells) {
       const r = cv.getBoundingClientRect();
-      const slot = Math.max(0, S.tray.findIndex(Boolean));
-      const fx0 = r.left + L.trayX + L.slotW * (slot + 0.5) - 14, fy0 = r.top + L.trayY + L.trayH / 2 - 6;
-      const tx = r.left + L.bx + L.size / 2 - 14, ty = r.top + L.by + L.size / 2;
+      const fx0 = r.left + L.trayX + L.slotW * (st.slot + 0.5) - 26, fy0 = r.top + L.trayY + L.trayH / 2 - 26;
+      const cs = st.cells.map(([, c]) => c), rs = st.cells.map(([rr]) => rr);
+      const tx = r.left + L.bx + ((Math.min(...cs) + Math.max(...cs) + 1) / 2) * L.cell - 26;
+      const ty = r.top + L.by + ((Math.min(...rs) + Math.max(...rs) + 1) / 2) * L.cell - 26;
       hand.style.setProperty('--fx', fx0 + 'px'); hand.style.setProperty('--fy', fy0 + 'px');
       hand.style.setProperty('--tx', tx + 'px'); hand.style.setProperty('--ty', ty + 'px');
+      hand.classList.add('on');
+    } else hand.classList.remove('on');
+    // Spotlights: TIME bar (step 4), dock + slot + arrow (step 5).
+    if (st.spot === 'timer') $('timer-wrap').classList.add('tut-spot');
+    if (st.spot === 'dock') {
+      $('powerups').classList.add('tut-spot');
+      const btn = document.querySelector('#powerups .pu[data-pu="star"]');
+      btn.classList.add('tut-spot');
+      const br = btn.getBoundingClientRect();
+      const arrow = $('tut-arrow');
+      arrow.style.left = (br.left + br.width / 2) + 'px';
+      arrow.style.top = (br.top - 26) + 'px';
+      arrow.classList.remove('hidden');
     }
   },
-  next() { if (this.step >= TUT_STEPS.length - 1) return this.finish('done'); this.step++; this.render(); },
-  onPlaced() { if (this.step === 0) this.next(); },
-  finish(how) { if (!this.active) return; this.step = -1; localStorage.setItem('gb_tut_done', '1'); $('tut').classList.remove('show'); Analytics.log('tutorial_' + how, {}); if (S.running) S.timerStarted = true; },
+  clearSpotlights() {
+    $('timer-wrap').classList.remove('tut-spot');
+    $('powerups').classList.remove('tut-spot');
+    document.querySelectorAll('#powerups .pu.tut-spot').forEach((b) => b.classList.remove('tut-spot'));
+    $('tut-arrow').classList.add('hidden');
+  },
+  acceptsDrop(slot, r, c) {
+    const st = this.current;
+    if (!st || st.slot == null || !st.target) return false;
+    return slot === st.slot && r === st.target.r && c === st.target.c;
+  },
+  next() {
+    if (this.step >= TUT_STEPS.length - 1) return this.finish('done');
+    this.step++;
+    this.render();
+  },
+  onPlaced() {
+    if (!this.active) return;
+    const st = this.current;
+    if (!st || st.slot == null) return;
+    this.next();
+  },
+  advanceFromDock() {
+    if (this.active && this.current && this.current.spot === 'dock') this.next();
+  },
+  // Pulsing gold highlight on the exact target cells + a glow ring around
+  // the expected tray piece. Called from draw(), after the tray.
+  drawHighlights(g, t) {
+    const st = this.current; if (!st) return;
+    const { bx, by, cell: s } = L;
+    const rm = reducedMotion();
+    if (st.cells) {
+      const pulse = rm ? 0.2 : 0.16 + 0.08 * Math.sin(t * 4);
+      for (const [r, c] of st.cells) {
+        const x = bx + c * s, y = by + r * s;
+        g.fillStyle = `rgba(255,210,31,${pulse})`;
+        rrect(x + 2, y + 2, s - 4, s - 4, s * 0.2); g.fill();
+        g.strokeStyle = '#ffd21f'; g.lineWidth = 3; g.setLineDash([7, 6]); g.lineDashOffset = rm ? 0 : -t * 24;
+        rrect(x + 3, y + 3, s - 6, s - 6, s * 0.2); g.stroke(); g.setLineDash([]);
+      }
+    }
+    if (st.slot != null && S.tray[st.slot]) {
+      const p = S.tray[st.slot], sh = p.shape, ts = trayCellFor(sh);
+      const cx = L.trayX + L.slotW * (st.slot + 0.5), cy = L.trayY + L.trayH / 2;
+      const w = sh.w * ts, h = sh.h * ts, pad = rm ? 6 : 6 + 2 * Math.sin(t * 4);
+      g.strokeStyle = 'rgba(255,210,31,0.95)'; g.lineWidth = 3; g.setLineDash([8, 6]); g.lineDashOffset = rm ? 0 : -t * 24;
+      rrect(cx - w / 2 - pad, cy - h / 2 - pad, w + pad * 2, h + pad * 2, 10); g.stroke(); g.setLineDash([]);
+    }
+  },
+  finish(how) {
+    if (!this.active) return;
+    this.step = -1;
+    this.clearSpotlights();
+    $('tut-hand').classList.remove('on');
+    $('tut').classList.remove('show');
+    localStorage.setItem('gb_tut_done', '1');
+    Analytics.log('tutorial_' + how, {});
+    if (how === 'done') {
+      // "Nice! You're ready." — one glossy moment over the fresh real
+      // game, which starts right away and auto-continues underneath.
+      const done = $('tut-done');
+      $('tut').classList.add('show');
+      done.classList.remove('hidden');
+      startGame('classic');
+      setTimeout(() => { done.classList.add('hidden'); $('tut').classList.remove('show'); }, 1400);
+    } else {
+      // Skip: back to the menu; the tutorial game is abandoned.
+      S.running = false;
+      clearSave();
+      show('title', true);
+      refreshTitle();
+    }
+  },
 };
-$('tut-next').onclick = () => Tutorial.next();
 $('tut-skip').onclick = () => Tutorial.finish('skipped');
 
 // ---------- Lifecycle: save on hide, pause music ----------
@@ -1154,7 +1366,74 @@ window.__gbBack = () => {
 
 S.board = emptyBoard();
 Sprites.init();
+// ---------- Hero type: glossy 3D numerals + wordmark (pre-rendered sprites) ----------
+// Score / BEST / combo / game-over score / countdown are <img> sprites once
+// the hero type is ready; before that they show plain text (same value). The
+// rolling score counter reuses a small <img> pool so it never rebuilds the
+// DOM while animating.
+function setLogoImg() {
+  const logo = $('title').querySelector('.logo');
+  if (logo.querySelector('img')) return;
+  logo.innerHTML = `<img id="logo-img" src="${Sprites.wordmarkURL()}" alt="Clearbloom">`;
+}
+const scoreImgs = [], bestImgs = [], ovScoreImgs = [], cdImgs = [];
+function renderDigitRow(pool, el, digits, pal) {
+  if (el.dataset.mode !== 'img') { el.innerHTML = ''; el.dataset.mode = 'img'; }
+  for (let i = 0; i < pool.length; i++) el.appendChild(pool[i]); // re-attach after any text phase
+  while (pool.length < digits.length) { const img = document.createElement('img'); img.alt = ''; el.appendChild(img); pool.push(img); }
+  for (let i = 0; i < digits.length; i++) {
+    const img = pool[i];
+    const key = `${pal}:${digits[i]}`;
+    if (img.dataset.key !== key) { img.src = Sprites.numeralURL(digits[i], pal); img.dataset.key = key; img.alt = digits[i]; }
+    img.style.display = '';
+  }
+  for (let i = digits.length; i < pool.length; i++) pool[i].style.display = 'none';
+}
+function renderScore(v) {
+  const el = $('score');
+  if (!Sprites.heroReady) { el.textContent = v; el.dataset.mode = ''; return; }
+  renderDigitRow(scoreImgs, el, String(Math.round(v)), 'gold');
+}
+function renderBest(v) {
+  const el = $('best');
+  if (!Sprites.heroReady) { el.textContent = v; el.dataset.mode = ''; return; }
+  renderDigitRow(bestImgs, el, String(v), 'gold');
+}
+function renderOvScore(v) {
+  const el = $('ov-score');
+  if (!Sprites.heroReady) { el.textContent = v; el.dataset.mode = ''; return; }
+  renderDigitRow(ovScoreImgs, el, String(v), 'gold');
+}
+function renderCombo() {
+  const el = $('combo');
+  if (S.combo < 2) { el.innerHTML = ''; el.dataset.val = ''; return; }
+  if (!Sprites.heroReady) { el.textContent = `Combo x${S.combo}`; el.dataset.val = ''; return; }
+  const key = `x${S.combo}`;
+  if (el.dataset.val === key) return;
+  el.dataset.val = key;
+  el.innerHTML = `<img class="combo-star" src="${Sprites.starURL('#ffd21f')}" alt="star"> Combo ×${[...String(S.combo)].map((d) => `<img src="${Sprites.numeralURL(d, 'gold')}" alt="${d}">`).join('')}`;
+}
+let lastCdShown = '';
+function renderCountdown(secs) {
+  const pal = secs <= 5 ? 'red' : 'amber';
+  const key = `${pal}:${secs}`;
+  if (lastCdShown === key) return;
+  lastCdShown = key;
+  const cd = $('countdown');
+  cd.dataset.secs = secs; cd.dataset.palette = pal;
+  const nums = $('cd-nums');
+  if (!Sprites.heroReady) { nums.textContent = secs; return; }
+  renderDigitRow(cdImgs, nums, String(secs), pal);
+}
+Sprites.initHeroType().then(() => {
+  setLogoImg();
+  lastCdShown = '';
+  renderScore(S.score); renderBest(modeBest()); renderCombo();
+  if ($('over').classList.contains('show')) renderOvScore(S.score);
+  if ($('countdown').classList.contains('on')) renderCountdown(parseInt($('countdown').dataset.secs || '20', 10));
+});
 initIcons();
+syncSoundBtn(); // after initIcons: it would overwrite the mute icon with the default 'sound' art
 applyMotionClass();
 layout();
 Ads.init();
@@ -1166,7 +1445,7 @@ else if ('serviceWorker' in navigator && location.protocol === 'https:') navigat
 // ---------- Test hooks (read-only layout + state; mutation only with ?test=1) ----------
 window.__gb = {
   layout: () => ({ ...L }),
-  state: () => ({ board: S.board.map((r) => r.map(Boolean)), tray: S.tray.map((p) => p && { id: p.shape.id, cells: p.shape.cells, w: p.shape.w, h: p.shape.h, helper: p.helper }), score: S.score, combo: S.combo, lines: S.lines, running: S.running, placed: S.placed, revived: S.revived, mode: S.mode, dateKey: S.dateKey, helperAvailable: S.helperAvailable, tutorialStep: Tutorial.step, timeLeft: Math.round(S.timeLeft * 10) / 10, timerStarted: S.timerStarted, charges: { ...S.charges }, chargeSecs: Object.fromEntries(Object.entries(S.chargeClocks).map(([t, arr]) => [t, arr.length ? Math.round(arr[0] * 10) / 10 : null])), autoSaving: S.autoSaving, armed: S.armed, sweepMode: S.sweepMode, musicOn: Music.on, musicBpm: Music.bpm, musicLoopSeconds: Music.loopSeconds, musicLoopEvents: Music.loopEvents, musicUrgency: Music.urgency, spritesReady: Sprites.ready, timerPaused: timerPaused(), level: S.level, xp: store.xp, playerLevel: playerLevelFor(store.xp), reducedMotion: reducedMotion(), countdownVisible: !$('countdown').classList.contains('hidden'), countdownText: $('countdown').textContent,
+  state: () => ({ board: S.board.map((r) => r.map(Boolean)), tray: S.tray.map((p) => p && { id: p.shape.id, cells: p.shape.cells, w: p.shape.w, h: p.shape.h, helper: p.helper }), score: S.score, combo: S.combo, lines: S.lines, running: S.running, placed: S.placed, revived: S.revived, mode: S.mode, dateKey: S.dateKey, helperAvailable: S.helperAvailable, tutorialStep: Tutorial.step, timeLeft: Math.round(S.timeLeft * 10) / 10, timerStarted: S.timerStarted, charges: { ...S.charges }, chargeSecs: Object.fromEntries(Object.entries(S.chargeClocks).map(([t, arr]) => [t, arr.length ? Math.round(arr[0] * 10) / 10 : null])), autoSaving: S.autoSaving, armed: S.armed, sweepMode: S.sweepMode, musicOn: Music.on, musicBpm: Music.bpm, musicLoopSeconds: Music.loopSeconds, musicLoopEvents: Music.loopEvents, musicUrgency: Music.urgency, audioState: Music.ctxState, audioTime: Music.ctxTime, musicScheduled: Music.scheduled, musicScheduler: Music.schedulerOn, sfxMuted: Sfx.muted, spritesReady: Sprites.ready, timerPaused: timerPaused(), level: S.level, xp: store.xp, playerLevel: playerLevelFor(store.xp), reducedMotion: reducedMotion(), countdownVisible: $('countdown').classList.contains('on'), countdownText: $('countdown').dataset.secs || '', heroTypeReady: Sprites.heroReady,
     layout: { size: L.size, cell: Math.round(L.cell * 10) / 10, bx: Math.round(L.bx * 10) / 10, by: Math.round(L.by * 10) / 10, trayX: Math.round(L.trayX * 10) / 10, trayY: Math.round(L.trayY * 10) / 10, trayH: Math.round(L.trayH * 10) / 10, slotW: Math.round(L.slotW * 10) / 10, trayCellMax: Math.round(L.trayCell * 10) / 10, stageW: L.w, stageH: L.h },
     dragScale: drag ? Math.round(drag.scale * 100) / 100 : null, dragStartScale: drag ? Math.round(drag.startScale * 100) / 100 : null }),
 };

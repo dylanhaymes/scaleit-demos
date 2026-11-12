@@ -11,6 +11,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
 <!-- Fonts are embedded in style.css as base64 data URIs (Baloo 2 + Fredoka,
      SIL Open Font License 1.1, listed in CREDITS.md) — no font files, no
      network fetch, so the game works offline and never waits on fonts. -->
@@ -22,34 +23,35 @@
     <div class="hud-box"><span class="label" id="best-label">BEST</span><span id="best">0</span></div>
     <div class="hud-score"><span id="score">0</span><span id="combo" class="combo"></span></div>
     <div class="hud-actions">
-      <button id="btn-settings" class="icon-btn" aria-label="Settings"><img alt="" data-icon="gear"></button>
       <button id="btn-menu" class="icon-btn" aria-label="Menu"><img alt="" data-icon="menu"></button>
     </div>
   </header>
   <div id="level-row"><span id="level-label">LEVEL 1</span><div class="xp-pill"><div id="level-fill"></div></div><span id="level-xp">0/10</span></div>
-  <div id="timer-wrap"><span id="timer-label">TIME</span><div id="timerbar"><div id="timer-fill"></div><span id="timer-text">2:00</span></div></div>
-  <div id="countdown" class="hidden">20</div>
+  <div id="timer-wrap"><span id="timer-label">TIME</span><div id="timerbar"><div id="timer-fill"></div><span id="timer-text">2:00</span></div><span id="countdown"><span id="cd-nums"></span></span></div>
   <div id="stage"><div id="board-glow"></div><canvas id="cv-board"></canvas><canvas id="cv"></canvas></div>
+  <div id="pu-target" class="off">
+    <div id="pu-chip">
+      <span id="pu-hint"></span>
+      <span id="pu-mode" class="hidden"><button id="pu-mode-row-btn">Row</button><button id="pu-mode-col-btn">Column</button></span>
+      <button id="pu-cancel">✕ Cancel</button>
+    </div>
+  </div>
   <div id="powerups">
     <button class="pu" data-pu="bomb" aria-label="Boom Bomb"><span class="pu-ring"><img alt="" data-icon="bomb"></span><span class="pu-name">Bomb</span><span class="pu-count">0</span><span class="pu-progress">0/10</span></button>
     <button class="pu" data-pu="sweep" aria-label="Eraser Sweep"><span class="pu-ring"><img alt="" data-icon="eraser"></span><span class="pu-name">Sweep</span><span class="pu-count">0</span><span class="pu-progress">0/10</span></button>
     <button class="pu" data-pu="reshuffle" aria-label="Shuffle Tray"><span class="pu-ring"><img alt="" data-icon="shuffle"></span><span class="pu-name">Tray</span><span class="pu-count">0</span><span class="pu-progress">0/10</span></button>
     <button class="pu" data-pu="star" aria-label="Time Star"><span class="pu-ring"><img alt="" data-icon="clock"></span><span class="pu-name">+15s</span><span class="pu-count">0</span><span class="pu-progress">0/10</span></button>
   </div>
-  <div id="pu-target" class="hidden">
-    <span id="pu-hint"></span>
-    <span id="pu-mode" class="hidden"><button id="pu-mode-row-btn">Row</button><button id="pu-mode-col-btn">Column</button></span>
-    <button id="pu-cancel">✕ Cancel</button>
-  </div>
 </div>
 
 <!-- Big-moment banner + edge flash + fly layer (juice, DOM) -->
-<div id="banner" class="hidden"><span id="banner-text"></span></div>
+<div id="banner" class="hidden"><span id="banner-text"></span><span id="banner-badge" class="best-badge big hidden"><img alt="" data-icon="star"><span>NEW BEST</span></span></div>
 <div id="edge-flash"></div>
 <div id="fly-layer"></div>
 
 <!-- Title screen -->
 <div id="title" class="overlay show">
+  <button id="btn-sound" class="icon-btn" aria-label="Sound on — tap to mute"><img id="sound-img" alt="" data-icon="sound"></button>
   <div class="panel">
     <div class="logo">Clear<span>bloom</span></div>
     <p class="tag">Drag bright blocks. Fill rows. Earn gold stars.</p>
@@ -64,7 +66,6 @@
     <button id="btn-play" class="btn big">Play</button>
     <button id="btn-new" class="btn ghost hidden">New game</button>
     <button id="btn-daily" class="btn daily"><img alt="" data-icon="star"> Daily challenge <small id="daily-date"></small></button>
-    <button id="btn-how" class="btn ghost">How difficulty works</button>
     <button id="btn-title-settings" class="btn ghost">Settings</button>
     <p class="small">Best: <b id="title-best">0</b> · Today's daily best: <b id="title-daily-best">0</b></p>
   </div>
@@ -88,7 +89,7 @@
     <div id="ov-stars"><span><img alt="" data-icon="star"></span><span><img alt="" data-icon="star"></span><span><img alt="" data-icon="star"></span></div>
     <h2>Game over</h2>
     <div id="ov-date" class="small hidden"></div>
-    <div id="ov-new" class="badge hidden">New best!</div>
+    <div id="ov-new" class="best-badge hidden"><img alt="" data-icon="star"><span>NEW BEST</span></div>
     <div class="final"><span class="label">SCORE</span><span id="ov-score">0</span></div>
     <p>Best <b id="ov-best">0</b> · Lines <b id="ov-lines">0</b> · Max combo <b id="ov-combo">0</b></p>
     <p id="ov-xp" class="small"></p>
@@ -97,14 +98,14 @@
   </div>
 </div>
 
-<!-- Menu / how it works -->
+<!-- Pause menu (the hamburger is the single top-right control; Settings
+     lives inside it now that the gear is gone) -->
 <div id="menu" class="overlay">
   <div class="panel scroll">
-    <h2>How difficulty works</h2>
-    <div id="rules"></div>
-    <p class="small">Your score is exactly what you earned. Ads never change the board, the pieces, or your score.</p>
+    <h2>Paused</h2>
     <button id="btn-resume" class="btn big">Back</button>
     <button id="btn-restart" class="btn ghost">Restart game</button>
+    <button id="btn-menu-settings" class="btn ghost">Settings</button>
     <button id="btn-log" class="btn ghost hidden">Show analytics log</button>
     <pre id="log" class="hidden"></pre>
   </div>
@@ -119,7 +120,6 @@
     <label class="toggle"><span>Vibration</span><input type="checkbox" id="set-haptics"></label>
     <label class="toggle"><span>Reduce motion</span><input type="checkbox" id="set-motion"></label>
     <button id="btn-tut-again" class="btn ghost">Show tutorial again</button>
-    <button id="btn-set-rules" class="btn ghost">How difficulty works</button>
     <button id="btn-set-close" class="btn big">Done</button>
   </div>
 </div>
@@ -134,18 +134,14 @@
   </div>
 </div>
 
-<!-- First-game tutorial (3 steps, once, skippable). Pointer events pass through except the card. -->
+<!-- Scripted first-game tutorial (5 steps, once, skippable). Slim caption
+     over the score row (never the board); input locked to the one scripted
+     move per step; a wrong drop snaps back. -->
 <div id="tut" class="tut">
+  <div id="tut-caption"><div class="tut-cap-main"><div id="tut-dots"><i></i><i></i><i></i><i></i><i></i></div><span id="tut-text"></span></div><button id="tut-skip" class="btn ghost">Skip</button></div>
   <div id="tut-hand" class="tut-hand"><img alt="" data-icon="tap"></div>
-  <div class="tut-card">
-    <div class="tut-dots"><i></i><i></i><i></i></div>
-    <div id="tut-text"></div>
-    <div id="tut-demo" class="tut-demo"></div>
-    <div class="tut-row">
-      <button id="tut-skip" class="btn ghost">Skip</button>
-      <button id="tut-next" class="btn">Next</button>
-    </div>
-  </div>
+  <div id="tut-arrow" class="tut-arrow hidden">▼</div>
+  <div id="tut-done" class="tut-done hidden"><img alt="" data-icon="star"><span>Nice! You're ready.</span></div>
 </div>
 
 <!-- Ad overlay: the player only ever sees "Advertisement". -->

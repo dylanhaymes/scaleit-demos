@@ -202,6 +202,14 @@ export const Music = {
   get loopSeconds() { return LOOP_SECONDS; },
   get urgency() { return urgencyOn; },
   get loopEvents() { return LOOP.reduce((a, s) => a + s.length, 0); },
+  // Live audio state (for the unlock test + debugging): the context state,
+  // its clock, and how many eighth-note slots the scheduler has actually
+  // scheduled — this advances while music plays; loopEvents is a static
+  // count and does not.
+  get ctxState() { return ctx ? ctx.state : 'none'; },
+  get ctxTime() { return ctx ? ctx.currentTime : 0; },
+  get scheduled() { return schedNextEighth; },
+  get schedulerOn() { return !!schedTimer; },
   set(on) { musicOn = !!on; localStorage.setItem('gb_music', musicOn ? '1' : '0'); musicOn ? this.start() : this.stop(); return musicOn; },
   start() {
     const c = ac(); if (!c || schedTimer) return;

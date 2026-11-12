@@ -359,65 +359,51 @@ function iconCanvas(name) {
       break;
     }
     case 'bomb': {
+      // Ball + fuse + spark as ONE unit, optically centred in the disc
+      // (equal breathing room all round) — the ball used to sit low.
       c.fillStyle = '#3a3a4d';
-      c.beginPath(); c.arc(cx, cy + 6, 28, 0, Math.PI * 2); c.fill();
+      c.beginPath(); c.arc(cx, cy + 13, 27, 0, Math.PI * 2); c.fill();
       c.strokeStyle = 'rgba(0,0,0,0.25)'; c.lineWidth = 3; c.stroke();
       c.strokeStyle = '#8a6a2f'; c.lineWidth = 5; c.lineCap = 'round';
-      c.beginPath(); c.moveTo(cx + 12, cy - 16); c.quadraticCurveTo(cx + 26, cy - 30, cx + 18, cy - 38); c.stroke();
+      c.beginPath(); c.moveTo(cx + 12, cy - 8); c.quadraticCurveTo(cx + 24, cy - 16, cx + 18, cy - 22); c.stroke();
       paint(grad('#ffe98a', '#ff8a1e'));
-      starPath(c, cx + 18, cy - 40, 10, 4.5); c.fill();
-      gloss(c, cx - 6, cy - 2, 22);
+      starPath(c, cx + 18, cy - 31, 9, 4); c.fill();
+      gloss(c, cx - 6, cy + 7, 21);
       break;
     }
     case 'eraser': {
-      // Sweep: a short row of glossy blocks with a bright beam cutting
-      // through them — reads as "clears a line" at a glance, even at 56px.
-      miniBlock(c, 14, 37, 22, '#2f8cff');
-      miniBlock(c, 38, 37, 22, '#2fd65a');
-      miniBlock(c, 62, 37, 22, '#ff8a1e');
-      // The sweep beam: a glowing white-gold streak, angled across the row.
+      // Sweep: three BIG glossy blocks are the subject — no beam, no glare
+      // layer, only the blocks' own top-left specular. A small eraser at
+      // the bottom-right edge is the action cue.
+      miniBlock(c, 7, 34, 26, '#2f8cff');
+      miniBlock(c, 35, 34, 26, '#2fd65a');
+      miniBlock(c, 63, 34, 26, '#ff8a1e');
       c.save();
-      c.translate(cx, cy); c.rotate(-0.3);
-      c.shadowColor = 'rgba(255,255,255,0.9)'; c.shadowBlur = 8;
-      const beam = c.createLinearGradient(-44, 0, 44, 0);
-      beam.addColorStop(0, 'rgba(255,255,255,0.05)');
-      beam.addColorStop(0.55, 'rgba(255,255,255,0.75)');
-      beam.addColorStop(1, 'rgba(255,255,255,0.95)');
-      c.fillStyle = beam; rr(c, -44, -8, 88, 16, 8); c.fill();
-      const core = c.createLinearGradient(-44, 0, 44, 0);
-      core.addColorStop(0, 'rgba(255,255,255,0.1)');
-      core.addColorStop(0.6, 'rgba(255,255,255,0.95)');
-      core.addColorStop(1, '#fff8e0');
-      c.fillStyle = core; rr(c, -44, -3.5, 88, 7, 3.5); c.fill();
+      c.translate(82, 70); c.rotate(-0.25);
+      c.fillStyle = '#ff8fb3'; rr(c, -11, -6, 22, 12, 3); c.fill();
+      c.fillStyle = '#fff8e0'; rr(c, -11, -6, 8, 12, 3); c.fill();
+      c.strokeStyle = 'rgba(90,40,0,0.25)'; c.lineWidth = 1.5; rr(c, -11, -6, 22, 12, 3); c.stroke();
       c.restore();
-      // Sparkles where the beam exits the row.
-      paint(grad('#ffe98a', '#f5a623'));
-      starPath(c, 84, 30, 7, 3); c.fill();
-      starPath(c, 12, 66, 5, 2); c.fill();
-      gloss(c, cx, cy, 30);
       break;
     }
     case 'shuffle': {
-      // Shuffle Tray: three small glossy blocks (like real tray pieces),
-      // the middle one bounced up, with a refresh arc swooping over them —
-      // reads as "new pieces" at a glance, even at 56px.
-      miniBlock(c, 16, 52, 20, '#ff4d4d');
-      miniBlock(c, 38, 42, 20, '#ffd21f');
-      miniBlock(c, 60, 52, 20, '#9b4dff');
-      // Refresh arc: a white swoosh over the blocks, arrowhead at the end.
+      // Shuffle Tray: three BIG glossy blocks, the middle one bounced up.
+      // No white arc, no glare layer — only the blocks' own specular.
+      // The action cue is a small GOLD circular arrow in the top-right
+      // corner (gold, not white: Dylan's glare complaint was about white
+      // washing out the disc, so the cue carries no white at all).
+      miniBlock(c, 9, 48, 24, '#ff4d4d');
+      miniBlock(c, 36, 34, 24, '#ffd21f');
+      miniBlock(c, 63, 48, 24, '#9b4dff');
       c.save();
-      c.strokeStyle = '#ffffff'; c.lineWidth = 6; c.lineCap = 'round';
-      c.shadowColor = 'rgba(255,255,255,0.8)'; c.shadowBlur = 6;
-      c.beginPath(); c.moveTo(18, 46); c.quadraticCurveTo(48, 6, 78, 46); c.stroke();
+      const aEnd = 2.6;
+      c.strokeStyle = 'rgba(255,210,31,0.95)'; c.lineWidth = 3.5; c.lineCap = 'round';
+      c.beginPath(); c.arc(80, 18, 9, -1.2, aEnd); c.stroke();
+      c.translate(80 + Math.cos(aEnd) * 9, 18 + Math.sin(aEnd) * 9);
+      c.rotate(aEnd + Math.PI / 2);
+      c.fillStyle = 'rgba(255,210,31,0.95)';
+      c.beginPath(); c.moveTo(6, 0); c.lineTo(-3, -4); c.lineTo(-3, 4); c.closePath(); c.fill();
       c.restore();
-      c.save();
-      c.translate(78, 46); c.rotate(0.95); // tangent of the arc at its end
-      c.fillStyle = '#ffffff';
-      c.beginPath(); c.moveTo(12, 0); c.lineTo(-3, -7); c.lineTo(-3, 7); c.closePath(); c.fill();
-      c.restore();
-      paint(grad('#ffe98a', '#f5a623'));
-      starPath(c, 48, 22, 6, 2.5); c.fill();
-      gloss(c, cx, cy, 32);
       break;
     }
     case 'clock': {
@@ -469,6 +455,167 @@ function iconCanvas(name) {
     }
   }
   return cv;
+}
+
+// ---------- Hero type: glossy 3D numerals + wordmark ----------
+// Pre-rendered at 2x/3x so hero type reads like a physical glossy toy:
+// chunky rounded letters, key light top-left, tight specular stripe on the
+// top edge, shallow bevel/extrusion, soft colored shadow. The wordmark and
+// numerals are rendered once (after the embedded fonts are ready) and cached
+// as data URLs; the game DOM then shows <img> sprites, never live gradient
+// text. Body UI stays clean Fredoka/Baloo.
+const NUMERAL_PALS = {
+  gold: { top: '#fffbe0', mid: '#ffd21f', bottom: '#ff8a1e', side: '#c98a1f', outline: '#7a3c00' },
+  amber: { top: '#fff6c8', mid: '#ffb347', bottom: '#ff8a1e', side: '#c97a1f', outline: '#7a3c00' },
+  red: { top: '#ffe2d6', mid: '#ff6b5e', bottom: '#d92b2b', side: '#a02020', outline: '#5a1000' },
+};
+const numeralCache = new Map();
+const starURLCache = new Map();
+let heroReady = false;
+let wordmarkURLCache = null;
+
+function heroFont(fs) { return `800 ${fs}px 'Baloo 2', 'Fredoka', system-ui, sans-serif`; }
+
+function renderNumeralCanvas(digit, pal) {
+  const fs = 220, pad = 30;
+  const meas = document.createElement('canvas').getContext('2d');
+  meas.font = heroFont(fs);
+  const tw = meas.measureText(digit).width;
+  const cv = document.createElement('canvas');
+  cv.width = Math.ceil(tw + pad * 2 + 20);
+  cv.height = 320;
+  const c = cv.getContext('2d');
+  const x = pad + 10, y = 252;
+  c.font = heroFont(fs); c.textBaseline = 'alphabetic'; c.textAlign = 'left'; c.lineJoin = 'round';
+  // Shallow extrusion: down-right steps, darkening.
+  for (let k = 7; k >= 1; k--) {
+    c.fillStyle = shade(pal.side, -0.05 * k);
+    c.fillText(digit, x + k * 1.4, y + k * 2.1);
+  }
+  // Face with soft colored shadow.
+  c.save();
+  c.shadowColor = 'rgba(122,60,0,0.35)'; c.shadowBlur = 14; c.shadowOffsetY = 8;
+  const g = c.createLinearGradient(0, y - fs, 0, y + 8);
+  g.addColorStop(0, pal.top); g.addColorStop(0.45, pal.mid); g.addColorStop(1, pal.bottom);
+  c.fillStyle = g;
+  c.fillText(digit, x, y);
+  c.restore();
+  // Specular: a TIGHT glossy band on the top edge only — a highlight, not
+  // a whitewash (the old 0.9-alpha band over half the glyph washed the
+  // colour out to pastel).
+  c.save();
+  c.globalCompositeOperation = 'source-atop';
+  const sg = c.createLinearGradient(0, y - fs, 0, y - fs * 0.38);
+  sg.addColorStop(0, 'rgba(255,255,255,0.6)');
+  sg.addColorStop(1, 'rgba(255,255,255,0)');
+  c.fillStyle = sg;
+  c.fillRect(0, y - fs - 12, cv.width, fs * 0.38);
+  c.fillStyle = 'rgba(255,255,255,0.9)';
+  c.fillRect(0, y - fs + 4, cv.width, 7);
+  c.restore();
+  // Thin darker outline.
+  c.strokeStyle = pal.outline; c.lineWidth = 9;
+  c.strokeText(digit, x, y);
+  return cv;
+}
+
+function numeralURL(digit, palName = 'gold') {
+  const key = `${palName}:${digit}`;
+  if (!numeralCache.has(key)) numeralCache.set(key, renderNumeralCanvas(digit, NUMERAL_PALS[palName]).toDataURL('image/png'));
+  return numeralCache.get(key);
+}
+
+function renderWordmarkCanvas() {
+  const word = 'Clearbloom';
+  const fs = 210, pad = 40;
+  const meas = document.createElement('canvas').getContext('2d');
+  meas.font = heroFont(fs);
+  const widths = [...word].map((ch) => meas.measureText(ch).width);
+  const tracking = -6;
+  const totalW = widths.reduce((a, b) => a + b, 0) + tracking * (word.length - 1);
+  const cv = document.createElement('canvas');
+  cv.width = Math.ceil(totalW * 0.96 + pad * 2 + 40);
+  cv.height = 330;
+  const c = cv.getContext('2d');
+  c.save();
+  c.translate(pad + 16, 0);
+  c.scale(0.96, 1); // slightly condensed so the word has presence at phone width
+  const baseline = 258;
+  // Deep saturated candy colours — the old bright blue→pink face washed to
+  // pastel under the specular. These read as colour, not a pale wash, on
+  // the cream panel.
+  const grad = c.createLinearGradient(0, 0, totalW, 0);
+  grad.addColorStop(0, '#1e63d8');
+  grad.addColorStop(0.38, '#5b21d6');
+  grad.addColorStop(0.68, '#a313d6');
+  grad.addColorStop(1, '#e0247e');
+  c.font = heroFont(fs); c.textBaseline = 'alphabetic'; c.textAlign = 'left'; c.lineJoin = 'round';
+  const letters = [...word];
+  // Extrusion pass (all letters), cream-gold sides.
+  for (let k = 7; k >= 1; k--) {
+    c.fillStyle = shade('#e8b64c', -0.055 * k);
+    let lx = 0;
+    for (let i = 0; i < letters.length; i++) { c.fillText(letters[i], lx + k * 1.3, baseline + k * 2.0); lx += widths[i] + tracking; }
+  }
+  // Face pass with soft colored shadow.
+  c.save();
+  c.shadowColor = 'rgba(122,60,0,0.45)'; c.shadowBlur = 18; c.shadowOffsetY = 10;
+  c.fillStyle = grad;
+  let lx = 0;
+  for (let i = 0; i < letters.length; i++) { c.fillText(letters[i], lx, baseline); lx += widths[i] + tracking; }
+  c.restore();
+  // Specular: a TIGHT glossy band on the top edge only — a highlight, not
+  // a whitewash (the old 0.9-alpha band over half the glyphs turned the
+  // wordmark pale on the cream panel).
+  c.save();
+  c.globalCompositeOperation = 'source-atop';
+  const sg = c.createLinearGradient(0, baseline - fs, 0, baseline - fs * 0.34);
+  sg.addColorStop(0, 'rgba(255,255,255,0.5)');
+  sg.addColorStop(1, 'rgba(255,255,255,0)');
+  c.fillStyle = sg;
+  c.fillRect(0, baseline - fs - 14, totalW, fs * 0.34);
+  c.fillStyle = 'rgba(255,255,255,0.85)';
+  c.fillRect(0, baseline - fs + 4, totalW, 6);
+  c.restore();
+  // Strong darker outline — the old 5px rim was too thin to hold the
+  // letters against the paper.
+  c.strokeStyle = '#7a3c00'; c.lineWidth = 10;
+  lx = 0;
+  for (let i = 0; i < letters.length; i++) { c.strokeText(letters[i], lx, baseline); lx += widths[i] + tracking; }
+  // Small 3D gold star accent sitting on the final m.
+  const starX = totalW - widths[widths.length - 1] * 0.45;
+  const starY = baseline - fs + 6;
+  c.save();
+  c.translate(starX, starY);
+  c.rotate(0.35);
+  const sg2 = c.createLinearGradient(0, -26, 0, 26);
+  sg2.addColorStop(0, '#fffbe0'); sg2.addColorStop(0.5, '#ffd21f'); sg2.addColorStop(1, '#ff8a1e');
+  c.fillStyle = sg2;
+  starPath(c, 0, 0, 24, 11, 5);
+  c.fill();
+  c.strokeStyle = '#7a3c00'; c.lineWidth = 3; c.stroke();
+  c.fillStyle = 'rgba(255,255,255,0.85)';
+  c.beginPath(); c.arc(-6, -9, 6, 0, Math.PI * 2); c.fill();
+  c.restore();
+  c.restore();
+  return cv;
+}
+
+function wordmarkURL() {
+  if (!wordmarkURLCache) wordmarkURLCache = renderWordmarkCanvas().toDataURL('image/png');
+  return wordmarkURLCache;
+}
+
+// Renders hero type after the embedded fonts are ready; safe to call early.
+async function initHeroType() {
+  try {
+    await Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 1200))]);
+  } catch { /* fall through with whatever fonts are available */ }
+  // Warm the caches so first paint is already the sprite version.
+  for (let d = 0; d <= 9; d++) numeralURL(String(d), 'gold');
+  numeralURL('2', 'amber'); numeralURL('0', 'amber'); numeralURL('1', 'red');
+  wordmarkURL();
+  heroReady = true;
 }
 
 let blocks = null, petals = null, stars = null, confetti = null, whiteBlock = null;
@@ -525,5 +672,14 @@ export const Sprites = {
   iconURL(name) {
     if (!iconURLCache.has(name)) iconURLCache.set(name, this.icon(name).toDataURL('image/png'));
     return iconURLCache.get(name);
+  },
+  // Hero type: pre-rendered glossy 3D numerals / wordmark (data URLs).
+  get heroReady() { return heroReady; },
+  initHeroType,
+  numeralURL,
+  wordmarkURL,
+  starURL(color = '#ffd21f') {
+    if (!starURLCache.has(color)) starURLCache.set(color, renderStarSprite(color).toDataURL('image/png'));
+    return starURLCache.get(color);
   },
 };

@@ -132,13 +132,78 @@ await test('music: on by default for a fresh profile', async () => {
 await test('music: toggle off is remembered across reload', async () => {
   const { ctx, page } = await newPage();
   await page.click('#btn-play');
-  await page.click('#btn-settings');
+  await page.click('#btn-menu');
+  await page.click('#btn-menu-settings');
   await page.uncheck('#set-music');
   eq(await page.evaluate(() => window.__gb.state().musicOn), false, 'music off after toggle');
   await page.reload();
   await page.waitForSelector('#btn-play');
   eq(await page.evaluate(() => window.__gb.state().musicOn), false, 'music still off after reload');
   await ctx.close();
+});
+
+await test('audio: title sound button shows the mute state and toggles both', async () => {
+  const { ctx, page } = await newPage();
+  // Fresh profile: sound on.
+  eq(await page.locator('#btn-sound').getAttribute('aria-label'), 'Sound on — tap to mute', 'fresh profile shows sound on');
+  // A returning player with both toggles off sees it immediately on the title.
+  await page.evaluate(() => { localStorage.setItem('gb_music', '0'); localStorage.setItem('gb_sfx', '0'); });
+  await page.reload();
+  await page.waitForSelector('#btn-play');
+  eq(await page.locator('#btn-sound').getAttribute('aria-label'), 'Sound off — tap to unmute', 'muted profile shows sound off');
+  // One tap turns both back on, and it sticks across reload.
+  await page.click('#btn-sound');
+  let st = await page.evaluate(() => window.__gb.state());
+  eq(st.musicOn, true, 'music back on');
+  eq(st.sfxMuted, false, 'sfx back on');
+  eq(await page.locator('#btn-sound').getAttribute('aria-label'), 'Sound on — tap to mute', 'button shows sound on again');
+  await page.reload();
+  await page.waitForSelector('#btn-play');
+  eq(await page.evaluate(() => window.__gb.state().musicOn), true, 'music still on after reload');
+  await ctx.close();
+});
+
+await test('audio: unlocks on Play — context running, music schedules, SFX live', async () => {
+  // A second browser WITHOUT --autoplay-policy, so the real user-gesture
+  // path is exercised (the suite browser's flag auto-resumes contexts and
+  // would hide an unlock bug).
+  const browser2 = await chromium.launch({
+    ...(chromiumPath ? { executablePath: chromiumPath } : {}),
+    args: ['--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage'],
+  });
+  try {
+    const ctx2 = await browser2.newContext({ viewport: { width: 390, height: 844 } });
+    const page2 = await ctx2.newPage();
+    page2.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
+    await page2.addInitScript(() => { localStorage.setItem('gb_tut_done', '1'); });
+    await page2.goto(`http://localhost:${PORT}/?test=1`);
+    await page2.waitForSelector('#btn-play');
+    let st = await page2.evaluate(() => window.__gb.state());
+    eq(st.audioState, 'none', 'no audio context before the first gesture');
+    eq(st.musicOn, true, 'music on by default');
+    eq(st.sfxMuted, false, 'sfx on by default');
+    await page2.click('#btn-play');
+    await sleep(1200);
+    st = await page2.evaluate(() => window.__gb.state());
+    eq(st.audioState, 'running', 'context running after the Play tap');
+    ok(st.musicScheduler, 'music scheduler is running');
+    ok(st.musicScheduled > 0, 'music has scheduled notes, got ' + st.musicScheduled);
+    const s1 = st.musicScheduled;
+    await sleep(1500);
+    st = await page2.evaluate(() => window.__gb.state());
+    ok(st.musicScheduled > s1, 'music keeps scheduling (' + s1 + ' -> ' + st.musicScheduled + ')');
+    ok(st.audioTime > 1, 'audio clock is advancing, got ' + st.audioTime);
+    // A real SFX (place a piece) fires without error and leaves audio running.
+    await page2.evaluate(() => { window.__gb.setBoard(['........', '........', '........', '........', '........', '........', '........', '........']); window.__gb.setTray([0, 0, 0]); });
+    await sleep(150);
+    await page2.evaluate(() => window.__gb.place(0, 0, 0));
+    await sleep(300);
+    st = await page2.evaluate(() => window.__gb.state());
+    eq(st.audioState, 'running', 'context still running after an SFX');
+    await ctx2.close();
+  } finally {
+    await browser2.close();
+  }
 });
 
 await test('timer: starts at 120 and ticks down', async () => {
@@ -235,7 +300,7 @@ await test('timer: pauses in menu, resumes after', async () => {
   await page.close();
 });
 
-await test('timer: pauses while tutorial is up, starts after skip', async () => {
+await test('tutorial: pauses while up; skip returns to menu, not into a game', async () => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const page = await ctx.newPage();
   page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
@@ -248,11 +313,110 @@ await test('timer: pauses while tutorial is up, starts after skip', async () => 
   let st = await page.evaluate(() => window.__gb.state());
   approx(st.timeLeft, t0, 0.35, 'frozen during tutorial');
   eq(st.timerStarted, false, 'timer not started during tutorial');
+  eq(st.tutorialStep, 0, 'tutorial on step 0');
   await page.click('#tut-skip');
-  await sleep(1300);
+  await waitFor(async () => page.locator('#title.show').isVisible(), 3000, 'back at the menu after skip');
   st = await page.evaluate(() => window.__gb.state());
-  eq(st.timerStarted, true, 'timer started after tutorial');
-  ok(t0 - st.timeLeft > 0.7, 'ticks after tutorial finishes');
+  eq(st.running, false, 'no game running after skip');
+  eq(st.tutorialStep, -1, 'tutorial closed after skip');
+  eq(await page.evaluate(() => localStorage.getItem('gb_tut_done')), '1', 'skip marks the tutorial done');
+  await ctx.close();
+});
+
+await test('tutorial: shown once — after skip, Play starts a real game', async () => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const page = await ctx.newPage();
+  page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
+  page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
+  await page.goto(`http://localhost:${PORT}/?test=1`);
+  await page.click('#btn-play');
+  await page.waitForSelector('#tut.show');
+  await page.click('#tut-skip');
+  await waitFor(async () => page.locator('#title.show').isVisible(), 3000, 'back at the menu after skip');
+  await page.click('#btn-play');
+  await waitFor(async () => (await page.evaluate(() => window.__gb.state().running)), 5000, 'real game running');
+  eq(await page.locator('#tut.show').count(), 0, 'tutorial not shown again');
+  eq((await page.evaluate(() => window.__gb.state())).tutorialStep, -1, 'no tutorial step in the real game');
+  await ctx.close();
+});
+
+await test('tutorial: scripted walkthrough plays through to a fresh real game', async () => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const page = await ctx.newPage();
+  page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
+  page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
+  await page.goto(`http://localhost:${PORT}/?test=1`);
+  await page.click('#btn-play');
+  await page.waitForSelector('#tut.show');
+  const st0 = await page.evaluate(() => window.__gb.state());
+  eq(st0.tutorialStep, 0, 'tutorial starts on step 0');
+  eq(await page.locator('#tut-text').textContent(), 'Drag this piece onto the highlighted squares.', 'step 1 caption');
+  eq(st0.timerStarted, false, 'timer paused during the walkthrough');
+  // A wrong drop snaps back: board + tray + step unchanged.
+  await dragPiece(page, 0, 0, 0);
+  let st = await page.evaluate(() => window.__gb.state());
+  eq(st.tutorialStep, 0, 'wrong drop does not advance');
+  ok(st.board.every((row) => row.every((v) => !v)), 'wrong drop places nothing');
+  ok(st.tray[0], 'wrong drop keeps the piece in the tray');
+  // The other tray slots are locked: no drag starts from slot 1.
+  await dragPiece(page, 1, 7, 3);
+  st = await page.evaluate(() => window.__gb.state());
+  eq(st.tutorialStep, 0, 'locked slot does not advance');
+  ok(st.board.every((row) => row.every((v) => !v)), 'locked slot places nothing');
+  // Settings and menu stay locked during the walkthrough (the gear is gone:
+  // the hamburger is the single top-right control, and it is locked too).
+  await page.click('#btn-menu');
+  eq(await page.locator('#menu.show').count(), 0, 'menu locked during tutorial');
+  eq(await page.locator('#settings.show').count(), 0, 'settings locked during tutorial');
+  // Step 1: the right drop advances (2-wide piece, aim at the centre of the two highlighted cells).
+  let L = await page.evaluate(() => window.__gb.layout());
+  await dragToPoint(page, 0, L.bx + 4 * L.cell, L.by + 7.5 * L.cell);
+  st = await page.evaluate(() => window.__gb.state());
+  eq(st.tutorialStep, 1, 'correct drop advances to step 1');
+  ok(st.board[7][3] && st.board[7][4], 'step 1 piece placed on the highlighted cells');
+  eq(await page.locator('#tut-text').textContent(), 'Fill a whole row or column to clear it.', 'step 2 caption');
+  // Step 2: complete the row — it clears.
+  await dragPiece(page, 0, 7, 7);
+  st = await page.evaluate(() => window.__gb.state());
+  eq(st.tutorialStep, 2, 'line clear advances to step 2');
+  eq(st.lines, 1, 'one line cleared');
+  // The clear itself is proven by lines === 1. By the time we read state,
+  // the tutorial has already advanced and applied the step-3 board, whose
+  // row 7 holds exactly one pre-filled cell at (7,3) — so the row is NOT
+  // empty anymore; assert the step-3 board instead.
+  eq(st.board[7].filter(Boolean).length, 1, 'step 3 board pre-fills one cell in row 7');
+  ok(st.board[7][3], 'pre-filled cell is (7,3)');
+  eq(await page.locator('#tut-text').textContent(), 'Clear more than one at a time for a combo.', 'step 3 caption');
+  // Step 3: one cell completes a row AND a column — a combo. The TIME bar
+  // is spotlighted for the next (time) step.
+  await dragPiece(page, 0, 6, 3);
+  st = await page.evaluate(() => window.__gb.state());
+  eq(st.tutorialStep, 3, 'combo advances to step 3');
+  eq(st.lines, 3, 'three lines cleared in total');
+  eq(st.combo, 2, 'combo is 2 after the double clear');
+  eq(await page.locator('#tut-text').textContent(), 'You have two minutes. Clearing lines adds time.', 'step 4 caption');
+  eq(await page.locator('#timer-wrap.tut-spot').count(), 1, 'TIME bar spotlighted on the time step');
+  // Step 4: clear a line and watch the TIME bar gain (120 +6 +14 +6 = 146).
+  L = await page.evaluate(() => window.__gb.layout());
+  await dragToPoint(page, 0, L.bx + 6 * L.cell, L.by + 5.5 * L.cell);
+  st = await page.evaluate(() => window.__gb.state());
+  eq(st.tutorialStep, 4, 'time step advances to step 4');
+  approx(st.timeLeft, 146, 0.6, 'timer gained from the clears');
+  eq(await page.locator('#tut-text').textContent(), 'Earn power-ups with a 3-line combo, or every 10 lines.', 'step 5 caption');
+  // Step 5: the dock itself is spotlighted; tap the star slot to finish.
+  eq(await page.locator('#powerups.tut-spot').count(), 1, 'dock spotlighted on the power-up step');
+  ok(await page.locator('#tut-arrow:not(.hidden)').isVisible(), 'arrow points at the dock');
+  eq(st.charges.star, 1, 'scripted Time Star charge in the dock');
+  await page.click('#powerups .pu[data-pu="star"]');
+  ok(await page.locator('#tut-done:not(.hidden)').isVisible(), '"Nice! You\'re ready." moment shows');
+  await sleep(1600);
+  st = await page.evaluate(() => window.__gb.state());
+  eq(st.tutorialStep, -1, 'tutorial closed after finishing');
+  eq(st.running, true, 'fresh real game running after the tutorial');
+  eq(st.timerStarted, true, 'timer started in the real game');
+  ok(st.board.every((row) => row.every((v) => !v)), 'real game starts on a fresh board');
+  eq(st.tray.filter(Boolean).length, 3, 'real game deals a normal 3-piece tray');
+  eq(await page.evaluate(() => localStorage.getItem('gb_tut_done')), '1', 'tutorial marked done');
   await ctx.close();
 });
 
@@ -339,6 +503,40 @@ await test('power-ups: Bomb clears 3x3 via UI tap, charge spent', async () => {
   eq(st.charges.bomb, 0, 'bomb charge spent');
   ok(st.board[3][3] === false && st.board[4][4] === false, '3x3 area cleared');
   ok(st.score >= s0 + 90, 'bomb scored 10/cell x9, got +' + (st.score - s0));
+  await page.close();
+});
+
+await test('feedback 3: arming a power-up never moves the board; one glossy chip, no toast', async () => {
+  const { page } = await newPage();
+  await startClassic(page);
+  await page.evaluate(() => window.__gb.setCharges({ bomb: 1, sweep: 1 }));
+  const before = await page.evaluate(() => window.__gb.layout());
+  await page.click('.pu[data-pu="bomb"]');
+  await sleep(300);
+  // The reserved slot is always in the layout: board geometry identical.
+  const armed = await page.evaluate(() => window.__gb.layout());
+  eq(armed.size, before.size, 'board size unchanged when armed');
+  eq(armed.cell, before.cell, 'board cell unchanged when armed');
+  eq(armed.by, before.by, 'board top unchanged when armed');
+  eq(armed.trayY, before.trayY, 'tray top unchanged when armed');
+  // One descriptor: the chip is visible, the dark toast pill is not.
+  ok(await page.locator('#pu-target:not(.off)').isVisible(), 'descriptor slot is on when armed');
+  eq(await page.locator('#pu-hint').textContent(), 'Tap a cell — 3x3 blast!', 'bomb chip text');
+  ok(await page.locator('#pu-cancel').isVisible(), 'Cancel is visible on the chip');
+  eq(await page.locator('#toast.show').count(), 0, 'no dark toast pill on arm');
+  // Cancel: slot hides (visibility, box kept), geometry still identical.
+  await page.click('#pu-cancel');
+  await sleep(200);
+  eq(await page.locator('#pu-target.off').count(), 1, 'slot off after cancel');
+  const after = await page.evaluate(() => window.__gb.layout());
+  eq(after.size, before.size, 'board size unchanged after cancel');
+  // Sweep arming shows the Row/Column buttons inside the same chip.
+  await page.click('.pu[data-pu="sweep"]');
+  await sleep(300);
+  ok(await page.locator('#pu-mode:not(.hidden)').isVisible(), 'sweep chip shows Row/Column');
+  eq(await page.locator('#pu-hint').textContent(), 'Tap a cell:', 'sweep chip text');
+  const armed2 = await page.evaluate(() => window.__gb.layout());
+  eq(armed2.size, before.size, 'board size unchanged when sweep armed');
   await page.close();
 });
 
@@ -540,17 +738,111 @@ await test('update2 perf: FPS under 4x CPU throttling (DevTools-style)', async (
 });
 
 
-await test('timer: 20s countdown shows big numbers + tick', async () => {
+await test('timer: 20s countdown lives on the timer row + ticks', async () => {
   const { page } = await newPage();
   await startClassic(page);
   await page.evaluate(() => window.__gb.setTimeLeft(20.5));
-  await waitFor(async () => page.locator('#countdown:not(.hidden)').isVisible(), 3000, 'countdown visible');
-  eq(await page.locator('#countdown').textContent(), '20', 'countdown shows 20');
+  await waitFor(async () => page.locator('#countdown.on').isVisible(), 3000, 'countdown visible');
+  eq(await page.locator('#countdown').getAttribute('data-secs'), '20', 'countdown shows 20');
+  eq(await page.locator('#countdown').getAttribute('data-palette'), 'amber', 'amber palette above 5s');
+  // The countdown sits inside the timer row and never overlaps the score.
+  const boxes = await page.evaluate(() => {
+    const r = (id) => { const b = document.getElementById(id).getBoundingClientRect(); return { x: b.x, y: b.y, w: b.width, h: b.height }; };
+    return { cd: r('countdown'), wrap: r('timer-wrap'), score: r('score') };
+  });
+  ok(Math.abs(boxes.cd.y - boxes.wrap.y) < 6, 'countdown vertically centred on the timer row');
+  ok(boxes.cd.x >= boxes.wrap.x && boxes.cd.x + boxes.cd.w <= boxes.wrap.x + boxes.wrap.w, 'countdown inside the timer row');
+  const overlap = boxes.cd.x < boxes.score.x + boxes.score.w && boxes.score.x < boxes.cd.x + boxes.cd.w
+    && boxes.cd.y < boxes.score.y + boxes.score.h && boxes.score.y < boxes.cd.y + boxes.cd.h;
+  ok(!overlap, 'countdown does not overlap the score');
   await sleep(1700);
-  eq(await page.locator('#countdown').textContent(), '19', 'countdown ticks to 19');
+  eq(await page.locator('#countdown').getAttribute('data-secs'), '19', 'countdown ticks to 19');
   const st = await page.evaluate(() => window.__gb.state());
   eq(st.musicUrgency, true, 'urgency on at 20s');
   eq(st.countdownVisible, true, 'countdown visible in state');
+  await page.close();
+});
+
+await test('timer: countdown goes red in the last 5s, hides above 20s', async () => {
+  const { page } = await newPage();
+  await startClassic(page);
+  await page.evaluate(() => window.__gb.setTimeLeft(4.5));
+  await waitFor(async () => page.locator('#countdown.on').isVisible(), 3000, 'countdown visible at 4s');
+  eq(await page.locator('#countdown').getAttribute('data-palette'), 'red', 'red palette at 4s');
+  eq(await page.locator('#countdown.urgent').count(), 1, 'urgent pulse in last 5s');
+  await page.evaluate(() => window.__gb.setTimeLeft(30));
+  await waitFor(async () => (await page.locator('#countdown.on').count()) === 0, 3000, 'countdown hides above 20s');
+  await page.close();
+});
+
+await test('hero type: wordmark sprite on home, gold numerals for score + BEST', async () => {
+  const { page } = await newPage();
+  await page.waitForSelector('#btn-play');
+  await waitFor(async () => (await page.evaluate(() => window.__gb.state().heroTypeReady)), 5000, 'hero type ready');
+  const logo = await page.evaluate(() => {
+    const img = document.querySelector('#logo-img');
+    return img ? { data: img.src.startsWith('data:image/png'), w: img.naturalWidth, h: img.naturalHeight } : null;
+  });
+  ok(logo, 'logo is an <img> sprite');
+  ok(logo.data, 'logo src is a data URL');
+  ok(logo.w > 800, 'wordmark rendered sharp (naturalWidth > 800)');
+  const score = await page.evaluate(() => {
+    const imgs = [...document.querySelectorAll('#score img')];
+    return { n: imgs.length, allData: imgs.every((i) => i.src.startsWith('data:image/png')) };
+  });
+  eq(score.n, 1, 'score 0 renders one numeral img');
+  ok(score.allData, 'score numerals are data URLs');
+  const best = await page.evaluate(() => {
+    const imgs = [...document.querySelectorAll('#best img')];
+    return { n: imgs.length, allData: imgs.every((i) => i.src.startsWith('data:image/png')) };
+  });
+  eq(best.n, 1, 'BEST 0 renders one numeral img');
+  ok(best.allData, 'BEST numerals are data URLs');
+  await page.close();
+});
+
+await test('hero type: score numerals track the score, combo shows a real star', async () => {
+  const { page } = await newPage();
+  await startClassic(page);
+  await setupBoard(page, ROW7, [0, 0, 0]);
+  await page.evaluate(() => window.__gb.place(0, 7, 7)); // 1 line
+  await setupBoard(page, ROW7, [0, 0, 0]);
+  await page.evaluate(() => window.__gb.place(0, 7, 7)); // 2nd line -> combo 2
+  await sleep(1200); // rolling score counter settles
+  const st = await page.evaluate(() => window.__gb.state());
+  eq(st.combo, 2, 'combo 2 after two quick line clears');
+  const score = await page.evaluate(() => {
+    const imgs = [...document.querySelectorAll('#score img')];
+    return { n: imgs.length, allData: imgs.every((i) => i.src.startsWith('data:image/png')) };
+  });
+  eq(score.n, String(st.score).length, 'score numeral count matches the score digits');
+  ok(score.allData, 'score numerals are data URLs');
+  const combo = await page.evaluate(() => {
+    const el = document.querySelector('#combo');
+    return { star: !!el.querySelector('img.combo-star'), digits: el.querySelectorAll('img:not(.combo-star)').length, text: el.textContent };
+  });
+  ok(combo.star, 'combo line has a real 3D star img, not a unicode star');
+  eq(combo.digits, 1, 'combo number renders as a numeral img');
+  ok(combo.text.includes('Combo'), 'combo line still reads "Combo"');
+  await page.close();
+});
+
+await test('hero type: game-over score is gold numerals', async () => {
+  const { page } = await newPage();
+  await startClassic(page);
+  await setupBoard(page, ROW7, [0, 0, 0]);
+  await page.evaluate(() => window.__gb.place(0, 7, 7)); // score > 0
+  await page.evaluate(() => window.__gb.setTimeLeft(0.3));
+  await waitFor(async () => page.locator('#revive.show').isVisible(), 6000, 'revive overlay');
+  await page.click('#btn-norevive');
+  await waitFor(async () => page.locator('#over.show').isVisible(), 5000, 'game-over panel');
+  const st = await page.evaluate(() => window.__gb.state());
+  const ov = await page.evaluate(() => {
+    const imgs = [...document.querySelectorAll('#ov-score img')];
+    return { n: imgs.length, allData: imgs.every((i) => i.src.startsWith('data:image/png')) };
+  });
+  eq(ov.n, String(st.score).length, 'game-over numeral count matches the score digits');
+  ok(ov.allData, 'game-over numerals are data URLs');
   await page.close();
 });
 
@@ -616,6 +908,41 @@ await test('levels: game-over star rating reveals 3 stars for a new best', async
   await page.close();
 });
 
+await test('new best: glossy badge in banner + game-over panel', async () => {
+  const { page } = await newPage();
+  await startClassic(page);
+  await setupBoard(page, ROW7, [0, 0, 0]);
+  await page.evaluate(() => window.__gb.place(0, 7, 7)); // score > 0, fresh profile => new best
+  await page.evaluate(() => window.__gb.setTimeLeft(0.3));
+  await waitFor(async () => page.locator('#revive.show').isVisible(), 6000, 'revive overlay');
+  await page.click('#btn-norevive');
+  // A new best gets its own beat: the banner badge pops over the board
+  // FIRST, then the panel opens with the same badge inside it. The two
+  // must never be on screen together — that stacked two badges.
+  await waitFor(async () => page.locator('#banner-badge:not(.hidden)').isVisible(), 3000, 'banner badge pops first');
+  ok(!(await page.locator('#over.show').isVisible()), 'panel still closed while the badge pops');
+  const bb = await page.evaluate(() => {
+    const el = document.getElementById('banner-badge');
+    const img = el.querySelector('img');
+    return { text: el.textContent.trim(), imgData: img.src.startsWith('data:image/png'), big: el.classList.contains('big') };
+  });
+  eq(bb.text, 'NEW BEST', 'banner badge reads NEW BEST');
+  ok(bb.imgData, 'banner badge star is a data-URL sprite');
+  ok(bb.big, 'banner badge is the big size');
+  await waitFor(async () => page.locator('#over.show').isVisible(), 5000, 'game-over panel');
+  // The banner badge has handed off to the panel badge by now.
+  ok(!(await page.locator('#banner:not(.hidden)').isVisible()), 'banner badge gone once the panel is up');
+  ok(await page.locator('#ov-new.best-badge:not(.hidden)').isVisible(), 'game-over panel badge visible');
+  const ov = await page.evaluate(() => {
+    const el = document.getElementById('ov-new');
+    const img = el.querySelector('img');
+    return { text: el.textContent.trim(), imgData: img.src.startsWith('data:image/png') };
+  });
+  eq(ov.text, 'NEW BEST', 'panel badge reads NEW BEST');
+  ok(ov.imgData, 'panel badge star is a data-URL sprite');
+  await page.close();
+});
+
 await test('power-ups: ring shows 7/10 progress after 7 lines', async () => {
   const { page } = await newPage();
   await startClassic(page);
@@ -660,15 +987,19 @@ await test('ui: display font is Baloo 2 (chunky display type)', async () => {
   const { page } = await newPage();
   await startClassic(page);
   await page.evaluate(() => document.fonts.load('800 32px "Baloo 2"'));
-  const ff = await page.evaluate(() => getComputedStyle(document.getElementById('score')).fontFamily);
-  ok(ff.includes('Baloo 2'), 'score uses Baloo 2, got ' + ff);
+  // The score is now a pre-rendered Baloo 2 sprite (see the hero-type
+  // tests); the live display text left in the HUD is the TIME bar text.
+  const ff = await page.evaluate(() => getComputedStyle(document.getElementById('timer-text')).fontFamily);
+  ok(ff.includes('Baloo 2'), 'timer text uses Baloo 2, got ' + ff);
+  eq(await page.locator('#score img').count(), 1, 'score is a numeral sprite');
   await page.close();
 });
 
 await test('ui: reduced-motion toggle persists and gates the body class', async () => {
   const { ctx, page } = await newPage();
   await startClassic(page);
-  await page.click('#btn-settings');
+  await page.click('#btn-menu');
+  await page.click('#btn-menu-settings');
   await page.check('#set-motion');
   ok(await page.evaluate(() => document.body.classList.contains('reduced-motion')), 'body class set');
   eq(await page.evaluate(() => localStorage.getItem('gb_motion')), '1', 'motion pref stored');
@@ -821,7 +1152,9 @@ await test('autosave: timeout never auto-uses a charge (star kept, revive offere
 
 await test('review fixes: menu buttons have large type (>= 21px)', async () => {
   const { page } = await newPage();
-  const sizes = await page.evaluate(() => [...document.querySelectorAll('.btn')].map((b) => parseFloat(getComputedStyle(b).fontSize)));
+  // Menu buttons are large type; #tut-skip is excluded — it is a small
+  // caption-pill control by design (13px), not a menu button.
+  const sizes = await page.evaluate(() => [...document.querySelectorAll('.btn:not(#tut-skip)')].map((b) => parseFloat(getComputedStyle(b).fontSize)));
   ok(sizes.length >= 8, 'panel buttons present, got ' + sizes.length);
   ok(sizes.every((s) => s >= 21), 'all .btn >= 21px, got ' + sizes.join(','));
   const big = await page.evaluate(() => parseFloat(getComputedStyle(document.getElementById('btn-play')).fontSize));
@@ -839,6 +1172,26 @@ await test('review fixes: no builder copy in the player UI', async () => {
   ok(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{1,2}$/.test(date), 'daily date is friendly, got ' + date);
   eq(await page.evaluate(() => document.querySelector('.ad-body').textContent.trim()), 'Advertisement', 'mock ad shows only Advertisement');
   ok(await page.evaluate(() => document.getElementById('btn-log').classList.contains('hidden')), 'analytics log hidden by default');
+  await page.close();
+});
+
+await test('review fixes: difficulty explainer is gone from the player UI', async () => {
+  const { page } = await newPage();
+  // No entry point anywhere: home panel, settings, or in-game.
+  eq(await page.locator('#btn-how').count(), 0, 'no How-difficulty button on the home panel');
+  await page.click('#btn-title-settings');
+  eq(await page.locator('#btn-set-rules').count(), 0, 'no How-difficulty button in Settings');
+  await page.click('#btn-set-close');
+  await startClassic(page);
+  await page.click('#btn-menu');
+  await waitFor(async () => page.locator('#menu.show').isVisible(), 3000, 'pause menu open');
+  eq(await page.locator('#rules').count(), 0, 'no rules panel in the UI');
+  eq(await page.locator('#menu h2').textContent(), 'Paused', 'menu is the pause menu now');
+  ok(await page.locator('#btn-menu-settings').isVisible(), 'Settings lives inside the pause menu');
+  const menuText = await page.evaluate(() => document.getElementById('menu').innerText);
+  for (const s of ['How difficulty works', 'Ads never', 'tied to ads', 'based on ads']) {
+    ok(!menuText.includes(s), 'no "' + s + '" in the menu');
+  }
   await page.close();
 });
 
@@ -906,13 +1259,17 @@ await test('review fixes 2: daily game-over heading is "Daily challenge over"', 
   await page.close();
 });
 
-await test('review fixes 2: RULES_TEXT describes the LEVEL bar above the TIME bar', async () => {
+await test('review fixes 2: pause menu has one top-right control, Settings inside it', async () => {
   const { page } = await newPage();
-  await page.click('#btn-how');
-  await waitFor(async () => page.locator('#menu.show').isVisible(), 5000, 'rules screen');
-  const txt = await page.locator('#rules').textContent();
-  ok(txt.includes('above the TIME bar'), 'LEVEL bar described as above the TIME bar');
-  ok(!txt.includes('under the timer'), 'no stale "under the timer" wording');
+  // One top-right button in-game: the hamburger only (the gear is gone).
+  eq(await page.locator('#btn-settings').count(), 0, 'no gear button in the HUD');
+  eq(await page.locator('#btn-menu').count(), 1, 'one hamburger in the HUD');
+  await startClassic(page);
+  await page.click('#btn-menu');
+  await waitFor(async () => page.locator('#menu.show').isVisible(), 3000, 'pause menu open');
+  await page.click('#btn-menu-settings');
+  await waitFor(async () => page.locator('#settings.show').isVisible(), 3000, 'settings open from the pause menu');
+  eq(await page.locator('#set-music').isChecked(), true, 'music toggle reflects the on state');
   await page.close();
 });
 
@@ -1034,24 +1391,36 @@ await test('review fixes 3: Sweep + Tray icons are the new action art', async ()
       g.drawImage(img, 0, 0);
       const d = g.getImageData(0, 0, 96, 96).data;
       let white = 0, opaque = 0; const buckets = new Set();
+      let minX = 96, maxX = 0, minY = 96, maxY = 0;
       for (let i = 0; i < d.length; i += 16) { // every 4th pixel
+        const px = (i / 4) % 96, py = Math.floor((i / 4) / 96);
         const r = d[i], gg = d[i + 1], b = d[i + 2], a = d[i + 3];
         if (a < 40) continue;
         opaque++;
+        if (px < minX) minX = px; if (px > maxX) maxX = px;
+        if (py < minY) minY = py; if (py > maxY) maxY = py;
         if (r > 225 && gg > 225 && b > 225) white++;
-        // Bucket saturated block colours (ignore near-white beam/gloss).
+        // Bucket saturated block colours (ignore near-white speculars).
         const mx = Math.max(r, gg, b), mn = Math.min(r, gg, b);
         if (mx - mn > 60 && mx > 120) buckets.add(`${Math.round(r / 64)}-${Math.round(gg / 64)}-${Math.round(b / 64)}`);
       }
-      return { white, opaque, colors: buckets.size };
+      return { white, opaque, colors: buckets.size, cx: (minX + maxX) / 2, cy: (minY + maxY) / 2 };
     }
-    return { sweep: await sample('.pu[data-pu="sweep"] .pu-ring img'), tray: await sample('.pu[data-pu="reshuffle"] .pu-ring img') };
+    return { sweep: await sample('.pu[data-pu="sweep"] .pu-ring img'), tray: await sample('.pu[data-pu="reshuffle"] .pu-ring img'), bomb: await sample('.pu[data-pu="bomb"] .pu-ring img') };
   });
   ok(art.sweep.opaque > 500, 'sweep icon is drawn, got ' + art.sweep.opaque + ' opaque samples');
-  ok(art.sweep.white > 30, 'sweep beam is bright white, got ' + art.sweep.white);
-  ok(art.sweep.colors >= 2, 'sweep shows block colours, got ' + art.sweep.colors);
-  ok(art.tray.opaque > 500, 'tray icon is drawn, got ' + art.tray.opaque + ' opaque samples');
+  ok(art.sweep.colors >= 3, 'sweep shows three big block colours, got ' + art.sweep.colors);
+  // Dylan feedback #2: the big white beam is gone — white is only the small
+  // speculars now (old beam: ~15% white; new render: ~2%).
+  ok(art.sweep.white / Math.max(1, art.sweep.opaque) < 0.08, 'sweep has no big white beam, white share ' + (art.sweep.white / Math.max(1, art.sweep.opaque)).toFixed(3));
+  // The new tray art (3 blocks + a small corner arrow, no arc/star) has
+  // fewer opaque pixels than the old arc version — 400 still proves it is
+  // drawn (500 samples measured).
+  ok(art.tray.opaque > 400, 'tray icon is drawn, got ' + art.tray.opaque + ' opaque samples');
   ok(art.tray.colors >= 3, 'tray shows three block colours, got ' + art.tray.colors);
+  ok(art.tray.white / Math.max(1, art.tray.opaque) < 0.08, 'tray has no big white arc, white share ' + (art.tray.white / Math.max(1, art.tray.opaque)).toFixed(3));
+  // Dylan feedback #2: bomb ball + fuse + spark as one unit, centred.
+  ok(Math.abs(art.bomb.cx - 48) <= 8 && Math.abs(art.bomb.cy - 48) <= 8, 'bomb art is centred in its disc, got (' + art.bomb.cx + ',' + art.bomb.cy + ')');
   await page.close();
 });
 

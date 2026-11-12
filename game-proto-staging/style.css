@@ -22,23 +22,26 @@ html,body{margin:0;height:100%;background:linear-gradient(160deg,#fff8e0 0%,#ffe
 #hud{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 0;gap:8px}
 .hud-box{display:flex;flex-direction:column;align-items:flex-start;min-width:72px}
 .label{font-size:11px;letter-spacing:.14em;color:var(--muted);font-weight:700;font-family:var(--display)}
-#best{font-size:18px;font-weight:800;color:#b97a00;font-family:var(--display)}
+#best{font-size:18px;font-weight:800;color:#b97a00;font-family:var(--display);display:inline-flex;align-items:flex-end}
+#best img{height:18px;width:auto;display:block}
 .hud-score{display:flex;flex-direction:column;align-items:center}
-/* Score: chunky display type, gradient fill, outline, drop shadow. */
-#score{font-family:var(--display);font-size:46px;font-weight:800;line-height:1;letter-spacing:.01em;
-  background:linear-gradient(180deg,#fff 8%,#ffd21f 45%,#ff8a1e 100%);
-  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:#ff8a1e;
-  -webkit-text-stroke:1.5px #7a3c00;text-shadow:0 3px 0 rgba(122,60,0,.35),0 6px 14px rgba(122,60,0,.25);
+/* Score: pre-rendered glossy 3D gold numerals (see js/sprites.js). */
+#score{display:inline-flex;align-items:flex-end;justify-content:center;gap:1px;min-height:46px;
   transition:transform .12s}
+#score img{height:46px;width:auto;display:block}
 #score.bump{transform:scale(1.18)}
 #score.rolling{animation:scorewobble .18s ease-in-out}
 @keyframes scorewobble{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
 .combo{font-size:14px;font-weight:700;color:var(--accent);min-height:16px;font-family:var(--display)}
-.combo::before{content:"★ ";color:var(--gold);-webkit-text-stroke:.5px #b97a00}
+.combo img{height:16px;width:auto;display:inline-block;vertical-align:-3px}
+.combo .combo-star{height:16px;width:16px;vertical-align:-3px}
 .hud-actions{display:flex;gap:6px;min-width:72px;justify-content:flex-end}
 .icon-btn{background:linear-gradient(180deg,#fff,#ffe9b8);border:2px solid #f5c86b;color:var(--ink);width:40px;height:40px;border-radius:14px;font-size:18px;box-shadow:0 4px 0 #d9a441,0 6px 12px rgba(122,60,0,.25),inset 0 2px 0 #fff;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
 .icon-btn:active{transform:translateY(3px);box-shadow:0 1px 0 #d9a441,0 3px 8px rgba(122,60,0,.25),inset 0 2px 0 #fff}
 .icon-btn img{width:26px;height:26px;display:block}
+/* Master sound switch on the title screen (top-right corner, clear of the
+   panel): shows the real mute state at a glance. */
+#title #btn-sound{position:absolute;top:calc(env(safe-area-inset-top,0px) + 12px);right:12px;z-index:2}
 #stage{flex:1;position:relative}
 #cv{position:absolute;inset:0;width:100%;height:100%;display:block}
 #cv-board{position:absolute;inset:0;width:100%;height:100%;display:block}
@@ -61,10 +64,11 @@ html,body{margin:0;height:100%;background:linear-gradient(160deg,#fff8e0 0%,#ffe
 .panel.scroll{max-height:88vh;overflow:auto;text-align:left}
 .panel.scroll::before{display:none}
 @keyframes pop{0%{transform:scale(.8)}60%{transform:scale(1.05)}100%{transform:scale(1)}}
-.logo{font-family:var(--display);font-size:52px;font-weight:800;letter-spacing:-.02em;line-height:1;color:#2f8cff;
-  background:linear-gradient(180deg,#2f8cff,#9b4dff);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
-  -webkit-text-stroke:1px #fff;text-shadow:0 3px 0 rgba(255,255,255,.8),0 6px 14px rgba(47,140,255,.3)}
-.logo span{color:var(--accent);background:linear-gradient(180deg,#ff8fb9,#ff5da2 60%,#e83e8c);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.logo{font-family:var(--display);font-size:52px;font-weight:800;letter-spacing:-.02em;line-height:1;color:#1e63d8;
+  background:linear-gradient(180deg,#1e63d8,#5b21d6);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  -webkit-text-stroke:1.5px #7a3c00;text-shadow:0 2px 0 rgba(122,60,0,.25),0 5px 12px rgba(122,60,0,.3)}
+.logo span{color:var(--accent);background:linear-gradient(180deg,#a313d6,#e0247e 60%,#c40e6e);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.logo img{width:100%;max-width:330px;height:auto;display:block;margin:0 auto;-webkit-text-stroke:0;text-shadow:none}
 .tag{color:var(--ink-soft);margin:8px 0 18px;font-weight:600}
 h2{margin:0 0 10px;font-size:28px;font-family:var(--display);font-weight:800;color:#7a3c00}
 
@@ -80,11 +84,23 @@ h2{margin:0 0 10px;font-size:28px;font-family:var(--display);font-weight:800;col
 .btn.daily img{width:20px;height:20px;vertical-align:-4px}
 .small{font-size:13px;color:var(--muted)}
 .final{display:flex;flex-direction:column;margin:10px 0}
-#ov-score{font-family:var(--display);font-size:56px;font-weight:800;line-height:1;color:#7a3c00}
-.badge{display:inline-block;background:var(--gold);color:#5a3c00;padding:4px 12px;border-radius:999px;font-weight:800;font-family:var(--display);animation:pop .4s cubic-bezier(.2,1.8,.4,1);border:2px solid #f5a623}
+#ov-score{display:flex;justify-content:center;min-height:56px}
+#ov-score img{height:56px;width:auto;display:block}
+/* ---- NEW BEST badge: one glossy-toy gold medallion, used both for the
+   in-game banner moment and the game-over panel (same component, two
+   sizes). Chunky 3D gold, real star, top-left specular, bevel, soft
+   colored shadow; springs in with a bounce + a shine sweep. ---- */
+.best-badge{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(180deg,#fff3b0 0%,#ffd21f 45%,#f5a623 100%);color:#7a3c00;padding:6px 16px 6px 10px;border-radius:999px;font-weight:800;font-family:var(--display);font-size:18px;letter-spacing:.02em;border:3px solid #b97e0e;box-shadow:0 4px 0 rgba(122,60,0,.45),0 10px 22px rgba(245,166,35,.55),inset 0 2px 0 rgba(255,255,255,.85);text-shadow:0 1px 0 rgba(255,255,255,.7);animation:bestpop .6s cubic-bezier(.2,1.8,.4,1);position:relative;overflow:hidden;white-space:nowrap}
+.best-badge img{width:26px;height:26px;flex:none;filter:drop-shadow(0 2px 2px rgba(122,60,0,.4))}
+.best-badge.big{font-size:26px;padding:10px 26px 10px 14px;border-width:4px;gap:10px}
+.best-badge.big img{width:38px;height:38px}
+.best-badge::after{content:"";position:absolute;top:0;bottom:0;width:40%;background:linear-gradient(115deg,transparent,rgba(255,255,255,.75),transparent);transform:translateX(-140%) skewX(-12deg);animation:bestshine 1.1s ease .35s forwards;pointer-events:none}
+@keyframes bestshine{to{transform:translateX(340%) skewX(-12deg)}}
+@keyframes bestpop{0%{transform:scale(.3) rotate(-8deg);opacity:0}55%{transform:scale(1.14) rotate(2deg);opacity:1}75%{transform:scale(.96) rotate(-1deg)}100%{transform:scale(1) rotate(0);opacity:1}}
+body.reduced-motion .best-badge{animation:none}
+body.reduced-motion .best-badge::after{display:none}
 .hidden{display:none!important}
 .ring{width:64px;height:64px;margin:10px auto;border-radius:50%;border:5px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;font-family:var(--display);color:#7a3c00;background:#fff}
-#rules ol{padding-left:20px;margin:0}#rules li{margin:0 0 10px;font-size:14px;line-height:1.4}
 #log{font-size:10px;background:#fff8e0;padding:8px;border-radius:8px;max-height:200px;overflow:auto;white-space:pre-wrap;border:1px solid #f5c86b}
 .ad{background:#000;z-index:50}
 .ad-box{position:relative;width:min(380px,100%);height:min(640px,90vh);background:repeating-linear-gradient(45deg,#222 0 20px,#2a2a2a 20px 40px);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:20px}
@@ -118,23 +134,34 @@ h2{margin:0 0 10px;font-size:28px;font-family:var(--display);font-weight:800;col
 .toggle input:checked{background:#4fd6a8}.toggle input:checked::after{left:23px}
 .tut{position:fixed;inset:0;z-index:20;pointer-events:none;display:none}
 .tut.show{display:block}
-.tut-card{pointer-events:auto;position:absolute;left:50%;top:calc(env(safe-area-inset-top) + 64px);transform:translateX(-50%);width:min(340px,92vw);background:linear-gradient(180deg,#fffdf4,#ffefd0);border:3px solid #f5c86b;border-radius:20px;padding:14px 16px 12px;box-shadow:0 14px 40px rgba(122,60,0,.4);text-align:center;font-size:15px;line-height:1.4;color:var(--ink);animation:pop .3s cubic-bezier(.2,1.6,.4,1)}
-.tut-card b{color:#e83e8c}
-.tut-row{display:flex;gap:8px}.tut-row .btn{margin-top:10px;padding:12px}
-.tut-dots{display:flex;gap:6px;justify-content:center;margin-bottom:8px}
-.tut-dots i{width:8px;height:8px;border-radius:50%;background:rgba(122,60,0,.2)}.tut-dots i.on{background:var(--accent)}
+/* Slim caption pill over the score row (never the board): dots + one short
+   line, high contrast, nothing to tap away. */
+#tut-caption{position:absolute;left:50%;top:calc(env(safe-area-inset-top) + 8px);translate:-50% 0;display:flex;align-items:center;gap:10px;width:min(280px,68vw);background:linear-gradient(180deg,#fffdf4,#ffefd0);border:3px solid #f5c86b;border-radius:999px;padding:8px 12px;box-shadow:0 8px 24px rgba(122,60,0,.35);text-align:left;font-size:14px;line-height:1.3;color:var(--ink);font-weight:600;animation:pop .3s cubic-bezier(.2,1.6,.4,1)}
+.tut-cap-main{flex:1;min-width:0}
+#tut-caption b{color:#e83e8c}
+#tut-dots{display:flex;gap:5px;justify-content:flex-start;margin-bottom:3px}
+#tut-dots i{width:7px;height:7px;border-radius:50%;background:rgba(122,60,0,.2)}
+#tut-dots i.on{background:var(--accent)}
+/* Skip lives INSIDE the caption pill — the old top-right spot sat on top of
+   the settings gear, so tapping the gear skipped the tutorial instead. */
+#tut-skip{position:static;flex:none;width:auto;white-space:nowrap;pointer-events:auto;padding:7px 11px;font-size:13px;margin:0}
 .tut-hand{position:absolute;left:0;top:0;transform:translate(var(--fx),var(--fy));animation:tutdrag 2.2s ease-in-out infinite;display:none;filter:drop-shadow(0 6px 8px rgba(0,0,0,.35))}
 .tut-hand img{width:52px;height:52px;display:block}
 .tut-hand.on{display:block}
 @keyframes tutdrag{0%{transform:translate(var(--fx),var(--fy)) scale(1);opacity:0}10%{opacity:1;transform:translate(var(--fx),var(--fy)) scale(.9)}70%{transform:translate(var(--tx),var(--ty)) scale(.9);opacity:1}85%{transform:translate(var(--tx),var(--ty)) scale(1);opacity:1}100%{transform:translate(var(--tx),var(--ty)) scale(1);opacity:0}}
-.tut-demo{display:none;margin:10px auto 0;gap:3px;justify-content:center}
-.tut-demo.on{display:flex}
-.tut-demo span{width:22px;height:22px;border-radius:6px;background:#2f8cff}
-.tut-demo span.gap{background:rgba(122,60,0,.12);animation:tutfill 2s ease-in-out infinite}
-.tut-demo.clear span{animation:tutbloom 2s ease-in-out infinite}
-.tut-demo.clear span.gap{animation:tutfill 2s ease-in-out infinite,tutbloom 2s ease-in-out infinite}
-@keyframes tutfill{0%,30%{background:rgba(122,60,0,.12)}40%,100%{background:#ff5da2}}
-@keyframes tutbloom{0%,45%{transform:scale(1);opacity:1}55%{transform:scale(1.15);background:#fff}80%,100%{transform:scale(.2);opacity:0}}
+/* Arrow pointing down at the dock slot being explained (power-up step). */
+.tut-arrow{position:absolute;left:0;top:0;font-size:22px;color:#f5a623;text-shadow:0 2px 0 rgba(122,60,0,.5),0 4px 12px rgba(245,166,35,.6);animation:tutbob 1s ease-in-out infinite;transform:translateX(-50%)}
+@keyframes tutbob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(6px)}}
+/* "Nice! You're ready." moment: glossy gold panel, auto-continues. */
+.tut-done{position:absolute;left:50%;top:38%;translate:-50% -50%;display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,#fff3b0,#ffd21f 55%,#f5a623);border:3px solid #b97e0e;border-radius:999px;padding:12px 22px;box-shadow:0 6px 0 rgba(122,60,0,.45),0 14px 30px rgba(245,166,35,.5),inset 0 2px 0 rgba(255,255,255,.85);font-family:var(--display);font-weight:800;font-size:22px;color:#7a3c00;text-shadow:0 1px 0 rgba(255,255,255,.7);animation:bestpop .6s cubic-bezier(.2,1.8,.4,1);white-space:nowrap}
+.tut-done img{width:30px;height:30px}
+.tut-done.hidden{display:none}
+/* Spotlight: the thing being explained glows and pulses (TIME bar on the
+   time step, power-up dock + one slot on the power-up step). */
+.tut-spot{outline:3px solid #ffd21f;outline-offset:3px;border-radius:14px;box-shadow:0 0 0 6px rgba(255,210,31,.35),0 0 24px rgba(255,210,31,.8);animation:tutpulse 1s ease-in-out infinite}
+@keyframes tutpulse{0%,100%{box-shadow:0 0 0 6px rgba(255,210,31,.35),0 0 24px rgba(255,210,31,.8)}50%{box-shadow:0 0 0 10px rgba(255,210,31,.25),0 0 34px rgba(255,210,31,1)}}
+.pu.tut-spot{transform:translateY(-6px) scale(1.08);z-index:2}
+body.reduced-motion .tut-spot,body.reduced-motion .tut-arrow,body.reduced-motion .tut-done{animation:none}
 
 /* ---- Timer bar: its own LABELED row, time printed ON the bar ---- */
 #timer-wrap{display:flex;align-items:center;gap:8px;margin:8px auto 0;width:min(92%,520px);flex:none}
@@ -148,9 +175,17 @@ h2{margin:0 0 10px;font-size:28px;font-family:var(--display);font-weight:800;col
 #timerbar.low{animation:timerpulse .8s ease-in-out infinite}
 @keyframes timerpulse{0%,100%{opacity:1}50%{opacity:.6}}
 /* Big countdown numbers from 20 s. */
-#countdown{position:absolute;left:50%;top:8px;transform:translateX(-50%);z-index:5;font-family:var(--display);font-size:44px;font-weight:800;line-height:1;color:#ff4d4d;-webkit-text-stroke:1.5px #fff;text-shadow:0 3px 0 rgba(122,60,0,.3),0 6px 16px rgba(255,77,77,.5);pointer-events:none}
-#countdown.pop{animation:countpop .5s cubic-bezier(.2,1.8,.4,1)}
-@keyframes countpop{0%{transform:translateX(-50%) scale(1.5);opacity:0}40%{transform:translateX(-50%) scale(1);opacity:1}100%{transform:translateX(-50%) scale(1);opacity:1}}
+/* Countdown: a reserved slot on the timer row (never an overlay). The 3D
+   glossy numerals live in #cd-nums; hidden above 20s or at game over. */
+#countdown{flex:none;width:58px;display:flex;justify-content:center;align-items:center;pointer-events:none;visibility:hidden}
+#countdown.on{visibility:visible}
+#countdown #cd-nums{display:flex;align-items:center}
+#countdown img{height:34px;width:auto;display:block}
+#countdown.pop #cd-nums{animation:countpop .5s cubic-bezier(.2,1.8,.4,1)}
+@keyframes countpop{0%{transform:scale(1.35);opacity:0}40%{transform:scale(1);opacity:1}100%{transform:scale(1);opacity:1}}
+#countdown.urgent #cd-nums{animation:counturgent .5s ease-in-out infinite}
+@keyframes counturgent{0%,100%{transform:scale(1)}50%{transform:scale(1.14)}}
+body.reduced-motion #countdown.pop #cd-nums,body.reduced-motion #countdown.urgent #cd-nums{animation:none}
 
 /* ---- Board glow: warm frame shimmer behind the canvas ---- */
 #board-glow{position:absolute;border-radius:26px;pointer-events:none;z-index:0;
@@ -198,15 +233,24 @@ h2{margin:0 0 10px;font-size:28px;font-family:var(--display);font-weight:800;col
 .pu.armed{background:linear-gradient(180deg,#b8ffe0,#4fd6a8 55%,#37b98c);border-color:#2a9a76}
 .pu.armed .pu-count{background:#1a1440;color:#9dfbd9}
 .pu:disabled{cursor:default}
-#pu-target{display:flex;align-items:center;justify-content:center;gap:8px;padding:4px 12px 8px;font-size:12px;color:var(--ink-soft);flex:none;min-height:26px;font-weight:600}
-#pu-target.hidden{display:none}
-#pu-mode button{background:#fff;border:2px solid #f5c86b;color:var(--ink);border-radius:999px;padding:6px 12px;font-size:14px;font-weight:800;font-family:var(--display)}
-#pu-mode button.on{background:var(--accent2);color:#1a1440;border-color:#2a9a76}
-#pu-cancel{background:#fff;border:2px solid #f5c86b;color:var(--ink);border-radius:999px;padding:6px 12px;font-size:14px;font-weight:800;font-family:var(--display)}
+/* Armed power-up descriptor: a RESERVED slot that is always in the layout
+   (fixed 44px height) so arming/disarming never moves the board — the old
+   in-flow row appeared on arm and shrank the board (it cropped). The chip
+   inside is ONE glossy component: hint + Row/Column + Cancel attached.
+   When nothing is armed the slot stays (content hidden via visibility, so
+   the box keeps its size); only the chip's own content changes. */
+#pu-target{display:flex;align-items:center;justify-content:center;height:36px;flex:none;padding:0 8px}
+#pu-target.off{visibility:hidden}
+#pu-chip{display:flex;align-items:center;gap:6px;max-width:100%;background:linear-gradient(180deg,#fff3b0,#ffd21f 55%,#f5a623);border:2px solid #b97e0e;border-radius:999px;padding:3px 10px;box-shadow:0 3px 0 rgba(122,60,0,.4),0 6px 14px rgba(245,166,35,.45),inset 0 2px 0 rgba(255,255,255,.8)}
+#pu-hint{font-size:14px;font-weight:800;color:#7a3c00;white-space:nowrap;line-height:1.2}
+#pu-mode{display:flex;gap:6px}
+#pu-mode button{background:#fff;border:2px solid #b97e0e;color:#7a3c00;border-radius:999px;padding:2px 9px;font-size:13px;line-height:1.2;font-weight:800;font-family:var(--display)}
+#pu-mode button.on{background:#7a3c00;color:#ffd21f;border-color:#7a3c00}
+#pu-cancel{background:#7a3c00;border:2px solid #7a3c00;color:#ffd21f;border-radius:999px;padding:2px 10px;font-size:13px;line-height:1.2;font-weight:800;font-family:var(--display);white-space:nowrap}
 
 /* ---- Big-moment banner, edge flash, fly layer ---- */
 #banner{position:fixed;left:50%;top:34%;transform:translate(-50%,-50%);z-index:40;pointer-events:none;text-align:center}
-#banner span{display:inline-block;font-family:var(--display);font-size:44px;font-weight:800;letter-spacing:.01em;
+#banner-text{display:inline-block;font-family:var(--display);font-size:44px;font-weight:800;letter-spacing:.01em;
   background:linear-gradient(180deg,#fff 10%,#ffd21f 45%,#ff8a1e 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
   -webkit-text-stroke:2px #7a3c00;text-shadow:0 4px 0 rgba(122,60,0,.35),0 10px 24px rgba(255,140,0,.5);
   animation:bannerpop .6s cubic-bezier(.2,1.8,.4,1)}
