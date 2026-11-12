@@ -1,15 +1,16 @@
-import { N, dealTray, fits, fitsAnywhere, helperEligible, levelFor, TIMER, POWERUPS, timeForClear, powerUpPoints, LEVEL_EVERY } from './difficulty.js';
+import { N, dealTray, fits, fitsAnywhere, helperEligible, levelFor, TIMER, POWERUPS, timeForClear, powerUpPoints, LEVEL_EVERY, rollVariant } from './difficulty.js';
 import { xpForGame, playerLevelFor, playerProgress, nextReward, rewardsForLevel } from './progress.js';
 import { Ads } from './ads.js';
 import { Analytics } from './analytics.js';
 import { Sfx, Music } from './audio.js';
 import { Haptics } from './haptics.js';
 import { COMBO_GRACE, BOARD_CLEAR_BONUS, clearPoints } from './scoring.js';
-import { dailyRng, localDateKey } from './rng.js';
-import { SHAPES, makePiece } from './pieces.js';
+import { dailyRng, localDateKey, hashSeed, makeRng } from './rng.js';
+import { SHAPES, makePiece, setActivePalette } from './pieces.js';
 import { APP_NAME } from './brand.js';
 import { Sprites } from './sprites.js';
-import { Accounts } from './accounts.js';
+import { PACKS, packBySlug, isPackUnlocked, lockText, loadCosmetics, selectedPack, setSelectedPack, toggleFavorite, recolorHex, unlockContext } from './cosmetics.js';
+import { Accounts, authErrorMessage } from './accounts.js';
 import { Leaderboards, mockBoard, sampleRank, boardKey, weekKeyFor, escapeHtml } from './leaderboards.js';
 import { Challenges, challengeRng, challengeStatus, timeLeftText } from './challenges.js';
 import { Store } from './store.js';
@@ -43,82 +44,54 @@ const SAVE_KEY = 'gb_save', SAVE_V = 2;
 const S = {
   board: [], tray: [null, null, null], score: 0, shownScore: 0, combo: 0, sinceClear: 0, maxCombo: 0,
   lines: 0, placed: 0, revived: false, helperAvailable: false, running: false, gamesThisSession: 0,
-  startBest: 0, startedAt: 0, mode: 'classic', dateKey: null, rng: Math.random,
+  startBest: 0, startedAt: 0, mode: 'classic', dateKey: null, rng: Math.random, variant: 'relaxed',
   // Challenge game (Update 3, batch 3): the challenge doc id, the score to
   // beat (the opponent's best so far, 0 if they haven't played), their name,
   // and their score (null until they play). dateKey holds the challenge seed.
   challengeId: null, challengeToBeat: 0, challengeOpponent: '', challengeOpponentScore: null,
   timeLeft: TIMER.start, timerStarted: false, lowTonePlayed: false,
   charges: { bomb: 0, sweep: 0, reshuffle: 0, star: 0 }, earnIdx: 0,
-  // Each held charge has its own 30 s play-time clock (oldest first).
-  // chargeClocks[type] is an array of seconds remaining, parallel to the count.
-  chargeClocks: { bomb: [], sweep: [], reshuffle: [], star: [] },
+  // Charges never expire (Dylan, Nov 12: the 30 s use-it-or-lose-it clock
+  // is removed). A charge stays until the player uses it or it is auto-used
+  // to save a no-moves board. No clocks, no ring drain, no poof.
   autoSaving: false, bannerUntil: 0,
   armed: null, sweepMode: 'row', level: 1,
 };
 const emptyCharges = () => ({ bomb: 0, sweep: 0, reshuffle: 0, star: 0 });
 const totalCharges = () => Object.values(S.charges).reduce((a, b) => a + b, 0);
-function emptyChargeClocks() { return { bomb: [], sweep: [], reshuffle: [], star: [] }; }
-// Use-it-or-lose-it: each charge lasts POWERUPS.chargeLifetimeSeconds of
-// PLAY time. The clock only runs while the game timer runs and no banner is
-// showing (pause/menu/settings/ads/tutorial/level-up banners/background all
-// pause it). Oldest charge first (FIFO per type).
+// Charges persist until used (no expiry). Earn in the fixed rotation,
+// oldest first when a charge is spent (FIFO per type is implicit: counts
+// only, no per-charge state).
 function addCharge(type) {
   S.charges[type]++;
-  S.chargeClocks[type].push(POWERUPS.chargeLifetimeSeconds);
 }
 function spendCharge(type) {
   if (!S.charges[type]) return;
   S.charges[type]--;
-  S.chargeClocks[type].shift();
   renderPowerups();
 }
-// Age every held charge by dt seconds of play time; expired charges fade
-// away with a soft poof and no points. Returns the number that expired.
-function ageChargeClocks(dt) {
-  if (dt <= 0) return 0;
-  let expired = 0;
-  for (const type of Object.keys(S.chargeClocks)) {
-    const clocks = S.chargeClocks[type];
-    for (let i = 0; i < clocks.length; i++) clocks[i] -= dt;
-    while (clocks.length && clocks[0] <= 0) {
-      clocks.shift();
-      S.charges[type]--;
-      expired++;
-      Analytics.log('powerup_expired', { type, remaining: totalCharges() });
-      const btn = document.querySelector(`#powerups .pu[data-pu="${type}"]`);
-      if (btn) { btn.classList.remove('poof'); void btn.offsetWidth; btn.classList.add('poof'); }
-    }
-  }
-  if (expired) renderPowerups();
-  else renderChargeClocks();
-  return expired;
-}
-// Ring + seconds text for held charges (drains as the oldest charge runs
-// down; pulses under 5 s). Only touches the DOM when the shown second changes.
-const lastClockShown = {};
-function renderChargeClocks() {
+// Ring + milestone text for the dock. A held charge shows a full ring (it
+// is ready, no countdown); an empty slot shows the lines-toward-next-charge
+// progress (into/10). Only touches the DOM when the shown value changes.
+const lastRingShown = {};
+function renderChargeRings() {
   document.querySelectorAll('#powerups .pu').forEach((b) => {
     const type = b.dataset.pu, n = S.charges[type] || 0;
     const ring = b.querySelector('.pu-ring'), prog = b.querySelector('.pu-progress');
     if (n > 0) {
-      const secs = Math.max(0, S.chargeClocks[type][0] || 0);
-      const shown = Math.ceil(secs);
-      if (lastClockShown[type] !== shown) {
-        lastClockShown[type] = shown;
-        ring.style.setProperty('--ring', Math.round((secs / POWERUPS.chargeLifetimeSeconds) * 100));
-        prog.textContent = `${shown}s`;
+      if (lastRingShown[type] !== 'held') {
+        lastRingShown[type] = 'held';
+        ring.style.setProperty('--ring', 100);
+        prog.textContent = '';
       }
-      b.classList.toggle('expiring', secs <= 5);
     } else {
       const into = S.lines % POWERUPS.linesMilestone;
       const key = 'm' + into;
-      if (lastClockShown[type] !== key) {
-        lastClockShown[type] = key;
+      if (lastRingShown[type] !== key) {
+        lastRingShown[type] = key;
         ring.style.setProperty('--ring', Math.round((into / POWERUPS.linesMilestone) * 100));
         prog.textContent = `${into}/${POWERUPS.linesMilestone}`;
       }
-      b.classList.remove('expiring');
     }
   });
 }
@@ -240,9 +213,6 @@ function update(dt) {
   fx.glow = Math.max(0, fx.glow - dt * 1.4);
   fx.shimmer = Math.max(0, fx.shimmer - dt * 1.1);
   fx.trayIn = Math.min(1, fx.trayIn + dt * 4);
-  // Charge clocks run only during active play (same pause rules as the
-  // timer, plus while a banner is showing).
-  if (!timerPaused() && Date.now() > S.bannerUntil) ageChargeClocks(dt);
   tickTimer(dt);
   if (S.shownScore < S.score) {
     S.shownScore = Math.min(S.score, S.shownScore + Math.max(1, (S.score - S.shownScore) * dt * 10));
@@ -254,13 +224,15 @@ function update(dt) {
 // ---------- Timer ----------
 // Pauses during the tutorial, pause/menu, settings, game-over/revive/ad
 // overlays, and when the app is backgrounded (rAF also stops when hidden, and
-// dt is clamped, so no time jump on return).
+// dt is clamped, so no time jump on return). 'title' is in the list because
+// Main Menu quits to the title mid-game: the run stays live (S.running is
+// still true) and the timer + charge clocks must freeze until Continue.
 function timerPaused() {
   if (!S.running || !S.timerStarted) return true;
   if (Tutorial.active) return true;
   if (document.hidden) return true;
   if (S.autoSaving) return true; // ~0.6s save freeze
-  for (const id of ['menu', 'settings', 'over', 'revive', 'ad']) if ($(id).classList.contains('show')) return true;
+  for (const id of ['menu', 'settings', 'over', 'revive', 'ad', 'title']) if ($(id).classList.contains('show')) return true;
   return false;
 }
 let lastTickSecond = -1;
@@ -294,9 +266,14 @@ let lastTimerShown = -1;
 function renderTimerBar() {
   const secs = Math.max(0, Math.ceil(S.timeLeft));
   const fill = $('timer-fill');
-  fill.style.width = Math.max(0, Math.min(100, (S.timeLeft / TIMER.cap) * 100)) + '%';
+  // Fill is relative to the START value, not the cap: the bar reads 100% at
+  // game start (120 s) and only starts draining once time drops below
+  // 120 s. Time earned above 120 s (up to the 150 s cap) keeps the bar
+  // full. (Dylan, Nov 12: the bar never looked full at start — 120/150.)
+  fill.style.width = Math.max(0, Math.min(100, (S.timeLeft / TIMER.start) * 100)) + '%';
   // Glossy pill colour shift: green -> yellow -> red as time runs low.
-  const frac = S.timeLeft / TIMER.cap;
+  // The mid threshold is start-relative too, so the bar is half-full at 60 s.
+  const frac = S.timeLeft / TIMER.start;
   fill.classList.toggle('low', S.timeLeft <= TIMER.lowSeconds && S.running);
   fill.classList.toggle('mid', S.timeLeft > TIMER.lowSeconds && frac < 0.5 && S.running);
   $('timerbar').classList.toggle('low', S.timeLeft <= TIMER.lowSeconds && S.running);
@@ -538,10 +515,11 @@ function flyIcon(iconName, fromX, fromY, target, done) {
 
 // ---------- Game flow ----------
 function deal() {
-  const res = dealTray({ board: S.board, placed: S.placed, helperAvailable: S.helperAvailable }, S.rng);
+  const res = dealTray({ board: S.board, placed: S.placed, helperAvailable: S.helperAvailable, variant: S.variant }, S.rng);
   S.tray = res.tray; fx.trayIn = 0;
   if (res.helperUsed) { S.helperAvailable = false; Analytics.log('helper_piece_dealt', { placed: S.placed, level: res.level }); toast('Helper piece this round — look for the gold star!'); }
   if (res.rerolls) Analytics.log('fair_deal_reroll', { rerolls: res.rerolls });
+  return res.helperUsed;
 }
 
 function renderLevel() {
@@ -555,7 +533,7 @@ function renderPlayerCard() {
   $('player-level-label').textContent = `Player Level ${p.level}`;
   $('player-xp-fill').style.width = (p.xpIntoLevel / p.xpForNext) * 100 + '%';
   const nr = nextReward(p.level);
-  $('player-next-reward').textContent = nr ? `Next reward at Level ${nr.level}: ${nr.reward}` : 'All rewards unlocked — superstar!';
+  $('player-next-reward').textContent = nr ? `Next reward at Level ${nr.level}: ${nr.reward}` : 'All level rewards unlocked — superstar!';
 }
 
 function setModeUI() {
@@ -567,6 +545,13 @@ function startGame(mode = 'classic', dateKey = localDateKey()) {
   // Challenge games reuse the seeded deal: dateKey IS the challenge seed,
   // so both players get the same pieces in the same order.
   S.rng = mode === 'daily' ? dailyRng(dateKey) : mode === 'challenge' ? challengeRng(dateKey) : Math.random;
+  // Difficulty variant (Dylan, Nov 12): rolled from a rng SEPARATE from the
+  // deal stream, so the roll never changes the pieces. Daily/challenge use
+  // a seed derived from the date/seed, so every player gets the same variant
+  // that day / for that challenge; classic uses Math.random. Same
+  // distribution for everyone.
+  const variantRng = mode === 'classic' ? Math.random : makeRng(hashSeed('clearbloom-variant-' + dateKey));
+  S.variant = rollVariant(variantRng);
   // A non-challenge game clears the challenge context (a stale challengeId
   // must never ride along into a classic/daily game).
   if (mode !== 'challenge') { S.challengeId = null; S.challengeToBeat = 0; S.challengeOpponent = ''; S.challengeOpponentScore = null; }
@@ -580,15 +565,20 @@ function startGame(mode = 'classic', dateKey = localDateKey()) {
   S.timerStarted = !willTut;
   if (Music.setUrgency) Music.setUrgency(false);
   // Power-ups never carry between games.
-  S.charges = emptyCharges(); S.chargeClocks = emptyChargeClocks(); S.earnIdx = 0; S.armed = null; S.sweepMode = 'row';
+  S.charges = emptyCharges(); S.earnIdx = 0; S.armed = null; S.sweepMode = 'row';
   S.level = 1;
   renderPowerups(); renderTimerBar(); renderLevel();
   // Comeback helper is classic-only; the daily deal is identical for everyone.
   S.helperAvailable = mode === 'classic' && helperEligible(store.history, store.best);
   renderScore(0); renderCombo(); setModeUI();
-  deal();
+  const helperDealt = deal();
   S.gamesThisSession++;
-  Analytics.log('game_start', { game: S.gamesThisSession, mode, best: modeBest(), helper_eligible: S.helperAvailable });
+  Analytics.log('game_start', { game: S.gamesThisSession, mode, best: modeBest(), helper_eligible: S.helperAvailable, variant: S.variant });
+  // The variant is disclosed to the player at the start of every game. If
+  // the helper toast just fired, the variant toast waits for it to clear
+  // instead of overwriting it.
+  const variantMsg = S.variant === 'spicy' ? 'Spicy game — pieces run a touch harder!' : 'Relaxed game — pieces run a touch easier';
+  if (helperDealt) setTimeout(() => toast(variantMsg), 1900); else toast(variantMsg);
   saveGame();
   if (willTut) Tutorial.start();
 }
@@ -600,10 +590,11 @@ function saveGame() {
   const data = {
     v: SAVE_V, mode: S.mode, dateKey: S.dateKey, rngState: S.rng.getState ? S.rng.getState() : null,
     challengeId: S.challengeId, challengeToBeat: S.challengeToBeat, challengeOpponent: S.challengeOpponent, challengeOpponentScore: S.challengeOpponentScore,
+    pack: selectedPack(), // which skin the board colours belong to, so a resume under a different pack can recolor by slot
     board: S.board, tray: S.tray.map((p) => p && { id: p.shape.id, color: p.color, helper: !!p.helper }),
     score: S.score, combo: S.combo, sinceClear: S.sinceClear, maxCombo: S.maxCombo, lines: S.lines, placed: S.placed,
     revived: S.revived, helperAvailable: S.helperAvailable, startBest: S.startBest, elapsed: Date.now() - S.startedAt, savedAt: Date.now(),
-    timeLeft: S.timeLeft, charges: { ...S.charges }, earnIdx: S.earnIdx, chargeClocks: S.chargeClocks,
+    timeLeft: S.timeLeft, charges: { ...S.charges }, earnIdx: S.earnIdx, variant: S.variant,
   };
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch {}
 }
@@ -624,20 +615,26 @@ function restoreGame(d) {
   if (S.rng.setState && d.rngState != null) S.rng.setState(d.rngState);
   S.board = d.board.map((row) => row.map((v) => v || null));
   S.tray = d.tray.map((p) => { if (!p || !SHAPES[p.id]) return null; const pc = makePiece(SHAPES[p.id]); pc.color = p.color; pc.helper = !!p.helper; return pc; });
+  // The save's colours belong to the pack it was saved under. If the
+  // player has since equipped a different pack, recolor board + tray by
+  // colour slot (old saves have no pack field: they predate packs, so
+  // they are Classic Candy). Hexes in no palette are left alone.
+  {
+    const savedPack = packBySlug(d.pack) || packBySlug('classic-candy');
+    const curPack = packBySlug(selectedPack()) || packBySlug('classic-candy');
+    if (savedPack && curPack && savedPack.slug !== curPack.slug) {
+      S.board = S.board.map((row) => row.map((v) => (v ? recolorHex(v, savedPack.colors, curPack.colors) : v)));
+      S.tray = S.tray.map((p) => { if (p) p.color = recolorHex(p.color, savedPack.colors, curPack.colors); return p; });
+    }
+  }
   Object.assign(S, { score: d.score, shownScore: d.score, combo: d.combo, sinceClear: d.sinceClear, maxCombo: d.maxCombo, lines: d.lines, placed: d.placed,
     revived: !!d.revived, helperAvailable: !!d.helperAvailable, startBest: d.startBest, startedAt: Date.now() - (d.elapsed || 0), running: true });
   S.timeLeft = typeof d.timeLeft === 'number' ? d.timeLeft : TIMER.start;
   S.charges = { ...emptyCharges(), ...(d.charges || {}) };
   if (S.charges.petal) { S.charges.star = (S.charges.star || 0) + S.charges.petal; delete S.charges.petal; } // pre-Update-5 saves used "petal"
-  // Restore each charge's remaining clock (missing/short entries get a fresh
-  // 30 s clock; extra entries are dropped).
-  S.chargeClocks = emptyChargeClocks();
-  for (const type of Object.keys(S.chargeClocks)) {
-    const saved = (d.chargeClocks && d.chargeClocks[type]) || [];
-    const n = S.charges[type] || 0;
-    S.chargeClocks[type] = saved.filter((v) => typeof v === 'number' && v > 0).slice(0, n);
-    while (S.chargeClocks[type].length < n) S.chargeClocks[type].push(POWERUPS.chargeLifetimeSeconds);
-  }
+  // The variant is saved with the game; saves from before variants existed
+  // (no variant field) default to Relaxed, the 2-in-3 majority.
+  S.variant = d.variant === 'spicy' ? 'spicy' : 'relaxed';
   S.earnIdx = d.earnIdx || 0; S.armed = null; S.lowTonePlayed = S.timeLeft <= TIMER.lowSeconds;
   S.level = levelFor(S.placed) + 1; renderLevel();
   // A restored game is already past the tutorial (it closed mid-game), so the
@@ -771,8 +768,9 @@ function grantCharge() {
   return true;
 }
 function renderPowerups() {
-  // Ring + seconds/milestone text live in renderChargeClocks (drains while a
-  // charge is held, milestone progress while the slot is empty).
+  // Ring + milestone text live in renderChargeRings (full ring while a
+  // charge is held, milestone progress while the slot is empty). Charges
+  // never expire, so there is no seconds text and no drain.
   document.querySelectorAll('#powerups .pu').forEach((b) => {
     const type = b.dataset.pu, n = S.charges[type] || 0;
     const countEl = b.querySelector('.pu-count');
@@ -784,7 +782,7 @@ function renderPowerups() {
     b.classList.toggle('armed', S.armed === type);
     b.disabled = n === 0 && S.armed !== type;
   });
-  renderChargeClocks();
+  renderChargeRings();
   // The reserved slot stays in the layout whether armed or not (class
   // 'off' hides the chip via visibility, so the box keeps its size and the
   // board never moves). Never display:none here — that was the arm-crop.
@@ -1276,7 +1274,7 @@ function refreshAccountUI() {
   if (subEl) subEl.textContent = st.signedIn
     ? (st.provider === 'google' ? 'Signed in with Google'
        : st.provider === 'facebook' ? 'Signed in with Facebook'
-       : 'Signed in — no account needed')
+       : 'Signed in with a private profile')
     : 'Progress saved on this device only';
   if (codeEl) codeEl.textContent = st.friendCode || '------';
   const input = $('acct-name-input');
@@ -1287,8 +1285,9 @@ function refreshAccountUI() {
   const setBtn = (id, enabled, title) => { const b = $(id); if (!b) return; b.disabled = !enabled; if (title !== undefined) b.title = title; };
   setBtn('btn-sign-google', cfg && !st.signedIn, cfg ? '' : "Sign-in isn't set up yet — keep playing as a guest");
   // Facebook is built but disabled until the provider exists in the console.
+  // The button says so on its face ("coming soon") — the title tooltip
+  // alone is invisible on touch screens.
   setBtn('btn-sign-facebook', false, "Facebook sign-in isn't set up yet");
-  setBtn('btn-sign-anon', cfg && !st.signedIn, cfg ? '' : "Sign-in isn't set up yet — keep playing as a guest");
   const out = $('btn-sign-out');
   if (out) out.classList.toggle('hidden', !st.signedIn);
   const msg = $('acct-msg');
@@ -1302,16 +1301,35 @@ function acctMsg(text, isError) {
   msg.classList.toggle('error', !!isError);
   if (text) { msg.dataset.sticky = '1'; } else { delete msg.dataset.sticky; }
 }
-function openAccount() { refreshAccountUI(); acctMsg(''); show('account', true); }
+function openAccount() {
+  refreshAccountUI();
+  acctMsg('');
+  // A redirect sign-in (iOS) that failed on the way back says so here
+  // instead of failing silently — the player lands back in this panel.
+  const st = Accounts.debugState();
+  if (st.redirectError) acctMsg(authErrorMessage(st.redirectError), true);
+  show('account', true);
+}
 $('btn-account').onclick = openAccount;
 $('btn-set-account').onclick = () => { show('settings', false); openAccount(); };
 $('btn-acct-close').onclick = () => show('account', false);
+// Save is the one clear path to play without an account (Dylan, Nov 12):
+// it saves the typed name to the guest profile and closes the panel so
+// the player is back in the game — no separate "play signed in with no
+// account" button, no jargon. Anonymous sign-in still exists in code
+// (Accounts.signInAnonymous + the __gb hook) but has no button; Google
+// is the only sign-in shown until Facebook is configured.
 $('btn-name-save').onclick = () => {
   const input = $('acct-name-input');
   const res = Accounts.setDisplayName(input ? input.value : '');
-  if (res.ok) { toast('Name saved'); acctMsg(''); refreshAccountUI(); }
+  if (res.ok) { toast('Name saved'); refreshAccountUI(); show('account', false); }
   else acctMsg(Accounts.nameRejectMessage(res.reason), true);
 };
+// iOS keyboard Return must save too — before this fix it did nothing,
+// so a player who typed their name and hit Return saw no save at all.
+$('acct-name-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); $('btn-name-save').click(); }
+});
 $('btn-copy-code').onclick = async () => {
   const code = Accounts.friendCode;
   if (!code) return;
@@ -1325,13 +1343,13 @@ $('btn-copy-code').onclick = async () => {
 $('set-hide-global').onchange = (e) => { Accounts.setHideFromGlobal(e.target.checked).catch(() => {}); };
 $('btn-sign-google').onclick = async () => {
   const res = await Accounts.signInGoogle();
-  if (res.ok) { toast('Signed in'); acctMsg(''); refreshAccountUI(); }
-  else acctMsg(res.reason === 'not-configured' ? "Sign-in isn't set up yet — the game is still being set up. Keep playing as a guest." : "Couldn't sign in — try again.", true);
-};
-$('btn-sign-anon').onclick = async () => {
-  const res = await Accounts.signInAnonymous();
-  if (res.ok) { toast('Signed in'); acctMsg(''); refreshAccountUI(); }
-  else acctMsg(res.reason === 'not-configured' ? "Sign-in isn't set up yet — the game is still being set up. Keep playing as a guest." : "Couldn't sign in — try again.", true);
+  if (res.ok) {
+    // Redirect flow (iOS): the page is about to navigate to Google —
+    // say so instead of claiming "Signed in" before it happens.
+    if (res.reason === 'redirect-started') { acctMsg('Opening Google sign-in…', false); return; }
+    toast('Signed in'); acctMsg(''); refreshAccountUI();
+  }
+  else acctMsg(authErrorMessage(res.reason), true);
 };
 $('btn-sign-out').onclick = async () => {
   await Accounts.signOut();
@@ -1601,6 +1619,87 @@ $('btn-restore').onclick = () => {
   if (res.reason === 'test-only') toast('Nothing to restore — purchases are not live yet');
   else toast("Couldn't check purchases right now");
 };
+
+// ---- Skins (cosmetics): the 10 packs from js/cosmetics.js ----
+// Same 37 shapes, same game — only the blocks' material + palette
+// change. Applying a pack re-renders the block sprites and recolors the
+// live board + tray by colour slot (same index, new palette), so a game
+// in progress keeps its pieces. Locked packs are never claimable here:
+// applyPack refuses them, and the picker shows the real requirement.
+function cosmeticsCtx() { return unlockContext(store.xp); }
+function applyPack(slug, { preview = false } = {}) {
+  const pack = packBySlug(slug);
+  if (!pack) return false;
+  // Preview is the test/screenshot hook only — it never persists and
+  // never unlocks. The real path enforces the unlock, always.
+  if (!preview && !isPackUnlocked(slug, cosmeticsCtx())) return false;
+  const from = packBySlug(selectedPack());
+  const fromPal = from ? from.colors : null;
+  if (!preview) setSelectedPack(slug);
+  setActivePalette(pack.colors);
+  Sprites.setPack(pack);
+  if (fromPal) {
+    S.board = S.board.map((row) => row.map((v) => (v ? recolorHex(v, fromPal, pack.colors) : v)));
+    S.tray = S.tray.map((p) => { if (p) p.color = recolorHex(p.color, fromPal, pack.colors); return p; });
+  }
+  renderSkins();
+  return true;
+}
+function skinCardHTML(pack, ctx, equipped) {
+  const unlocked = isPackUnlocked(pack.slug, ctx);
+  const favs = loadCosmetics().favorites;
+  const isFav = favs.includes(pack.slug);
+  const preview = Sprites.packPreview(pack);
+  const state = equipped
+    ? '<span class="skin-lock" style="color:#2f8cff">Equipped</span>'
+    : unlocked
+      ? `<button class="btn ghost sm" data-use="${escapeHtml(pack.slug)}">Use</button>`
+      : `<div class="skin-lock">🔒 ${escapeHtml(lockText(pack))}</div>`;
+  const buy = !unlocked && (pack.unlock.kind === 'iap' || pack.unlock.kind === 'supporter')
+    ? `<button class="btn ghost sm" data-buy-pack="${escapeHtml(pack.unlock.product)}">${escapeHtml(pack.unlock.price)}</button>` : '';
+  return `<div class="skin-card${equipped ? ' equipped' : ''}${unlocked ? '' : ' locked'}"><span class="skin-preview"><img src="${preview}" alt="${escapeHtml(pack.name)} preview"></span><div class="skin-info"><div class="skin-name">${escapeHtml(pack.name)}<span class="skin-badge">${escapeHtml(pack.badge)}</span></div><div class="skin-note">${escapeHtml(pack.note)}</div>${state}${buy}</div><button class="skin-fav${isFav ? ' on' : ''}" data-fav="${escapeHtml(pack.slug)}" ${unlocked ? '' : 'disabled title="Unlock this skin first — favorites are for skins you own"'} aria-label="${isFav ? 'Remove from favorites' : 'Add to favorites'}">${isFav ? '★' : '☆'}</button></div>`;
+}
+function renderSkins() {
+  const list = $('skins-list'), favEl = $('skins-fav');
+  if (!list || !favEl) return;
+  const ctx = cosmeticsCtx();
+  const equipped = selectedPack();
+  const favs = loadCosmetics().favorites.filter((s) => isPackUnlocked(s, ctx));
+  favEl.innerHTML = favs.length
+    ? favs.map((s) => skinCardHTML(packBySlug(s), ctx, s === equipped)).join('')
+    : '<p class="skins-empty">No favorites yet — tap ☆ on a skin you own to pin it here.</p>';
+  list.innerHTML = PACKS.map((p) => skinCardHTML(p, ctx, p.slug === equipped)).join('');
+}
+function openSkins() {
+  renderSkins();
+  show('skins', true);
+}
+$('btn-skins').onclick = () => openSkins();
+$('btn-skins-close').onclick = () => show('skins', false);
+function skinsClick(e) {
+  const use = e.target.closest ? e.target.closest('[data-use]') : null;
+  if (use) {
+    const pack = packBySlug(use.dataset.use);
+    if (pack && applyPack(pack.slug)) toast(`${pack.name} equipped`);
+    else toast("That skin isn't unlocked yet");
+    return;
+  }
+  const fav = e.target.closest ? e.target.closest('[data-fav]') : null;
+  if (fav && !fav.disabled) {
+    const res = toggleFavorite(fav.dataset.fav, cosmeticsCtx());
+    if (!res.ok) toast('Unlock this skin first — favorites are for skins you own');
+    else { toast(res.favorited ? 'Added to favorites' : 'Removed from favorites'); renderSkins(); }
+    return;
+  }
+  const buy = e.target.closest ? e.target.closest('[data-buy-pack]') : null;
+  if (buy) {
+    const res = Store.buy(buy.dataset.buyPack);
+    if (res.reason === 'test-only') toast('Test product — purchases are not live yet');
+    else toast("Couldn't find that product");
+  }
+}
+$('skins-list').onclick = skinsClick;
+$('skins-fav').onclick = skinsClick;
 // Invite link opened? Add the friend (the link is the invitation) and
 // clean the params so a reload does not re-add.
 function checkInviteLink() {
@@ -1620,6 +1719,12 @@ $('btn-menu').onclick = () => { if (Tutorial.active) return; show('menu', true);
 // the hamburger is the single top-right control).
 $('btn-menu-settings').onclick = () => { show('menu', false); syncSettings(); show('settings', true); };
 $('btn-resume').onclick = () => show('menu', false);
+// Main Menu (Dylan, Nov 12 ~3:05 PM): quit to the title WITHOUT ending the
+// run — save first, so Play offers "Continue" and the game resumes exactly
+// where it left off. No score is submitted on quit (scores submit on game
+// over only) and the run is not abandoned: S.running stays true and the
+// timer simply pauses while the title is shown (see timerPaused).
+$('btn-menu-home').onclick = () => { saveGame(); show('menu', false); refreshTitle(); show('title', true); Analytics.log('game_quit_to_menu', { score: S.score, mode: S.mode }); };
 $('btn-restart').onclick = () => { show('menu', false); if (S.running) { S.running = false; Analytics.log('game_abandon', { score: S.score }); } clearSave(); startGame(S.mode === 'daily' ? 'daily' : S.mode === 'challenge' ? 'challenge' : 'classic', S.dateKey || localDateKey()); };
 $('btn-log').onclick = () => { const el = $('log'); el.classList.toggle('hidden'); el.textContent = Analytics.all().slice(-60).map((e) => JSON.stringify(e)).join('\n'); };
 // Hidden debug path only: the analytics log stays out of the player UI
@@ -1633,7 +1738,15 @@ $('pu-cancel').onclick = cancelArmed;
 $('pu-mode-row-btn').onclick = () => { S.sweepMode = 'row'; renderPowerups(); };
 $('pu-mode-col-btn').onclick = () => { S.sweepMode = 'col'; renderPowerups(); };
 renderPowerups(); renderTimerBar();
-$('btn-again').onclick = async () => { show('over', false); await Ads.maybeInterstitialAtBreak(S.gamesThisSession); startGame(S.mode === 'daily' ? 'daily' : S.mode === 'challenge' ? 'challenge' : 'classic', S.mode === 'classic' ? localDateKey() : S.dateKey); };
+$('btn-again').onclick = async () => {
+  show('over', false);
+  // Play Again must never hang on an ad: the interstitial is a break-time
+  // extra, not a gate. If it does not resolve in 10 s (a stuck provider, a
+  // throttled timer), start the fresh game anyway — the ad, if it is still
+  // showing, stays closable on top, and the timer is paused while it shows.
+  await Promise.race([Ads.maybeInterstitialAtBreak(S.gamesThisSession), sleepMs(10000)]);
+  startGame(S.mode === 'daily' ? 'daily' : S.mode === 'challenge' ? 'challenge' : 'classic', S.mode === 'classic' ? localDateKey() : S.dateKey);
+};
 $('btn-over-boards').onclick = () => { show('over', false); openBoards(); };
 $('btn-home').onclick = () => { show('over', false); refreshTitle(); show('title', true); };
 
@@ -1693,7 +1806,7 @@ const Tutorial = {
     // Fresh tutorial session: reset the in-progress game, then step 0.
     S.board = tutBoard(TUT_EMPTY);
     S.score = 0; S.shownScore = 0; S.combo = 0; S.sinceClear = 0; S.maxCombo = 0; S.lines = 0; S.placed = 0;
-    S.charges = emptyCharges(); S.chargeClocks = emptyChargeClocks(); S.earnIdx = 0; S.armed = null; S.sweepMode = 'row';
+    S.charges = emptyCharges(); S.earnIdx = 0; S.armed = null; S.sweepMode = 'row';
     S.level = 1; S.timeLeft = TIMER.start; S.lowTonePlayed = false; lastTickSecond = -1;
     $('countdown').classList.remove('on'); lastCdShown = '';
     S.timerStarted = false;
@@ -1710,7 +1823,6 @@ const Tutorial = {
     if (st.tray) S.tray = st.tray.map((i) => (i == null ? null : makePiece(SHAPES[i])));
     if (st.grant) {
       S.charges[st.grant] = (S.charges[st.grant] || 0) + 1;
-      S.chargeClocks[st.grant] = [POWERUPS.chargeLifetimeSeconds];
       renderPowerups();
     }
     $('tut-text').textContent = st.text;
@@ -1738,8 +1850,12 @@ const Tutorial = {
       const br = btn.getBoundingClientRect();
       const arrow = $('tut-arrow');
       arrow.style.left = (br.left + br.width / 2) + 'px';
-      arrow.style.top = (br.top - 26) + 'px';
       arrow.classList.remove('hidden');
+      // Position from the arrow's own measured height (64px font): its tip
+      // sits 16px above the slot at rest, 6px at the bottom of the bob, so
+      // it never touches the slot. A fixed offset would drift with the
+      // font size and could cover the tray or the slot.
+      arrow.style.top = (br.top - arrow.offsetHeight - 16) + 'px';
     }
   },
   clearSpotlights() {
@@ -1820,6 +1936,16 @@ $('tut-skip').onclick = () => Tutorial.finish('skipped');
 
 // ---------- Lifecycle: save on hide, pause music ----------
 document.addEventListener('visibilitychange', () => { if (document.hidden) { saveGame(); Music.pause(); } else Music.resume(); });
+// Menu music: iOS Safari + Chrome block audio before any user gesture, so
+// there is no true zero-tap autoplay on load. Instead the music starts on
+// the FIRST tap/keypress anywhere on the page — including the title
+// screen, not just Play — and keeps playing across menu and game. No
+// AudioContext is created before that gesture (the suite asserts
+// audioState === 'none' pre-gesture); Sfx.unlock() both creates it and
+// starts the music when it is on.
+const unlockAudioOnce = () => Sfx.unlock();
+document.addEventListener('pointerdown', unlockAudioOnce, { once: true, capture: true });
+document.addEventListener('keydown', unlockAudioOnce, { once: true, capture: true });
 window.addEventListener('pagehide', saveGame);
 
 // ---------- Back button (Android, via native.js): close overlays, else pause ----------
@@ -1835,7 +1961,10 @@ window.__gbBack = () => {
 };
 
 S.board = emptyBoard();
-Sprites.init();
+// Equipped cosmetics pack first: new deals + block sprites use its
+// palette + material from the first frame (not the classic default).
+setActivePalette((packBySlug(selectedPack()) || packBySlug('classic-candy')).colors);
+Sprites.init(packBySlug(selectedPack()) || packBySlug('classic-candy'));
 // ---------- Hero type: glossy 3D numerals (pre-rendered sprites) ----------
 // Score / BEST / combo / game-over score / countdown are <img> sprites once
 // the hero type is ready; before that they show plain text (same value). The
@@ -1915,7 +2044,7 @@ else if ('serviceWorker' in navigator && location.protocol === 'https:') navigat
 // ---------- Test hooks (read-only layout + state; mutation only with ?test=1) ----------
 window.__gb = {
   layout: () => ({ ...L }),
-  state: () => ({ board: S.board.map((r) => r.map(Boolean)), tray: S.tray.map((p) => p && { id: p.shape.id, cells: p.shape.cells, w: p.shape.w, h: p.shape.h, helper: p.helper }), score: S.score, combo: S.combo, lines: S.lines, running: S.running, placed: S.placed, revived: S.revived, mode: S.mode, dateKey: S.dateKey, helperAvailable: S.helperAvailable, tutorialStep: Tutorial.step, timeLeft: Math.round(S.timeLeft * 10) / 10, timerStarted: S.timerStarted, charges: { ...S.charges }, chargeSecs: Object.fromEntries(Object.entries(S.chargeClocks).map(([t, arr]) => [t, arr.length ? Math.round(arr[0] * 10) / 10 : null])), autoSaving: S.autoSaving, armed: S.armed, sweepMode: S.sweepMode, musicOn: Music.on, musicBpm: Music.bpm, musicLoopSeconds: Music.loopSeconds, musicLoopEvents: Music.loopEvents, musicUrgency: Music.urgency, audioState: Music.ctxState, audioTime: Music.ctxTime, musicScheduled: Music.scheduled, musicScheduler: Music.schedulerOn, sfxMuted: Sfx.muted, spritesReady: Sprites.ready, timerPaused: timerPaused(), level: S.level, xp: store.xp, playerLevel: playerLevelFor(store.xp), reducedMotion: reducedMotion(), countdownVisible: $('countdown').classList.contains('on'), countdownText: $('countdown').dataset.secs || '', heroTypeReady: Sprites.heroReady,
+  state: () => ({ board: S.board.map((r) => r.map(Boolean)), tray: S.tray.map((p) => p && { id: p.shape.id, cells: p.shape.cells, w: p.shape.w, h: p.shape.h, helper: p.helper }), score: S.score, combo: S.combo, lines: S.lines, running: S.running, placed: S.placed, revived: S.revived, mode: S.mode, dateKey: S.dateKey, helperAvailable: S.helperAvailable, tutorialStep: Tutorial.step, timeLeft: Math.round(S.timeLeft * 10) / 10, timerStarted: S.timerStarted, charges: { ...S.charges }, variant: S.variant, autoSaving: S.autoSaving, armed: S.armed, sweepMode: S.sweepMode, musicOn: Music.on, musicBpm: Music.bpm, musicLoopSeconds: Music.loopSeconds, musicLoopEvents: Music.loopEvents, musicUrgency: Music.urgency, audioState: Music.ctxState, audioTime: Music.ctxTime, musicScheduled: Music.scheduled, musicScheduler: Music.schedulerOn, musicGain: Music.busGain, musicBaseGain: Music.baseGain, sfxMuted: Sfx.muted, spritesReady: Sprites.ready, timerPaused: timerPaused(), level: S.level, xp: store.xp, playerLevel: playerLevelFor(store.xp), pack: selectedPack(), packMaterial: Sprites.packMaterial, reducedMotion: reducedMotion(), countdownVisible: $('countdown').classList.contains('on'), countdownText: $('countdown').dataset.secs || '', heroTypeReady: Sprites.heroReady,
     layout: { size: L.size, cell: Math.round(L.cell * 10) / 10, bx: Math.round(L.bx * 10) / 10, by: Math.round(L.by * 10) / 10, trayX: Math.round(L.trayX * 10) / 10, trayY: Math.round(L.trayY * 10) / 10, trayH: Math.round(L.trayH * 10) / 10, slotW: Math.round(L.slotW * 10) / 10, trayCellMax: Math.round(L.trayCell * 10) / 10, stageW: L.w, stageH: L.h },
     dragScale: drag ? Math.round(drag.scale * 100) / 100 : null, dragStartScale: drag ? Math.round(drag.startScale * 100) / 100 : null }),
   // Accounts (Update 3, batch 1): read-only state for tests.
@@ -1979,6 +2108,10 @@ if (new URLSearchParams(location.search).has('test')) {
   window.__gb.buyProduct = (id) => Store.buy(id);
   window.__gb.restorePurchases = () => Store.restore();
   window.__gb.showStore = () => openStore();
+  window.__gb.applyPack = (slug) => applyPack(slug);
+  window.__gb.previewPack = (slug) => applyPack(slug, { preview: true });
+  window.__gb.showSkins = () => openSkins();
+  window.__gb.cosmeticsState = () => ({ selected: selectedPack(), favorites: loadCosmetics().favorites, owned: loadCosmetics().owned, packs: PACKS.map((p) => ({ slug: p.slug, name: p.name, unlocked: isPackUnlocked(p.slug, cosmeticsCtx()) })) });
   window.__gb.setBoard = (rows) => { S.board = rows.map((row) => [...row].map((ch) => (ch === '#' ? '#5aa2ff' : null))); };
   window.__gb.startDaily = (k) => { show('title', false); clearSave(); startGame('daily', k); };
   window.__gb.startGame = (mode, k) => { show('title', false); clearSave(); startGame(mode || 'classic', k || localDateKey()); };
@@ -1987,14 +2120,11 @@ if (new URLSearchParams(location.search).has('test')) {
   window.__gb.setTimeLeft = (s) => { S.timeLeft = s; S.lowTonePlayed = s <= TIMER.lowSeconds; renderTimerBar(); };
   window.__gb.setCharges = (c) => {
     S.charges = { ...emptyCharges(), ...c };
-    // Test hook: fresh 30 s clocks for every charge set.
-    S.chargeClocks = emptyChargeClocks();
-    for (const type of Object.keys(S.charges)) for (let i = 0; i < (S.charges[type] || 0); i++) S.chargeClocks[type].push(POWERUPS.chargeLifetimeSeconds);
     renderPowerups();
   };
-  // Test hook: advance every held charge's clock by sec seconds of play
-  // time (processes expiries). Deterministic; does not touch the game timer.
-  window.__gb.fastForwardCharges = (sec) => ageChargeClocks(sec);
+  // Test hook: the Ads module, so tests can swap in a hanging provider and
+  // prove Play Again never waits on an ad forever.
+  window.__gb.ads = Ads;
   // Test hook: run the no-moves check (and any auto-save it triggers).
   window.__gb.checkGameOver = () => checkGameOver();
   window.__gb.place = (slot, r, c) => place(slot, r, c);

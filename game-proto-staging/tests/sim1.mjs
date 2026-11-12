@@ -1,12 +1,15 @@
 // Median-game estimate for the timer rules (Design Update 5: 120 s start,
-// 150 s cap, level-up +5 s per 15 placements, 30 s charge expiry,
-// auto-save on no-moves: Reshuffle, then Bomb best 3x3, then Sweep fullest
-// line. Timeout never auto-uses a charge, so it still ends the game.)
+// 150 s cap, level-up +5 s per 15 placements, charges persist until used
+// (30 s expiry REMOVED, Dylan Nov 12), auto-save on no-moves: Reshuffle,
+// then Bomb best 3x3, then Sweep fullest line. Timeout never auto-uses a
+// charge, so it still ends the game.)
 // Greedy simulated player: each placement takes ~3s of human time; each
 // placed piece goes to the spot maximizing lines cleared, then minimizing
 // board fill. Game ends on timeout OR no-moves-left, whichever comes first.
 // Uses the real difficulty.js dealTray + scoring.js clearPoints + TIMER.
-import { N, dealTray, fits, fitsAnywhere, TIMER, timeForClear, levelFor, LEVEL_EVERY, POWERUPS } from '../js/difficulty.js';
+// Variant: pass CB_VARIANT=relaxed|spicy|standard (default: all three plus
+// the 2/3-relaxed + 1/3-spicy mix Dylan ordered, each 300 games).
+import { N, dealTray, fits, fitsAnywhere, TIMER, timeForClear, levelFor, LEVEL_EVERY, POWERUPS, rollVariant } from '../js/difficulty.js';
 import { clearPoints } from '../js/scoring.js';
 
 function bestSpot(board, shape) {
@@ -66,39 +69,33 @@ function findSweepSave(board, tray) {
   for (let i = 0; i < N; i++) consider('col', i);
   return best;
 }
-function playGame(seed) {
+function playGame(seed, variant) {
   let rngState = seed >>> 0;
   const rng = () => { rngState = (rngState + 0x6d2b79f5) >>> 0; let t = rngState; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   let board = Array.from({ length: N }, () => Array(N).fill(null));
   let timeLeft = TIMER.start, placed = 0, lines = 0, combo = 0, sinceClear = 0, score = 0;
-  let tray = dealTray({ board, placed, helperAvailable: false }, rng).tray;
+  let tray = dealTray({ board, placed, helperAvailable: false, variant }, rng).tray;
   let elapsed = 0;
-  // Power-up charges with 30 s play-time clocks (oldest first), same earn
-  // rules as the game: 1 per 3-line combo, 1 per 10 lines, max 3, fixed
-  // rotation bomb -> sweep -> reshuffle -> star. The greedy sim never uses
-  // power-ups manually; charges only get auto-used on no-moves, or expire.
+  // Power-up charges persist until used (no expiry clocks since Nov 12).
+  // Same earn rules as the game: 1 per 3-line combo, 1 per 10 lines,
+  // max 3, fixed rotation bomb -> sweep -> reshuffle -> star. The greedy
+  // sim never uses power-ups manually; charges only get auto-used on
+  // no-moves.
   const charges = { bomb: 0, sweep: 0, reshuffle: 0, star: 0 };
-  const clocks = { bomb: [], sweep: [], reshuffle: [], star: [] };
-  let earnIdx = 0, saves = { reshuffle: 0, bomb: 0, sweep: 0 }, expiries = 0;
+  let earnIdx = 0, saves = { reshuffle: 0, bomb: 0, sweep: 0 };
   const totalCharges = () => charges.bomb + charges.sweep + charges.reshuffle + charges.star;
   const grant = () => {
     if (totalCharges() >= POWERUPS.maxCharges) return;
     const type = POWERUPS.earnOrder[earnIdx++ % POWERUPS.earnOrder.length];
-    charges[type]++; clocks[type].push(POWERUPS.chargeLifetimeSeconds);
+    charges[type]++;
   };
-  const spend = (type) => { charges[type]--; clocks[type].shift(); };
-  const ageClocks = (sec) => {
-    for (const type of Object.keys(clocks)) {
-      for (let i = 0; i < clocks[type].length; i++) clocks[type][i] -= sec;
-      while (clocks[type].length && clocks[type][0] <= 0) { clocks[type].shift(); charges[type]--; expiries++; }
-    }
-  };
+  const spend = (type) => { charges[type]--; };
   // Auto-save on no-moves (same priority + choice rules as the game).
   // Returns true if the game was saved and can continue.
   const tryAutoSave = () => {
     if (charges.reshuffle > 0) {
       spend('reshuffle');
-      tray = dealTray({ board, placed, helperAvailable: false }, rng).tray;
+      tray = dealTray({ board, placed, helperAvailable: false, variant }, rng).tray;
       if (trayFitsOn(board, tray)) { saves.reshuffle++; return true; }
     }
     if (charges.bomb > 0) {
@@ -134,13 +131,12 @@ function playGame(seed) {
     }
     if (!move) {
       if (tryAutoSave()) continue;
-      return { end: 'no_moves', elapsed, placed, lines, score, saves, expiries, reviveOffered: score > 0 };
+      return { end: 'no_moves', elapsed, placed, lines, score, saves, reviveOffered: score > 0 };
     }
-    if (timeLeft <= 0) return { end: 'timeout', elapsed, placed, lines, score, saves, expiries, reviveOffered: score > 0 };
+    if (timeLeft <= 0) return { end: 'timeout', elapsed, placed, lines, score, saves, reviveOffered: score > 0 };
     // spend the human time for this placement
     elapsed += SECS_PER_PLACE; timeLeft -= SECS_PER_PLACE;
-    ageClocks(SECS_PER_PLACE); // charge clocks run on play time only
-    if (timeLeft <= 0) return { end: 'timeout', elapsed, placed, lines, score, saves, expiries, reviveOffered: score > 0 };
+    if (timeLeft <= 0) return { end: 'timeout', elapsed, placed, lines, score, saves, reviveOffered: score > 0 };
     const { piece, spot } = move;
     for (const [dr, dc] of piece.shape.cells) board[spot.r + dr][spot.c + dc] = 1;
     tray[move.slot] = null; placed++;
@@ -165,18 +161,37 @@ function playGame(seed) {
       for (let m = Math.floor(linesBefore / POWERUPS.linesMilestone) + 1; m <= Math.floor(lines / POWERUPS.linesMilestone); m++) grants++;
       for (let i = 0; i < grants; i++) grant();
     } else { sinceClear++; if (sinceClear >= 3) combo = 0; }
-    if (tray.every((p) => !p)) tray = dealTray({ board, placed, helperAvailable: false }, rng).tray;
-    if (placed > 600) return { end: 'cap', elapsed, placed, lines, score, saves, expiries, reviveOffered: score > 0 };
+    if (tray.every((p) => !p)) tray = dealTray({ board, placed, helperAvailable: false, variant }, rng).tray;
+    if (placed > 600) return { end: 'cap', elapsed, placed, lines, score, saves, reviveOffered: score > 0 };
   }
 }
-const GAMES = 300, out = [];
-for (let i = 0; i < GAMES; i++) out.push(playGame(12345 + i * 7919));
-out.sort((a, b) => a.elapsed - b.elapsed);
-const med = out[Math.floor(GAMES / 2)];
-const byEnd = {};
-for (const g of out) byEnd[g.end] = (byEnd[g.end] || 0) + 1;
-const avg = (k) => (out.reduce((a, g) => a + g[k], 0) / GAMES).toFixed(1);
-const totSaves = out.reduce((a, g) => a + g.saves.reshuffle + g.saves.bomb + g.saves.sweep, 0);
-const savesByType = { reshuffle: out.reduce((a, g) => a + g.saves.reshuffle, 0), bomb: out.reduce((a, g) => a + g.saves.bomb, 0), sweep: out.reduce((a, g) => a + g.saves.sweep, 0) };
-const reviveOffered = out.filter((g) => g.reviveOffered).length;
-console.log(JSON.stringify({ games: GAMES, median_secs: med.elapsed, median_min: +(med.elapsed / 60).toFixed(2), median_placed: out[Math.floor(GAMES / 2)].placed, median_lines: out[Math.floor(GAMES / 2)].lines, p10_secs: out[Math.floor(GAMES * 0.1)].elapsed, p90_secs: out[Math.floor(GAMES * 0.9)].elapsed, avg_placed: avg('placed'), avg_lines: avg('lines'), end_reasons: byEnd, revive_offered_games: reviveOffered, revive_offered_pct: +(100 * reviveOffered / GAMES).toFixed(1), autosaves_total: totSaves, autosaves_per_game: +(totSaves / GAMES).toFixed(2), autosaves_by_type: savesByType, avg_expiries_per_game: +(out.reduce((a, g) => a + g.expiries, 0) / GAMES).toFixed(2) }, null, 2));
+const GAMES = 300;
+function runBatch(label, variantOf) {
+  const out = [];
+  for (let i = 0; i < GAMES; i++) out.push(playGame(12345 + i * 7919, variantOf(i)));
+  out.sort((a, b) => a.elapsed - b.elapsed);
+  const med = out[Math.floor(GAMES / 2)];
+  const byEnd = {};
+  for (const g of out) byEnd[g.end] = (byEnd[g.end] || 0) + 1;
+  const avg = (k) => (out.reduce((a, g) => a + g[k], 0) / GAMES).toFixed(1);
+  const totSaves = out.reduce((a, g) => a + g.saves.reshuffle + g.saves.bomb + g.saves.sweep, 0);
+  const savesByType = { reshuffle: out.reduce((a, g) => a + g.saves.reshuffle, 0), bomb: out.reduce((a, g) => a + g.saves.bomb, 0), sweep: out.reduce((a, g) => a + g.saves.sweep, 0) };
+  const reviveOffered = out.filter((g) => g.reviveOffered).length;
+  console.log(JSON.stringify({ batch: label, games: GAMES, median_secs: med.elapsed, median_min: +(med.elapsed / 60).toFixed(2), median_placed: out[Math.floor(GAMES / 2)].placed, median_lines: out[Math.floor(GAMES / 2)].lines, p10_secs: out[Math.floor(GAMES * 0.1)].elapsed, p90_secs: out[Math.floor(GAMES * 0.9)].elapsed, avg_placed: avg('placed'), avg_lines: avg('lines'), end_reasons: byEnd, revive_offered_games: reviveOffered, revive_offered_pct: +(100 * reviveOffered / GAMES).toFixed(1), autosaves_total: totSaves, autosaves_per_game: +(totSaves / GAMES).toFixed(2), autosaves_by_type: savesByType }, null, 2));
+}
+// The variant roll in the real game uses a rng separate from the deal
+// stream (so the roll never changes the pieces); the sim mirrors that with
+// a second mulberry32 seeded per game.
+function mixRoll(seed) {
+  let s = (seed ^ 0x9e3779b9) >>> 0;
+  const rng = () => { s = (s + 0x6d2b79f5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  return rollVariant(rng);
+}
+const only = process.env.CB_VARIANT;
+if (only) runBatch(only, () => (only === 'standard' ? undefined : only));
+else {
+  runBatch('standard (no variant)', () => undefined);
+  runBatch('relaxed', () => 'relaxed');
+  runBatch('spicy', () => 'spicy');
+  runBatch('mix (2/3 relaxed + 1/3 spicy, Dylan Nov 12)', (i) => mixRoll(12345 + i * 7919));
+}

@@ -17,7 +17,19 @@
   --body:'Fredoka',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;height:100%;background:linear-gradient(160deg,#fff8e0 0%,#ffedb8 55%,#ffd9c2 100%);color:var(--ink);font-family:var(--body);overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+/* Root background is a SOLID warm colour: it is the canvas background, so
+   any area outside the page box (e.g. below a short layout viewport in an
+   iOS standalone instance) can never show white. The gradient lives on
+   body and covers the page itself. (Dylan, Nov 12 ~3:04 PM — large white
+   gap at the bottom in Safari Add to Home Screen mode; the running
+   instance's layout viewport ended ~55pt short of the screen and the
+   region below it showed the white window background. viewport-fit=cover
+   was already in the meta since Task 1, and headless 430x932 fills warm
+   to the bottom, so this is the belt-and-braces fix + a cold relaunch:
+   force-quit the standalone app and reopen it so it picks up the new
+   files. SW cache bumped v9 -> v10 alongside.) */
+html{background:#ffedb8}
+html,body{margin:0;height:100%;min-height:100vh;min-height:100dvh;background:linear-gradient(160deg,#fff8e0 0%,#ffedb8 55%,#ffd9c2 100%);color:var(--ink);font-family:var(--body);overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
 #app{position:fixed;inset:0;display:flex;flex-direction:column;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
 #hud{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 0;gap:8px}
 .hud-box{display:flex;flex-direction:column;align-items:flex-start;min-width:72px}
@@ -65,13 +77,33 @@ html,body{margin:0;height:100%;background:linear-gradient(160deg,#fff8e0 0%,#ffe
 .panel.scroll::before{display:none}
 @keyframes pop{0%{transform:scale(.8)}60%{transform:scale(1.05)}100%{transform:scale(1)}}
 .logo{font-family:var(--display);font-size:52px;font-weight:800;letter-spacing:-.02em;line-height:1;color:#2f8cff;
-  background:linear-gradient(135deg,#2f8cff 0%,#5b7dff 14%,#8a5cff 28%,#b04dff 42%,#d14de0 56%,#f0569a 70%,#ff5da2 84%,#e83e8c 100%);
+  background:linear-gradient(135deg,#3a8df8 0%,#5e7ff7 14%,#8961f7 28%,#ad55f7 42%,#cc56db 56%,#ea5e9a 70%,#f965a2 84%,#e2488c 100%);
+  background:linear-gradient(135deg in oklab,#3a8df8 0%,#5e7ff7 14%,#8961f7 28%,#ad55f7 42%,#cc56db 56%,#ea5e9a 70%,#f965a2 84%,#e2488c 100%);
   -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
-  -webkit-text-stroke:1px #fff;text-shadow:0 3px 0 rgba(255,255,255,.8),0 6px 14px rgba(47,140,255,.3)}
+  -webkit-text-stroke:1px #fff;filter:drop-shadow(0 3px 0 rgba(255,255,255,.8)) drop-shadow(0 6px 10px rgba(47,140,255,.3))}
 /* One continuous blend across the whole word: the span must NOT carry its
    own gradient, or the blue/pink seam comes back as a hard line. The old
    look was two separate gradients (blue "Clear", pink "bloom") meeting at
    the span edge — that seam is what Dylan called the hard line. */
+/* NO text-shadow on .logo (Dylan, Nov 12 ~2:46 PM — hard lines STILL in the
+   menu text): with transparent fill + background-clip:text, Chromium paints
+   the shadow THROUGH the glyphs as horizontal white bands — probe-verified
+   A/B (shadow on = banded + washed out; shadow off = clean). The lift is
+   now filter:drop-shadow, which shadows the glyph silhouette from OUTSIDE
+   only and cannot paint inside the text. Gradient interpolates in oklab
+   (sRGB line above is the fallback for older browsers) so the blue→pink
+   middle stays vivid instead of dipping muddy. Saturation history (all
+   OKLCH chroma, gamut-mapped, numerically inverted matrices, round-trip
+   verified): +5% (Nov 12 ~2:46 PM) moved 3 stops; +15% (Nov 12 ~3:02 PM)
+   was computed and staged but NEVER shown to Dylan and NEVER pushed —
+   superseded and dropped. Saturation -7% (Dylan, Nov 12 ~3:21 PM:
+   "Saturation -7% on clearbloom text") = OKLCH chroma x0.93 per stop
+   off the LIVE 2b606aa baseline (the wordmark on his phone):
+   #2f8cff->#3a8df8 (x0.935), #5b7dff->#5e7ff7 (x0.929), #8a5cff->#8961f7
+   (x0.931), #b04dff->#ad55f7 (x0.929), #d14de0->#cc56db (x0.928),
+   #f0569a->#ea5e9a (x0.928), #ff5da2->#f965a2 (x0.931), #e83e8c->#e2488c
+   (x0.932). Reducing chroma is always in gamut, so all 8 stops moved.
+   Mean chroma across the 8 stops: 0.2438 -> 0.2268 (x0.930). */
 .logo span{background:none;-webkit-text-fill-color:transparent}
 .tag{color:var(--ink-soft);margin:8px 0 18px;font-weight:600}
 h2{margin:0 0 10px;font-size:28px;font-family:var(--display);font-weight:800;color:#7a3c00}
@@ -157,8 +189,12 @@ body.reduced-motion .best-badge::after{display:none}
 .tut-hand.on{display:block}
 @keyframes tutdrag{0%{transform:translate(var(--fx),var(--fy)) scale(1);opacity:0}10%{opacity:1;transform:translate(var(--fx),var(--fy)) scale(.9)}70%{transform:translate(var(--tx),var(--ty)) scale(.9);opacity:1}85%{transform:translate(var(--tx),var(--ty)) scale(1);opacity:1}100%{transform:translate(var(--tx),var(--ty)) scale(1);opacity:0}}
 /* Arrow pointing down at the dock slot being explained (power-up step). */
-.tut-arrow{position:absolute;left:0;top:0;font-size:22px;color:#f5a623;text-shadow:0 2px 0 rgba(122,60,0,.5),0 4px 12px rgba(245,166,35,.6);animation:tutbob 1s ease-in-out infinite;transform:translateX(-50%)}
-@keyframes tutbob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(6px)}}
+.tut-arrow{position:absolute;left:0;top:0;font-size:64px;line-height:1;color:#f5a623;text-shadow:0 2px 0 rgba(122,60,0,.5),0 4px 12px rgba(245,166,35,.6);filter:drop-shadow(0 4px 8px rgba(122,60,0,.45));animation:tutbob 1s ease-in-out infinite;transform:translateX(-50%)}
+@keyframes tutbob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(10px)}}
+/* Arrow is MUCH larger now (Dylan, Nov 12 ~3:02 PM — the 22px arrow above
+   the power-up slot was easy to miss): 64px, unmissable, still the same
+   glossy gold. It is positioned from its own measured height in main.js
+   so its tip sits just above the slot on any viewport. */
 /* "Nice! You're ready." moment: glossy gold panel, auto-continues. */
 .tut-done{position:absolute;left:50%;top:38%;translate:-50% -50%;display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,#fff3b0,#ffd21f 55%,#f5a623);border:3px solid #b97e0e;border-radius:999px;padding:12px 22px;box-shadow:0 6px 0 rgba(122,60,0,.45),0 14px 30px rgba(245,166,35,.5),inset 0 2px 0 rgba(255,255,255,.85);font-family:var(--display);font-weight:800;font-size:22px;color:#7a3c00;text-shadow:0 1px 0 rgba(255,255,255,.7);animation:bestpop .6s cubic-bezier(.2,1.8,.4,1);white-space:nowrap}
 .tut-done img{width:30px;height:30px}
@@ -258,9 +294,19 @@ body.reduced-motion #countdown.pop #cd-nums,body.reduced-motion #countdown.urgen
 /* ---- Big-moment banner, edge flash, fly layer ---- */
 #banner{position:fixed;left:50%;top:34%;transform:translate(-50%,-50%);z-index:40;pointer-events:none;text-align:center}
 #banner-text{display:inline-block;font-family:var(--display);font-size:44px;font-weight:800;letter-spacing:.01em;
-  background:linear-gradient(180deg,#fff 10%,#ffe98a 28%,#ffd21f 45%,#ffab2e 70%,#ff8a1e 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
-  -webkit-text-stroke:2px #7a3c00;text-shadow:0 4px 0 rgba(122,60,0,.35),0 10px 24px rgba(255,140,0,.5);
+  background:linear-gradient(180deg,#fff 10%,#ffe98a 28%,#ffd21f 45%,#ffab2e 70%,#ff8a1e 100%);
+  background:linear-gradient(180deg in oklab,#fff 10%,#ffe98a 28%,#ffd21f 45%,#ffab2e 70%,#ff8a1e 100%);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  -webkit-text-stroke:2px #7a3c00;
+  filter:drop-shadow(0 4px 0 rgba(122,60,0,.35)) drop-shadow(0 10px 24px rgba(255,140,0,.5));
   animation:bannerpop .6s cubic-bezier(.2,1.8,.4,1)}
+/* NO text-shadow on #banner-text (Dylan, Nov 12 ~3:01 PM — "text that pops
+   up" still had hard lines): same cause as the wordmark — with transparent
+   fill + background-clip:text, Chromium paints the shadow THROUGH the
+   glyphs as horizontal bands ("Nice!" in the fix11 before-shot). The lift
+   is now filter:drop-shadow, which shadows the glyph silhouette from
+   OUTSIDE only. Gradient interpolates in oklab (sRGB line above is the
+   fallback), same stops and hues — only the lines are gone. */
 @keyframes bannerpop{0%{transform:scale(.4) rotate(-6deg);opacity:0}60%{transform:scale(1.12) rotate(2deg);opacity:1}100%{transform:scale(1) rotate(0);opacity:1}}
 #edge-flash{position:fixed;inset:0;pointer-events:none;z-index:35;opacity:0;box-shadow:inset 0 0 60px 18px rgba(255,210,31,.9)}
 #edge-flash.go{animation:edgeflash .7s ease-out}
@@ -347,3 +393,22 @@ body.reduced-motion #countdown.pop #cd-nums,body.reduced-motion #countdown.urgen
 .store-price{font-family:var(--display);font-weight:800;font-size:17px;color:#7a3c00;flex:none}
 .store-test{display:inline-block;background:#7a3c00;color:#ffd21f;border-radius:999px;font-size:11px;font-weight:800;padding:2px 7px;margin-left:6px;vertical-align:2px}
 #btn-restore{margin-top:6px}
+
+/* ---- Skins (cosmetics) ---- */
+#skins .panel{text-align:left}
+#skins h2{text-align:center}
+.skin-card{display:flex;align-items:center;gap:10px;background:#fff;border:2px solid #f5c86b;border-radius:14px;padding:10px 12px;margin-bottom:6px;box-shadow:0 2px 0 #d9a441}
+.skin-card.equipped{border-color:#2f8cff;background:#eaf3ff}
+.skin-card.locked{opacity:.75}
+.skin-preview{flex:none;width:66px;height:22px;border-radius:6px;overflow:hidden}
+.skin-preview img{width:66px;height:22px;display:block}
+.skin-info{flex:1;min-width:0}
+.skin-name{font-weight:800;font-size:16px;color:var(--ink)}
+.skin-badge{display:inline-block;background:#7a3c00;color:#ffd21f;border-radius:999px;font-size:11px;font-weight:800;padding:2px 7px;margin-left:6px;vertical-align:2px}
+.skin-note{font-size:13px;line-height:1.35;color:var(--muted);margin-top:2px}
+.skin-lock{font-size:13px;font-weight:700;color:#b97e0e;margin-top:2px}
+.skin-fav{background:none;border:none;font-size:22px;line-height:1;cursor:pointer;padding:4px;color:#d9a441;flex:none}
+.skin-fav.on{color:#f5a623}
+.skin-fav:disabled{opacity:.35;cursor:default}
+#skins-fav-wrap .skin-card{margin-bottom:6px}
+.skins-empty{text-align:center;color:var(--muted);font-weight:700;padding:10px 0}

@@ -80,6 +80,7 @@
     <button id="btn-daily" class="btn daily"><img alt="" data-icon="star"> Daily challenge <small id="daily-date"></small></button>
     <button id="btn-boards" class="btn ghost">Leaderboards</button>
     <button id="btn-store" class="btn ghost">Store</button>
+    <button id="btn-skins" class="btn ghost">Skins</button>
     <button id="btn-title-settings" class="btn ghost">Settings</button>
     <p class="small">Best: <b id="title-best">0</b> · Today's daily best: <b id="title-daily-best">0</b></p>
   </div>
@@ -122,6 +123,7 @@
     <button id="btn-resume" class="btn big">Back</button>
     <button id="btn-restart" class="btn ghost">Restart game</button>
     <button id="btn-menu-settings" class="btn ghost">Settings</button>
+    <button id="btn-menu-home" class="btn ghost">Main Menu</button>
     <button id="btn-log" class="btn ghost hidden">Show analytics log</button>
     <pre id="log" class="hidden"></pre>
   </div>
@@ -174,6 +176,25 @@
   </div>
 </div>
 
+<!-- Skins (cosmetics): the 10 packs from js/cosmetics.js. Same 37 shapes
+     in 7 colors, different material + palette per pack — cosmetics only,
+     never gameplay. Locked packs show their real requirement or price;
+     nothing here claims an unlock that isn't real. Favorites (★) sit at
+     the top for quick access; only unlocked packs can be favorited. -->
+<div id="skins" class="overlay">
+  <div class="panel scroll">
+    <h2>Skins</h2>
+    <p class="small">New looks for your blocks — same game, same pieces, just a different style. Unlock more by playing, or find them in the Store.</p>
+    <div id="skins-fav-wrap">
+      <span class="acct-label">★ Favorites</span>
+      <div id="skins-fav" class="friend-list"></div>
+    </div>
+    <span class="acct-label">All skins</span>
+    <div id="skins-list" class="friend-list"></div>
+    <button id="btn-skins-close" class="btn big">Done</button>
+  </div>
+</div>
+
 <!-- Account & sign-in (Update 3). Guests play everything except social;
      sign-in is optional and never required to play. -->
 <div id="account" class="overlay">
@@ -197,8 +218,7 @@
     <label class="toggle"><span>Hide me from global leaderboards</span><input type="checkbox" id="set-hide-global"></label>
     <div id="acct-signin">
       <button id="btn-sign-google" class="btn ghost">Sign in with Google</button>
-      <button id="btn-sign-facebook" class="btn ghost" disabled title="Facebook sign-in isn't set up yet">Sign in with Facebook</button>
-      <button id="btn-sign-anon" class="btn ghost">Play signed in, no account</button>
+      <button id="btn-sign-facebook" class="btn ghost" disabled title="Facebook sign-in isn't set up yet">Sign in with Facebook (coming soon)</button>
       <button id="btn-sign-out" class="btn ghost hidden">Sign out</button>
     </div>
     <p class="small">Signing in saves your progress to your account so it follows you to a new device. Guests keep everything on this device only.</p>

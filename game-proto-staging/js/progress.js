@@ -3,22 +3,24 @@
 // XP: 10 per line cleared, 5 per max combo in the game, 25 per game played.
 // Level thresholds are cumulative XP: level L needs 50*L*(L+1) total XP
 // (L1 = 100, L2 = 300, L3 = 600, L4 = 1000, L5 = 1500, ...). Milestone
-// rewards are cosmetic unlocks stored locally (sticker packs, block skins,
-// board frames, backgrounds). No randomness: the reward at each level is
-// fixed and listed below. Nothing here is sold, ad-gated, or random.
+// rewards are REAL cosmetic packs from js/cosmetics.js — nothing else.
+// The old list named rewards that did not exist ("Crayon Red block skin",
+// "Sunny Day board frame", "Rainbow block skin", "Chalk Doodle background",
+// "Golden Trophy board frame", "Superstar sticker pack", "Rainbow Trophy
+// board frame") and the game-over line told players they had unlocked
+// them. That false-unlock claim is fixed by listing only packs that
+// exist: the four level packs. Construction Paper is a mission reward
+// (15 mission stars), not a level reward, so it is not a milestone.
+// Nothing here is sold, ad-gated, or random.
 export const XP_PER_LINE = 10;
 export const XP_PER_COMBO = 5;
 export const XP_PER_GAME = 25;
 
 export const MILESTONES = [
-  { level: 2, reward: 'Gold Star sticker pack' },
-  { level: 3, reward: 'Crayon Red block skin' },
-  { level: 4, reward: 'Sunny Day board frame' },
-  { level: 5, reward: 'Rainbow block skin' },
-  { level: 7, reward: 'Chalk Doodle background' },
-  { level: 10, reward: 'Golden Trophy board frame' },
-  { level: 15, reward: 'Superstar sticker pack' },
-  { level: 20, reward: 'Rainbow Trophy board frame' },
+  { level: 2, reward: 'Gold Star Stickers', pack: 'gold-star' },
+  { level: 5, reward: 'Crayon Box', pack: 'crayon-box' },
+  { level: 12, reward: 'Gummy Garden', pack: 'gummy-garden' },
+  { level: 20, reward: 'Midnight Galaxy', pack: 'midnight-galaxy' },
 ];
 
 export function xpForGame(lines, maxCombo) {

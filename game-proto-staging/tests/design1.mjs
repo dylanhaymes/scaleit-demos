@@ -300,6 +300,34 @@ await test('timer: pauses in menu, resumes after', async () => {
   await page.close();
 });
 
+await test('pause menu: Main Menu quits to title, saves the game, timer pauses (Dylan Nov 12)', async () => {
+  const { page } = await newPage();
+  await startClassic(page);
+  await page.evaluate(() => window.__gb.setTimeLeft(100));
+  await page.click('#btn-menu');
+  eq(await page.locator('#btn-menu-home').count(), 1, 'Main Menu entry exists in the pause menu');
+  eq(await page.locator('#btn-menu-home').textContent(), 'Main Menu', 'entry reads Main Menu');
+  await page.click('#btn-menu-home');
+  await waitFor(async () => page.locator('#title.show').isVisible(), 3000, 'title shows after Main Menu');
+  eq(await page.locator('#menu.show').count(), 0, 'menu closed');
+  eq(await page.locator('#over.show').count(), 0, 'no game-over panel on quit');
+  let st = await page.evaluate(() => window.__gb.state());
+  eq(st.running, true, 'game still live (quit does not end the run)');
+  eq(st.timerPaused, true, 'timer paused while the title is shown');
+  await sleep(1200);
+  st = await page.evaluate(() => window.__gb.state());
+  approx(st.timeLeft, 100, 0.4, 'timer frozen on the title');
+  ok(await page.evaluate(() => !!localStorage.getItem('gb_save')), 'save present after quit');
+  const label = await page.locator('#btn-play').textContent();
+  ok(label.includes('Continue'), 'Play offers Continue, got ' + label);
+  // Resume: Continue restores the same game with its saved timer.
+  await page.click('#btn-play');
+  await waitFor(async () => (await page.evaluate(() => window.__gb.state().running)), 5000, 'resumed game running');
+  st = await page.evaluate(() => window.__gb.state());
+  approx(st.timeLeft, 100, 1.5, 'resumed with the saved timer');
+  await page.close();
+});
+
 await test('tutorial: pauses while up; skip returns to menu, not into a game', async () => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const page = await ctx.newPage();
@@ -1214,39 +1242,256 @@ async function waitSaveDone(page) {
   await sleep(200);
 }
 
-await test('autosave: charge expires after 30s of play (oldest first, no points)', async () => {
+await test('autosave: charges persist until used — no expiry after long play (Dylan Nov 12)', async () => {
   const { page } = await newPage();
   await startClassic(page);
   await page.evaluate(() => window.__gb.setCharges({ bomb: 1 }));
   let st = await page.evaluate(() => window.__gb.state());
-  approx(st.chargeSecs.bomb, 30, 1.5, 'fresh charge has ~30s');
-  await page.evaluate(() => window.__gb.fastForwardCharges(26));
+  eq(st.charges.bomb, 1, 'charge held');
+  // No seconds-remaining UI on a held slot (the 30 s clock is gone).
+  eq(await page.locator('.pu[data-pu="bomb"] .pu-progress').textContent(), '', 'held slot shows no seconds');
+  ok(!(await page.locator('.pu[data-pu="bomb"]').evaluate((el) => el.classList.contains('expiring'))), 'slot never pulses expiring');
+  // Idle play time that would have expired the old 30 s clock twice over.
+  await sleep(5000);
   st = await page.evaluate(() => window.__gb.state());
-  approx(st.chargeSecs.bomb, 4, 1.5, '26s fast-forwarded, ~4s left');
-  ok(await page.locator('.pu[data-pu="bomb"]').evaluate((el) => el.classList.contains('expiring')), 'slot pulses under 5s');
-  eq(await page.locator('.pu[data-pu="bomb"] .pu-progress').textContent(), '4s', 'seconds remaining shown');
-  const scoreBefore = st.score;
-  await page.evaluate(() => window.__gb.fastForwardCharges(5));
+  eq(st.charges.bomb, 1, 'charge still held after 5 s idle in play');
+  // Placements do not age charges either.
+  await setupBoard(page, ['........', '........', '........', '........', '........', '........', '........', '........'], [0, 0, 0]);
+  await page.evaluate(() => window.__gb.place(0, 0, 0));
+  await page.evaluate(() => window.__gb.place(1, 0, 1));
+  await page.evaluate(() => window.__gb.place(2, 0, 2));
   st = await page.evaluate(() => window.__gb.state());
-  eq(st.charges.bomb, 0, 'charge expired');
-  eq(st.score, scoreBefore, 'expiry gives no points');
-  eq(await page.locator('.pu[data-pu="bomb"] .pu-progress').textContent(), '0/10', 'empty slot back to milestone ring');
+  eq(st.charges.bomb, 1, 'charge still held after placements');
+  eq(st.score, 3, 'placements scored (sanity)');
   await page.close();
 });
 
-await test('autosave: charge clock pauses in the menu, runs in play', async () => {
+await test('autosave: a charge earned early still saves a no-fit board late (persistence)', async () => {
   const { page } = await newPage();
   await startClassic(page);
-  await page.evaluate(() => window.__gb.setCharges({ bomb: 1 }));
-  await page.click('#btn-menu');
-  const t0 = (await page.evaluate(() => window.__gb.state())).chargeSecs.bomb;
-  await sleep(2000);
+  await page.evaluate(() => window.__gb.setCharges({ reshuffle: 1 }));
+  // Idle long past the old 30 s clock: on the old code the charge would be
+  // gone by now and no save could fire; on the new code it is still there.
+  await sleep(35000);
   let st = await page.evaluate(() => window.__gb.state());
-  approx(st.chargeSecs.bomb, t0, 0.6, 'clock frozen while menu open');
-  await page.click('#btn-resume');
-  await sleep(2000);
+  eq(st.charges.reshuffle, 1, 'reshuffle charge survived the 35 s idle stretch');
+  await setupNoFit(page, { reshuffle: 1 });
+  await page.evaluate(() => window.__gb.checkGameOver());
+  await waitSaveDone(page);
   st = await page.evaluate(() => window.__gb.state());
-  approx(t0 - st.chargeSecs.bomb, 2, 0.8, 'clock runs again after menu closes');
+  eq(st.charges.reshuffle, 0, 'reshuffle spent on the save');
+  eq(st.running, true, 'game continues after save');
+  ok(await page.locator('#revive.show').isVisible() === false, 'no revive offered after a save');
+  await page.close();
+});
+
+// ---------- Tray bug (Dylan, Nov 12 ~3:13 PM): a piece that only fits in
+// space opened by a line clear must survive the clear and stay fittable;
+// the tray must never refill while a piece remains. ----------
+await test('tray: piece that fits only after a line clear survives it (no stale no-fit)', async () => {
+  const { page } = await newPage();
+  await startClassic(page);
+  // Rows 0-5 full, row 6 '##..####', row 7 '...#####'. The 2x2 (slot 2)
+  // fits nowhere before the clear; the '###' (slot 1) at row 7 cols 0-2
+  // completes row 7 (and columns 0-2), opening a 2x2 hole at rows 6-7.
+  await setupBoard(page, ['########', '########', '########', '########', '########', '########', '##..####', '...#####'], [null, 3, 11]);
+  await page.evaluate(() => window.__gb.setCharges({ reshuffle: 1 }));
+  const before = await page.evaluate(() => window.__gb.state());
+  eq(before.tray[2] && before.tray[2].id, 11, '2x2 present before the clear');
+  await page.evaluate(() => window.__gb.place(1, 7, 0));
+  await sleep(900); // past the 600 ms auto-save window
+  const st = await page.evaluate(() => window.__gb.state());
+  ok(st.lines >= 1, 'the placement cleared lines, got ' + st.lines);
+  eq(st.tray[1], null, 'placed slot is empty');
+  ok(st.tray[2] && st.tray[2].id === 11, 'the 2x2 SURVIVED the clear (tray ' + JSON.stringify(st.tray.map((p) => p && p.id)) + ')');
+  eq(st.charges.reshuffle, 1, 'no auto-save fired while a piece fits');
+  eq(st.autoSaving, false, 'no auto-save in flight');
+  eq(st.running, true, 'game still running');
+  const fitsNow = await page.evaluate(async () => {
+    const d = await import('/js/difficulty.js');
+    const s = window.__gb.state();
+    const board = s.board.map((r) => r.map(Boolean));
+    const shape = s.tray[2];
+    return d.fitsAnywhere(board, { cells: shape.cells, w: shape.w, h: shape.h });
+  });
+  ok(fitsNow, 'the surviving 2x2 fits the post-clear board');
+  await page.close();
+});
+
+await test('tray: random placements never lose an unplaced piece or re-deal early', async () => {
+  const { page } = await newPage();
+  await startClassic(page);
+  // Oracle: the game's own fits/fitsAnywhere, imported in the page.
+  const optionsFor = (board, tray) => page.evaluate(async ({ board, tray }) => {
+    const d = await import('/js/difficulty.js');
+    const out = [];
+    tray.forEach((p, slot) => {
+      if (!p) return;
+      for (let r = 0; r <= 8 - p.h; r++) for (let c = 0; c <= 8 - p.w; c++) {
+        if (d.fits(board, { cells: p.cells, w: p.w, h: p.h }, r, c)) out.push([slot, r, c]);
+      }
+    });
+    return out;
+  }, { board, tray });
+  let moves = 0;
+  for (let i = 0; i < 12; i++) {
+    let st = await page.evaluate(() => window.__gb.state());
+    if (!st.running) { await page.reload(); await page.waitForSelector('#btn-play'); await startClassic(page); st = await page.evaluate(() => window.__gb.state()); }
+    if (!st.charges.reshuffle) await page.evaluate(() => window.__gb.setCharges({ reshuffle: 1 })); // keep the auto-save path armed
+    await page.evaluate(() => window.__gb.setTimeLeft(120));
+    st = await page.evaluate(() => window.__gb.state());
+    const board = st.board.map((r) => r.map(Boolean));
+    const tray = st.tray.map((p) => (p ? { id: p.id, cells: p.cells, w: p.w, h: p.h } : null));
+    const options = await optionsFor(board, tray);
+    if (!options.length) { await sleep(1200); continue; } // no moves: auto-save or game over resolves it
+    const [slot, r, c] = options[Math.floor(Math.random() * options.length)];
+    const beforeIds = st.tray.map((p) => (p ? p.id : null));
+    await page.evaluate(({ slot, r, c }) => window.__gb.place(slot, r, c), { slot, r, c });
+    await sleep(900);
+    const after = await page.evaluate(() => window.__gb.state());
+    moves++;
+    const afterIds = after.tray.map((p) => (p ? p.id : null));
+    for (let k = 0; k < 3; k++) {
+      if (k === slot) eq(afterIds[k], null, `iter ${i}: placed slot emptied`);
+      else if (beforeIds[k] !== null) eq(afterIds[k], beforeIds[k], `iter ${i}: unplaced slot ${k} kept its piece (${JSON.stringify(beforeIds)} -> ${JSON.stringify(afterIds)})`);
+    }
+    if (after.tray.some(Boolean)) eq(after.autoSaving, false, `iter ${i}: no auto-save in flight while a piece remains`);
+  }
+  ok(moves >= 8, 'enough placements ran, got ' + moves);
+  await page.close();
+});
+
+// ---------- Timer bar (Dylan, Nov 12 ~3:21 PM): full at game start ----------
+await test('timer: bar reads 100% at game start and stays full above 120s', async () => {
+  const { page } = await newPage();
+  await startClassic(page);
+  const width = async () => parseFloat(await page.locator('#timer-fill').evaluate((el) => el.style.width));
+  await page.evaluate(() => window.__gb.setTimeLeft(120));
+  approx(await width(), 100, 0.5, 'bar full at 120s');
+  await page.evaluate(() => window.__gb.setTimeLeft(130));
+  approx(await width(), 100, 0.5, 'bar still full at 130s (above start, under cap)');
+  await page.evaluate(() => window.__gb.setTimeLeft(60));
+  approx(await width(), 50, 0.5, 'bar half at 60s');
+  await page.evaluate(() => window.__gb.setTimeLeft(59));
+  ok(await page.locator('#timer-fill').evaluate((el) => el.classList.contains('mid')), 'mid colour once below half');
+  await page.close();
+});
+
+// ---------- Play Again (Dylan, Nov 12 ~3:16 PM): a fresh game must start ----------
+async function forceGameOver(page) {
+  await page.evaluate(() => window.__gb.setTimeLeft(0.3));
+  await waitFor(async () => (await page.locator('#revive.show').isVisible()) || (await page.locator('#over.show').isVisible()), 6000, 'game over');
+  if (await page.locator('#revive.show').isVisible()) await page.click('#btn-norevive');
+  await waitFor(async () => page.locator('#over.show').isVisible(), 5000, 'game-over panel');
+}
+
+await test('play again: fresh game starts after the 3rd Play Again interstitial', async () => {
+  const { page } = await newPage();
+  await startClassic(page);
+  for (let g = 1; g <= 3; g++) {
+    await forceGameOver(page);
+    await page.click('#btn-again');
+    if (g === 3) {
+      await waitFor(async () => page.locator('#ad.show').isVisible(), 5000, 'interstitial shows on 3rd Play Again');
+      await waitFor(async () => page.evaluate(() => { const c = document.getElementById('ad-close'); return c && !c.disabled; }), 8000, 'ad Close enables');
+      await page.click('#ad-close');
+    }
+    await waitFor(async () => (await page.evaluate(() => window.__gb.state())).running, 6000, 'fresh game running after Play Again ' + g);
+    const st = await page.evaluate(() => window.__gb.state());
+    eq(st.score, 0, 'game ' + (g + 1) + ': score reset');
+    ok(st.board.every((r) => r.every((v) => !v)), 'game ' + (g + 1) + ': board empty');
+    eq(st.tray.filter(Boolean).length, 3, 'game ' + (g + 1) + ': fresh tray of 3');
+    ok(st.timeLeft > 115, 'game ' + (g + 1) + ': timer refilled, got ' + st.timeLeft);
+    eq(await page.locator('#over.show').isVisible(), false, 'game ' + (g + 1) + ': game-over panel gone');
+  }
+  await page.close();
+});
+
+await test('play again: fresh game starts even when the interstitial never resolves', async () => {
+  const { page } = await newPage();
+  await startClassic(page);
+  // Swap in a provider whose interstitial promise never settles, and arm
+  // the 3rd-game trigger so Play Again actually awaits it.
+  await page.evaluate(() => window.__gb.ads.setProvider({ name: 'hang', init() {}, isRewardedReady() { return true; }, showRewarded() { return Promise.resolve({ rewarded: false }); }, showInterstitial() { return new Promise(() => {}); } }));
+  await page.evaluate(() => { window.__gb.ads._gamesSince = 2; });
+  await forceGameOver(page);
+  const t0 = Date.now();
+  await page.click('#btn-again');
+  await waitFor(async () => (await page.evaluate(() => window.__gb.state())).running, 15000, 'fresh game running despite the hanging ad');
+  const took = Date.now() - t0;
+  ok(took >= 9000 && took < 15000, 'the 10 s ad timeout fired (took ' + took + ' ms), it did not wait forever');
+  const st = await page.evaluate(() => window.__gb.state());
+  eq(st.score, 0, 'fresh game score reset');
+  ok(st.board.every((r) => r.every((v) => !v)), 'fresh game board empty');
+  await page.close();
+});
+
+// ---------- Difficulty variation (Dylan, Nov 12 ~3:26 PM) ----------
+await test('difficulty: rollVariant is ~1/3 spicy, same distribution for everyone', async () => {
+  const { page } = await newPage();
+  const counts = await page.evaluate(async () => {
+    const d = await import('/js/difficulty.js');
+    let s = 987654321 >>> 0;
+    const rng = () => { s = (s + 0x6d2b79f5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    let spicy = 0;
+    for (let i = 0; i < 3000; i++) if (d.rollVariant(rng) === 'spicy') spicy++;
+    return spicy;
+  });
+  ok(counts >= 900 && counts <= 1100, 'spicy ~1/3 of 3000 rolls, got ' + counts);
+  await page.close();
+});
+
+await test('difficulty: relaxed deals easier pieces, spicy harder, level untouched', async () => {
+  const { page } = await newPage();
+  // 10k trays per variant: the relaxed shift (-0.5 level) moves only ~1% of
+  // the mix weight, so a small sample would be noise. Counting big+huge
+  // pieces over 30k pieces makes the direction ~5 sigma.
+  const res = await page.evaluate(async () => {
+    const d = await import('/js/difficulty.js');
+    const sample = (variant) => {
+      let s = 424242 >>> 0;
+      const rng = () => { s = (s + 0x6d2b79f5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+      let awkward = 0, n = 0, levelOk = true;
+      for (let i = 0; i < 10000; i++) {
+        const { tray, level } = d.dealTray({ board: Array.from({ length: 8 }, () => Array(8).fill(null)), placed: 45, helperAvailable: false, variant }, rng);
+        if (level !== 3) levelOk = false;
+        for (const p of tray) { if (p.shape.cls === 'big' || p.shape.cls === 'huge') awkward++; n++; }
+      }
+      return { awkward, n, levelOk };
+    };
+    return { std: sample(undefined), rel: sample('relaxed'), spi: sample('spicy') };
+  });
+  ok(res.std.levelOk && res.rel.levelOk && res.spi.levelOk, 'dealTray level is 3 at 45 placed for every variant');
+  ok(res.rel.awkward < res.std.awkward, 'relaxed has fewer big+huge pieces (' + res.rel.awkward + ' < ' + res.std.awkward + ' of ' + res.std.n + ')');
+  ok(res.spi.awkward > res.std.awkward, 'spicy has more big+huge pieces (' + res.spi.awkward + ' > ' + res.std.awkward + ' of ' + res.std.n + ')');
+  await page.close();
+});
+
+await test('difficulty: same daily date rolls the same variant, and the toast discloses it', async () => {
+  const { page } = await newPage();
+  await page.evaluate(() => window.__gb.startDaily('2026-11-12'));
+  await waitFor(async () => (await page.evaluate(() => window.__gb.state())).running, 5000, 'daily running');
+  const first = await page.evaluate(() => ({ v: window.__gb.state().variant, toast: document.getElementById('toast').textContent }));
+  ok(first.v === 'relaxed' || first.v === 'spicy', 'variant rolled, got ' + first.v);
+  ok(first.toast.includes(first.v === 'spicy' ? 'Spicy game' : 'Relaxed game'), 'toast discloses the variant, got "' + first.toast + '"');
+  await page.evaluate(() => window.__gb.startDaily('2026-11-12'));
+  await waitFor(async () => (await page.evaluate(() => window.__gb.state())).running, 5000, 'daily running again');
+  const second = await page.evaluate(() => window.__gb.state().variant);
+  eq(second, first.v, 'same date, same variant');
+  await page.close();
+});
+
+await test('difficulty: RULES_TEXT discloses the mix and that charges never expire', async () => {
+  const { page } = await newPage();
+  const rules = await page.evaluate(async () => {
+    const d = await import('/js/difficulty.js');
+    return d.RULES_TEXT.join('\n');
+  });
+  ok(rules.includes('Relaxed') && rules.includes('Spicy'), 'mix disclosed');
+  ok(rules.includes('never depends on ads'), 'mix is random, not ad-based');
+  ok(rules.includes('never expire'), 'persistence disclosed');
+  ok(!rules.includes('30 seconds') && !rules.includes('use them fast'), 'no 30 s expiry wording left');
+  ok(!rules.includes('chargeLifetimeSeconds'), 'no clock constant referenced');
   await page.close();
 });
 
@@ -1737,11 +1982,11 @@ await test('accounts: anonymous sign-in reaches Firebase Auth (live project; ski
 await test('accounts: signed-in UI renders (card, panel, sign-out) via preview hook', async () => {
   const { ctx, page } = await newPage();
   await page.evaluate(() => window.__gb.setAccountPreview('anonymous'));
-  eq(await page.locator('#acct-sub').textContent(), 'Signed in — no account needed', 'card shows signed-in sub');
+  eq(await page.locator('#acct-sub').textContent(), 'Signed in with a private profile', 'card shows signed-in sub');
   await page.click('#btn-account');
   ok(await page.locator('#btn-sign-out').isVisible(), 'sign-out visible when signed in');
   ok(await page.locator('#btn-sign-google').isDisabled(), 'Google button disabled when signed in');
-  ok(await page.locator('#btn-sign-anon').isDisabled(), 'anonymous button disabled when signed in');
+  eq(await page.locator('#btn-sign-anon').count(), 0, 'no confusing anonymous button in the panel (Dylan, Nov 12)');
   await page.click('#btn-sign-out');
   await waitFor(async () => (await page.evaluate(() => window.__gb.accounts())).status === 'guest', 5000, 'back to guest');
   eq(await page.locator('#acct-sub').textContent(), 'Progress saved on this device only', 'card back to guest sub');
@@ -1757,7 +2002,8 @@ await test('accounts: title card + account panel show guest state, sign-in butto
   ok(await page.locator('#account.show').isVisible(), 'account panel opens');
   eq(await page.locator('#acct-code').textContent(), (await page.evaluate(() => window.__gb.accounts())).friendCode, 'panel shows the friend code');
   ok(await page.locator('#btn-sign-google').isEnabled(), 'Google button enabled with live config');
-  ok(await page.locator('#btn-sign-anon').isEnabled(), 'anonymous button enabled with live config');
+  eq(await page.locator('#btn-sign-anon').count(), 0, 'anonymous button removed (Dylan, Nov 12)');
+  ok((await page.locator('#btn-sign-facebook').textContent()).includes('coming soon'), 'Facebook button says coming soon on its face');
   ok(!(await page.locator('#btn-sign-facebook').isEnabled()), 'Facebook button disabled');
   ok(await page.locator('#btn-sign-out').isHidden(), 'sign-out hidden while guest');
   await page.click('#btn-acct-close');
@@ -1815,6 +2061,139 @@ await test('accounts: no Firebase SDK loads for guests (no vendor SDK requests a
   await sleep(1500);
   eq(fired.length, 0, 'no Firebase SDK requests for a guest: ' + fired.join(', '));
   eq(typeof (await page.evaluate(() => window.firebase)), 'undefined', 'window.firebase stays undefined for guests');
+  await ctx.close();
+});
+
+await test('accounts: redirect detection (iOS/standalone) + plain-language error messages', async () => {
+  const { ctx, page } = await newPage();
+  const r = await page.evaluate(async () => {
+    const m = await import('/js/accounts.js');
+    return {
+      ios: m.useRedirectAuth({ userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1' }),
+      ipad: m.useRedirectAuth({ userAgent: 'Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15' }),
+      desktop: m.useRedirectAuth({ userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36' }),
+      standalone: m.useRedirectAuth({ userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)', standalone: true }),
+      displayMode: m.useRedirectAuth({ userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)', displayMode: 'standalone' }),
+      popupBlocked: m.authErrorMessage('auth/popup-blocked'),
+      unauthDomain: m.authErrorMessage('auth/unauthorized-domain'),
+      network: m.authErrorMessage('auth/network-request-failed'),
+      unknown: m.authErrorMessage('auth/something-new'),
+    };
+  });
+  eq(r.ios, true, 'iPhone uses redirect sign-in');
+  eq(r.ipad, true, 'iPad uses redirect sign-in');
+  eq(r.desktop, false, 'desktop keeps pop-up sign-in');
+  eq(r.standalone, true, 'standalone web app uses redirect sign-in');
+  eq(r.displayMode, true, 'display-mode standalone uses redirect sign-in');
+  ok(r.popupBlocked.includes('pop-up') && !r.popupBlocked.includes('auth/'), 'popup-blocked is plain language');
+  ok(r.unauthDomain.includes('Firebase console') && !r.unauthDomain.includes('auth/'), 'unauthorized-domain names the console fix');
+  ok(r.network.includes('online'), 'network error says to check the connection');
+  ok(r.unknown.includes('try again'), 'unknown codes still get a plain fallback');
+  await ctx.close();
+});
+
+await test('accounts: Save stores the name and closes the panel — the one clear guest path', async () => {
+  const { ctx, page } = await newPage();
+  await page.click('#btn-account');
+  await page.fill('#acct-name-input', 'Dylan');
+  await page.click('#btn-name-save');
+  await waitFor(async () => (await page.locator('#account.show').count()) === 0, 5000, 'panel closes after Save');
+  eq(await page.locator('#acct-name').textContent(), 'Dylan', 'title card shows the saved name');
+  eq((await page.evaluate(() => window.__gb.accounts())).displayName, 'Dylan', 'name in state');
+  await ctx.close();
+});
+
+await test('accounts: pressing Enter in the name input saves it (iOS Return key)', async () => {
+  const { ctx, page } = await newPage();
+  await page.click('#btn-account');
+  await page.fill('#acct-name-input', 'Dylan Two');
+  await page.keyboard.press('Enter');
+  await waitFor(async () => (await page.locator('#account.show').count()) === 0, 5000, 'panel closes after Enter');
+  eq(await page.locator('#acct-name').textContent(), 'Dylan Two', 'Enter saved the name');
+  eq((await page.evaluate(() => window.__gb.accounts())).displayName, 'Dylan Two', 'name in state after Enter');
+  await ctx.close();
+});
+
+// Stubbed Firebase (no network): the page's _loadFirebase uses
+// window.firebase when it already has apps, so the stub replaces the
+// real SDK entirely for these tests. Passed to addInitScript as a
+// function — Playwright serializes it into the page.
+function installFakeFirebase() {
+  const calls = [];
+  window.__fakeAuthCalls = calls;
+  const fakeAuth = {
+    currentUser: null,
+    onAuthStateChanged: () => () => {},
+    getRedirectResult: async () => {
+      const n = +(localStorage.getItem('gb_fake_gr_calls') || '0') + 1;
+      localStorage.setItem('gb_fake_gr_calls', String(n));
+      if (window.__fakeRejectRedirect && n === 1) throw { code: 'auth/unauthorized-domain' };
+      return { user: null };
+    },
+    signInWithRedirect: async () => { calls.push('redirect'); },
+    signInWithPopup: async () => { calls.push('popup'); },
+    linkWithRedirect: async () => { calls.push('link-redirect'); },
+    linkWithPopup: async () => { calls.push('link-popup'); },
+    signInAnonymously: async () => { calls.push('anon'); },
+    signOut: async () => {},
+    signInWithCredential: async () => { calls.push('credential'); },
+  };
+  function authFn() { return fakeAuth; }
+  authFn.GoogleAuthProvider = class {};
+  authFn.FacebookAuthProvider = class {};
+  window.firebase = { apps: [{}], initializeApp() {}, auth: authFn, firestore: () => ({}) };
+  window.__fakeAuth = fakeAuth;
+}
+
+await test('accounts: iOS uses redirect sign-in, desktop uses pop-up (stubbed Firebase)', async () => {
+  // iPhone UA → redirect.
+  const ctxIos = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1' });
+  const pIos = await ctxIos.newPage();
+  await pIos.addInitScript(() => { localStorage.setItem('gb_tut_done', '1'); });
+  await pIos.addInitScript(installFakeFirebase);
+  await pIos.goto(`http://localhost:${PORT}/?test=1`);
+  await pIos.waitForSelector('#btn-play');
+  await pIos.click('#btn-account');
+  await pIos.click('#btn-sign-google');
+  await waitFor(async () => (await pIos.evaluate(() => window.__fakeAuthCalls.length)) > 0, 5000, 'redirect call recorded');
+  eq((await pIos.evaluate(() => window.__fakeAuthCalls)).join(','), 'redirect', 'iPhone calls signInWithRedirect');
+  eq(await pIos.evaluate(() => localStorage.getItem('gb_auth_redirect')), '1', 'redirect flag set for boot completion');
+  ok((await pIos.locator('#acct-msg').textContent()).includes('Opening Google sign-in'), 'panel says Google sign-in is opening');
+  await ctxIos.close();
+  // Desktop UA → pop-up, no flag.
+  const ctxDesk = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+  const pDesk = await ctxDesk.newPage();
+  await pDesk.addInitScript(() => { localStorage.setItem('gb_tut_done', '1'); });
+  await pDesk.addInitScript(installFakeFirebase);
+  await pDesk.goto(`http://localhost:${PORT}/?test=1`);
+  await pDesk.waitForSelector('#btn-play');
+  await pDesk.click('#btn-account');
+  await pDesk.click('#btn-sign-google');
+  await waitFor(async () => (await pDesk.evaluate(() => window.__fakeAuthCalls.length)) > 0, 5000, 'popup call recorded');
+  eq((await pDesk.evaluate(() => window.__fakeAuthCalls)).join(','), 'popup', 'desktop calls signInWithPopup');
+  eq(await pDesk.evaluate(() => localStorage.getItem('gb_auth_redirect')), null, 'no redirect flag on desktop');
+  await ctxDesk.close();
+});
+
+await test('accounts: a failed redirect sign-in explains itself in the account panel', async () => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1' });
+  const page = await ctx.newPage();
+  const localErrors = [];
+  page.on('console', (m) => { if (m.type() === 'error') localErrors.push('console: ' + m.text()); });
+  page.on('pageerror', (e) => localErrors.push('pageerror: ' + e.message));
+  await page.addInitScript(() => {
+    localStorage.setItem('gb_tut_done', '1');
+    localStorage.setItem('gb_auth_redirect', '1'); // as if returning from Google
+    window.__fakeRejectRedirect = true;
+  });
+  await page.addInitScript(installFakeFirebase);
+  await page.goto(`http://localhost:${PORT}/?test=1`);
+  await page.waitForSelector('#btn-play');
+  await waitFor(async () => (await page.evaluate(() => window.__gb.accounts())).redirectError === 'auth/unauthorized-domain', 8000, 'redirect error recorded');
+  eq(await page.evaluate(() => localStorage.getItem('gb_auth_redirect')), null, 'pending flag cleared after handling');
+  await page.click('#btn-account');
+  ok((await page.locator('#acct-msg').textContent()).includes('isn\u2019t set up for this site yet'), 'panel explains the failed sign-in in plain language');
+  eq(localErrors.length, 0, 'no page errors on the redirect-return page: ' + localErrors.slice(0, 3).join(' | '));
   await ctx.close();
 });
 
@@ -2270,6 +2649,258 @@ await test('title: wordmark fully visible on load, phone + desktop (no flex-cent
     ok(s.bottom <= s.vh, `${name}: Settings reachable after scrolling, got ${s.bottom} of ${s.vh}`);
     await ctx.close();
   }
+});
+
+// ---------- Cosmetics packs (10) + favorites + menu music ----------
+await test('cosmetics: 10 packs, each with 7 colors + a real unlock rule', async () => {
+  const { ctx, page } = await newPage();
+  const packs = await page.evaluate(async () => (await import('/js/cosmetics.js')).PACKS);
+  eq(packs.length, 10, '10 packs');
+  for (const p of packs) {
+    eq(p.colors.length, 7, `${p.slug} has 7 colors`);
+    eq(p.colorNames.length, 7, `${p.slug} has 7 color names`);
+    ok(['included', 'level', 'stars', 'iap', 'supporter'].includes(p.unlock.kind), `${p.slug} has a real unlock kind`);
+    ok(p.material, `${p.slug} has a material`);
+    ok(p.unlockText, `${p.slug} has unlock text`);
+  }
+  await ctx.close();
+});
+
+await test('cosmetics: no phantom milestone rewards — every level reward names a real pack', async () => {
+  // REGRESSION (Dylan, Nov 12): the old MILESTONES promised "Crayon Red
+  // block skin", "Sunny Day board frame" and friends, and the game-over
+  // line told players they had unlocked them. Every reward must be a pack
+  // that exists in the registry.
+  const { ctx, page } = await newPage();
+  const r = await page.evaluate(async () => {
+    const p = await import('/js/progress.js');
+    const c = await import('/js/cosmetics.js');
+    const slugs = new Set(c.PACKS.map((x) => x.slug));
+    return {
+      milestones: p.MILESTONES,
+      allReal: p.MILESTONES.every((m) => m.pack && slugs.has(m.pack)),
+      rewards: p.rewardsForLevel(20),
+      next1: p.nextReward(1),
+      next20: p.nextReward(20),
+    };
+  });
+  eq(r.milestones.length, 4, '4 level milestones');
+  ok(r.allReal, 'every milestone names a real pack');
+  for (const phantom of ['Crayon Red block skin', 'Sunny Day board frame', 'Rainbow block skin', 'Chalk Doodle background', 'Golden Trophy board frame', 'Superstar sticker pack', 'Rainbow Trophy board frame']) {
+    ok(!r.rewards.includes(phantom), `no phantom "${phantom}" in rewards`);
+    ok(!JSON.stringify(r.milestones).includes(phantom), `no phantom "${phantom}" in milestones`);
+  }
+  eq(r.next1.reward, 'Gold Star Stickers', 'next reward at level 1 is Gold Star Stickers');
+  eq(r.next1.level, 2, 'next reward is at level 2');
+  eq(r.next20, null, 'no next reward past level 20');
+  await ctx.close();
+});
+
+await test('cosmetics: unlock gates are honest (level / stars / paid / unknown)', async () => {
+  const { ctx, page } = await newPage();
+  const u = await page.evaluate(async () => {
+    const m = await import('/js/cosmetics.js');
+    const at = (level, stars = 0, owned = []) => ({ playerLevel: level, missionStars: stars, owned });
+    return {
+      classic: m.isPackUnlocked('classic-candy', at(1)),
+      gold1: m.isPackUnlocked('gold-star', at(1)),
+      gold2: m.isPackUnlocked('gold-star', at(2)),
+      crayon4: m.isPackUnlocked('crayon-box', at(4)),
+      crayon5: m.isPackUnlocked('crayon-box', at(5)),
+      gummy11: m.isPackUnlocked('gummy-garden', at(11)),
+      gummy12: m.isPackUnlocked('gummy-garden', at(12)),
+      galaxy19: m.isPackUnlocked('midnight-galaxy', at(19)),
+      galaxy20: m.isPackUnlocked('midnight-galaxy', at(20)),
+      paper: m.isPackUnlocked('construction-paper', at(20)),
+      paperStars: m.isPackUnlocked('construction-paper', at(1, 15)),
+      ocean: m.isPackUnlocked('ocean-gummies', at(20)),
+      oceanOwned: m.isPackUnlocked('ocean-gummies', at(1, 0, ['ocean-gummies'])),
+      lolli: m.isPackUnlocked('lollipop-swirl', at(20)),
+      lolliSup: m.isPackUnlocked('lollipop-swirl', at(1, 0, ['supporter'])),
+      unknown: m.isPackUnlocked('nope', at(20)),
+      missionStars: m.missionStars(),
+    };
+  });
+  eq(u.classic, true, 'starting pack always unlocked');
+  eq(u.gold1, false, 'Gold Star locked at level 1');
+  eq(u.gold2, true, 'Gold Star unlocks at level 2');
+  eq(u.crayon4, false, 'Crayon Box locked at level 4');
+  eq(u.crayon5, true, 'Crayon Box unlocks at level 5');
+  eq(u.gummy11, false, 'Gummy Garden locked at level 11');
+  eq(u.gummy12, true, 'Gummy Garden unlocks at level 12');
+  eq(u.galaxy19, false, 'Midnight Galaxy locked at level 19');
+  eq(u.galaxy20, true, 'Midnight Galaxy unlocks at level 20');
+  eq(u.paper, false, 'Construction Paper locked with 0 mission stars');
+  eq(u.paperStars, true, 'Construction Paper unlocks at 15 mission stars');
+  eq(u.ocean, false, 'Ocean Gummies locked without a purchase');
+  eq(u.oceanOwned, true, 'Ocean Gummies unlocks when owned');
+  eq(u.lolli, false, 'Lollipop Swirl locked without Supporter');
+  eq(u.lolliSup, true, 'Lollipop Swirl unlocks with Supporter');
+  eq(u.unknown, false, 'unknown slug never unlocks');
+  eq(u.missionStars, 0, 'no missions yet, so 0 mission stars');
+  await ctx.close();
+});
+
+await test('cosmetics: recolorHex maps by slot, leaves foreign hexes alone', async () => {
+  const { ctx, page } = await newPage();
+  const r = await page.evaluate(async () => {
+    const m = await import('/js/cosmetics.js');
+    const classic = m.packBySlug('classic-candy').colors;
+    const crayon = m.packBySlug('crayon-box').colors;
+    return {
+      slot0: m.recolorHex('#ff4d4d', classic, crayon),
+      slot6: m.recolorHex('#ff5da2', classic, crayon),
+      foreign: m.recolorHex('#5aa2ff', classic, crayon),
+      white: m.recolorHex('#ffffff', classic, crayon),
+      nullHex: m.recolorHex(null, classic, crayon),
+    };
+  });
+  eq(r.slot0, '#e63946', 'slot 0 maps classic -> crayon');
+  eq(r.slot6, '#ef476f', 'slot 6 maps classic -> crayon');
+  eq(r.foreign, '#5aa2ff', 'foreign hex left alone');
+  eq(r.white, '#ffffff', 'white left alone');
+  eq(r.nullHex, null, 'null stays null');
+  await ctx.close();
+});
+
+await test('cosmetics: game-over unlock line names a real pack (level 2)', async () => {
+  const { ctx, page } = await newPage();
+  // 290 XP + one game (25 XP) = 315 -> Player Level 2 -> Gold Star Stickers.
+  await page.evaluate(() => localStorage.setItem('gb_xp', '290'));
+  await page.reload();
+  await page.waitForSelector('#btn-play');
+  await startClassic(page);
+  await page.evaluate(() => window.__gb.setTimeLeft(0.3));
+  await waitFor(async () => page.locator('#revive.show').isVisible(), 6000, 'revive overlay');
+  await page.click('#btn-norevive');
+  await waitFor(async () => page.locator('#over.show').isVisible(), 5000, 'game-over panel');
+  const xpLine = await page.locator('#ov-xp').textContent();
+  ok(xpLine.includes('+25 XP'), 'XP line shows +25');
+  ok(xpLine.includes('Player Level 2'), 'XP line shows level 2');
+  ok(xpLine.includes('unlocked: Gold Star Stickers!'), `unlock line names the real pack, got: ${xpLine}`);
+  ok(!xpLine.includes('Crayon Red'), 'no phantom unlock in the line');
+  await page.click('#btn-home');
+  await sleep(200);
+  eq(await page.locator('#player-next-reward').textContent(), 'Next reward at Level 5: Crayon Box', 'title next reward is the real level-5 pack');
+  await ctx.close();
+});
+
+await test('cosmetics: picker opens with 10 honest cards + favorites empty state', async () => {
+  const { ctx, page } = await newPage();
+  await page.click('#btn-skins');
+  ok(await page.locator('#skins.show').isVisible(), 'skins panel opens');
+  eq(await page.locator('#skins-list .skin-card').count(), 10, '10 pack cards');
+  ok((await page.locator('#skins-list').textContent()).includes('Equipped'), 'equipped pack is marked');
+  ok((await page.locator('#skins-list').textContent()).includes('🔒'), 'locked packs show a lock');
+  ok((await page.locator('#skins-list').textContent()).includes('$1.99'), 'paid packs show their price');
+  ok((await page.locator('#skins-list').textContent()).includes('Player Level 2'), 'level requirement shown');
+  ok((await page.locator('#skins-fav').textContent()).includes('No favorites yet'), 'favorites empty state');
+  // Every card has a rendered block preview (not a broken image).
+  const previews = await page.locator('.skin-preview img').evaluateAll((imgs) => imgs.map((i) => i.src.startsWith('data:image/png') && i.naturalWidth > 0));
+  eq(previews.length, 10, '10 previews');
+  ok(previews.every(Boolean), 'every preview is a rendered image');
+  await page.click('#btn-skins-close');
+  ok(await page.locator('#skins.show').isHidden(), 'skins panel closes');
+  await ctx.close();
+});
+
+await test('cosmetics: apply refuses locked packs, paid packs stay locked + buy refuses', async () => {
+  const { ctx, page } = await newPage();
+  eq(await page.evaluate(() => window.__gb.applyPack('gold-star')), false, 'locked level pack refuses at level 1');
+  eq(await page.evaluate(() => window.__gb.applyPack('ocean-gummies')), false, 'paid pack refuses in test mode');
+  eq(await page.evaluate(() => window.__gb.applyPack('nope')), false, 'unknown pack refuses');
+  eq((await page.evaluate(() => window.__gb.cosmeticsState())).selected, 'classic-candy', 'selection unchanged after refused applies');
+  // Earn level 2 (300 XP) and the Gold Star pack applies, with its material.
+  await page.evaluate(() => localStorage.setItem('gb_xp', '300'));
+  await page.reload();
+  await page.waitForSelector('#btn-play');
+  eq(await page.evaluate(() => window.__gb.applyPack('gold-star')), true, 'Gold Star applies at level 2');
+  const st = await page.evaluate(() => window.__gb.state());
+  eq(st.pack, 'gold-star', 'state reports the equipped pack');
+  eq(st.packMaterial, 'sticker', 'state reports the sticker material');
+  eq((await page.evaluate(() => window.__gb.cosmeticsState())).selected, 'gold-star', 'selection persisted');
+  // A paid pack's Buy button still answers test-only, never a charge.
+  await page.click('#btn-skins');
+  await page.click('[data-buy-pack="cosmetic_pack"]');
+  await sleep(200);
+  eq(await page.locator('#toast').textContent(), 'Test product — purchases are not live yet', 'paid pack buy toasts honestly');
+  await ctx.close();
+});
+
+await test('cosmetics: favorites only for unlocked packs, persist across reload', async () => {
+  const { ctx, page } = await newPage();
+  const r = await page.evaluate(async () => {
+    const m = await import('/js/cosmetics.js');
+    return {
+      locked: m.toggleFavorite('gold-star', { playerLevel: 1, missionStars: 0, owned: [] }),
+      ok: m.toggleFavorite('classic-candy', { playerLevel: 1, missionStars: 0, owned: [] }),
+      stored: JSON.parse(localStorage.getItem('gb_cosmetics') || '{}'),
+    };
+  });
+  eq(r.locked.ok, false, 'locked pack cannot be favorited');
+  eq(r.locked.reason, 'locked', 'locked reason');
+  eq(r.ok.ok, true, 'owned pack can be favorited');
+  eq(r.ok.favorited, true, 'favorited');
+  ok(r.stored.favorites.includes('classic-candy'), 'favorite persisted to localStorage');
+  // After a reload the favorite is still there, at the top of the picker.
+  await page.reload();
+  await page.waitForSelector('#btn-play');
+  await page.click('#btn-skins');
+  await sleep(200);
+  eq(await page.locator('#skins-fav .skin-card').count(), 1, 'one favorite card');
+  ok((await page.locator('#skins-fav').textContent()).includes('Classic Candy'), 'favorite is Classic Candy');
+  ok(!(await page.locator('#skins-fav').textContent()).includes('No favorites yet'), 'empty state gone');
+  // The star on the favorited card in the all-list shows filled.
+  ok((await page.locator('#skins-list [data-fav="classic-candy"]').textContent()).includes('★'), 'star shows filled');
+  await ctx.close();
+});
+
+await test('music: starts on the first tap anywhere on the title (no Play needed)', async () => {
+  // iOS Safari + Chrome block audio before any gesture, so there is no
+  // zero-tap autoplay — but the music must start on the first tap
+  // anywhere on the menu, not only when a game starts.
+  const { ctx, page } = await newPage();
+  const before = await page.evaluate(() => window.__gb.state());
+  eq(before.audioState, 'none', 'no audio context before the first gesture');
+  eq(before.musicOn, true, 'music on by default');
+  await page.click('#title .logo');
+  await waitFor(async () => (await page.evaluate(() => window.__gb.state())).audioState === 'running', 5000, 'context running after the title tap');
+  const st = await page.evaluate(() => window.__gb.state());
+  ok(st.musicScheduler, 'music scheduler is running');
+  ok(st.musicScheduled > 0, 'music has scheduled notes, got ' + st.musicScheduled);
+  eq(st.running, false, 'still on the title — no game started');
+  ok(await page.locator('#title.show').isVisible(), 'title still showing');
+  await ctx.close();
+});
+
+await test('music: power-up sting ducks music to 0.93x while sounding, restores after', async () => {
+  // Earning a charge plays a unique bell sting and dips the music 7%
+  // (x0.93) on a sharp 30 ms ramp while it sounds, snapping back to 1.0x
+  // the moment it ends. Real-game path: the 3-line clear that earns the
+  // charge also fires the generic clear duck in the same tick — the sting
+  // duck must own the bus through the sting, not be dragged to 0.12 or
+  // held down by the generic 900 ms restore.
+  const { ctx, page } = await newPage();
+  await page.click('#title .logo');
+  await waitFor(async () => (await page.evaluate(() => window.__gb.state())).audioState === 'running', 5000, 'context running after the title tap');
+  await startClassic(page);
+  const st0 = await page.evaluate(() => window.__gb.state());
+  ok(st0.musicScheduler, 'music scheduler is running');
+  const base = st0.musicGain;
+  ok(Math.abs(base - st0.musicBaseGain) < 0.01, `music at standard level before earn (got ${base})`);
+  const three = ['......#.', '......#.', '......#.', '......#.', '......#.', '......#.', '######..', '######..'];
+  await setupBoard(page, three, [11, 0, 0]);
+  await page.evaluate(() => window.__gb.place(0, 6, 6));
+  // ~150 ms in: the 30 ms duck ramp is done, the 500 ms sting is sounding.
+  await sleep(150);
+  let st = await page.evaluate(() => window.__gb.state());
+  eq(st.charges.bomb, 1, 'bomb charge earned');
+  ok(Math.abs(st.musicGain - base * 0.93) < 0.015, `music ducked to 0.93x during sting (got ${st.musicGain}, base ${base})`);
+  // Sting ends at ~500 ms + 30 ms restore ramp: well past that, back at 1.0x.
+  await sleep(600);
+  st = await page.evaluate(() => window.__gb.state());
+  ok(Math.abs(st.musicGain - base) < 0.01, `music restored to 1.0x after sting (got ${st.musicGain}, base ${base})`);
+  await ctx.close();
 });
 
 await test('console: 0 errors across all tests', async () => {

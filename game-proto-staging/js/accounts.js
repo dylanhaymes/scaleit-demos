@@ -8,9 +8,12 @@
 // - The Firebase compat SDK is self-hosted in js/vendor/ and loaded
 //   lazily (dynamic import) only when a player signs in or returns with
 //   a session — guests never load it, and the game works fully offline
-//   in guest mode. Every sign-in call returns { ok: false, reason }
-//   instead of throwing when the SDK can't load or the network is down.
-//   The UI shows that plainly instead of faking a sign-in.
+//   in guest mode. EXCEPTION: a redirect sign-in (iOS, see
+//   useRedirectAuth) reloads the page, so the SDK loads at boot when a
+//   redirect is pending (localStorage gb_auth_redirect) to complete it.
+//   Every sign-in call returns { ok: false, reason } instead of
+//   throwing when the SDK can't load or the network is down. The UI
+//   shows that plainly (authErrorMessage) instead of faking a sign-in.
 // - The game NEVER depends on Firebase: every method is safe to call in
 //   guest/local mode and never throws. Social features degrade gracefully
 //   when signed out (batch 2: leaderboards show a "sign in to see friends"
@@ -46,6 +49,50 @@ export const ACCOUNT_DATA_KEYS = ['gb_profile', 'gb_xp', 'gb_games', 'gb_best', 
 const FRIEND_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no 0/O/1/I/L
 const FRIEND_CODE_LEN = 6;
 
+// Set just before a redirect sign-in starts; cleared once the result is
+// handled at boot. Lets init() know the SDK must load to complete it.
+export const REDIRECT_FLAG = 'gb_auth_redirect';
+
+// iOS Safari and standalone web apps (Add to Home Screen) cannot do
+// pop-up sign-in: a standalone app has no window to host the Firebase
+// pop-up, and mobile Safari blocks pop-ups by default — signInWithPopup
+// fails there with auth/popup-blocked (Dylan, Nov 12: Google sign-in
+// dead on his iPhone home-screen app). Those environments use the
+// redirect flow instead (signInWithRedirect + getRedirectResult);
+// desktop browsers keep the pop-up. `env` is injectable for tests.
+export function useRedirectAuth(env) {
+  const nav = (env && env.navigator) || (typeof navigator !== 'undefined' ? navigator : {});
+  const standalone = (env && 'standalone' in env) ? env.standalone === true : nav.standalone === true;
+  let displayStandalone = false;
+  try {
+    displayStandalone = (env && 'displayMode' in env) ? env.displayMode === 'standalone'
+      : (typeof matchMedia !== 'undefined' && matchMedia('(display-mode: standalone)').matches);
+  } catch {}
+  const ua = (env && 'userAgent' in env) ? env.userAgent : (nav.userAgent || '');
+  return standalone === true || displayStandalone || /iPad|iPhone|iPod/.test(ua);
+}
+
+// Plain-language sign-in errors for the UI. Never show raw Firebase
+// codes to the player — every reason maps to something actionable.
+export function authErrorMessage(code) {
+  switch (code) {
+    case 'auth/popup-blocked': return 'Your browser blocked the sign-in window — allow pop-ups for this site, then tap again.';
+    case 'auth/popup-closed-by-user':
+    case 'auth/cancelled-popup-request': return 'Sign-in was closed before it finished — tap again to retry.';
+    case 'auth/unauthorized-domain': return 'Google sign-in isn\u2019t set up for this site yet. The game team needs to add this site in the Firebase console, then it will work.';
+    case 'auth/network-request-failed': return 'No connection — check you\u2019re online and try again.';
+    case 'auth/operation-not-supported-in-this-environment': return 'This browser can\u2019t open the sign-in window — try again from Safari.';
+    case 'auth/account-exists-with-different-credential':
+    case 'auth/credential-already-in-use':
+    case 'auth/email-already-in-use': return 'That Google account is already linked a different way — try the other sign-in option.';
+    case 'auth/user-cancelled': return 'Sign-in was cancelled — tap again to retry.';
+    case 'auth/invalid-credential': return 'That sign-in didn\u2019t work — try again.';
+    case 'facebook-not-configured': return 'Facebook sign-in isn\u2019t set up yet.';
+    case 'not-configured': return 'Sign-in isn\u2019t set up yet — the game is still being set up. Keep playing as a guest.';
+    default: return 'Couldn\u2019t sign in — try again.';
+  }
+}
+
 function makeLocalUid() {
   let s = '';
   const rnd = new Uint32Array(3);
@@ -76,6 +123,7 @@ export const Accounts = {
   _loading: null,
   _authWired: false, // the auth singleton keeps one listener for the page lifetime
   _listeners: new Set(),
+  _redirectError: null, // last redirect sign-in failure code, for the panel to explain
 
   get configured() { return isFirebaseConfigured(); },
   get facebookEnabled() { return FACEBOOK_PROVIDER_ENABLED; },
@@ -110,12 +158,17 @@ export const Accounts = {
 
   // Never throws. The SDK loads at boot ONLY for a returning signed-in
   // player (their cloudUid is in the local profile) so their session
-  // restores. Guests never pay for the SDK at boot — it loads on the
-  // first sign-in attempt instead (ensureFirebase).
+  // restores — plus when a redirect sign-in is pending (see
+  // useRedirectAuth): the redirect reloads the page, so the SDK must
+  // load at boot to complete it. Guests never pay for the SDK at boot
+  // otherwise — it loads on the first sign-in attempt instead
+  // (ensureFirebase).
   async init() {
     this.profile = this.loadProfile() || this.freshGuestProfile();
     this.saveProfile();
-    if (isFirebaseConfigured() && this.profile.cloudUid) {
+    let pendingRedirect = false;
+    try { pendingRedirect = localStorage.getItem(REDIRECT_FLAG) === '1'; } catch {}
+    if (isFirebaseConfigured() && (this.profile.cloudUid || pendingRedirect)) {
       await this._loadFirebase();
     }
     return null;
@@ -147,6 +200,10 @@ export const Accounts = {
           auth.onAuthStateChanged((user) => this._onAuth(user));
           this._authWired = true;
         }
+        // Complete a redirect sign-in started before the reload (iOS
+        // standalone). Runs before the currentUser adoption below so a
+        // just-returned user is picked up either way.
+        await this._handleRedirectResult(auth);
         if (auth.currentUser) await this._onAuth(auth.currentUser);
         return this.fb;
       } catch { return null; }
@@ -154,6 +211,30 @@ export const Accounts = {
     const out = await this._loading;
     this._loading = null;
     return out;
+  },
+  // Finish a redirect sign-in (see useRedirectAuth). Clears the pending
+  // flag either way. Never throws. When the redirect failed, the reason
+  // is kept on _redirectError so the account panel can say so plainly
+  // instead of failing silently.
+  async _handleRedirectResult(auth) {
+    let pending = false;
+    try { pending = localStorage.getItem(REDIRECT_FLAG) === '1'; } catch {}
+    if (!pending || !auth || typeof auth.getRedirectResult !== 'function') return null;
+    try { localStorage.removeItem(REDIRECT_FLAG); } catch {}
+    try {
+      const res = await auth.getRedirectResult();
+      this._redirectError = null;
+      return res;
+    } catch (e) {
+      const code = (e && e.code) || 'sign-in-failed';
+      this._redirectError = code;
+      // The Google account is already linked another way: sign in with
+      // the credential from the failed redirect instead of losing it.
+      if ((code === 'auth/credential-already-in-use' || code === 'auth/email-already-in-use' || code === 'auth/account-exists-with-different-credential') && e.credential && typeof auth.signInWithCredential === 'function') {
+        try { await auth.signInWithCredential(e.credential); this._redirectError = null; } catch {}
+      }
+      return null;
+    }
   },
   // Returns { auth, db } or null (no config / load failure / offline).
   async ensureFirebase() {
@@ -230,6 +311,20 @@ export const Accounts = {
     if (!fb) return { ok: false, reason: 'not-configured' };
     try {
       const provider = makeProvider();
+      // iOS Safari / standalone web apps can't do pop-ups (Dylan, Nov 12:
+      // Google sign-in dead on his iPhone home-screen app) — use the
+      // redirect flow there. The page reloads; _handleRedirectResult at
+      // boot completes it. Returns redirect-started (the page navigates
+      // away, so the caller shows "opening" instead of "signed in").
+      if (useRedirectAuth()) {
+        try { localStorage.setItem(REDIRECT_FLAG, '1'); } catch {}
+        if (fb.auth.currentUser && fb.auth.currentUser.isAnonymous) {
+          await fb.auth.currentUser.linkWithRedirect(provider);
+        } else {
+          await fb.auth.signInWithRedirect(provider);
+        }
+        return { ok: true, reason: 'redirect-started' };
+      }
       if (fb.auth.currentUser && fb.auth.currentUser.isAnonymous) {
         try {
           await fb.auth.currentUser.linkWithPopup(provider);
@@ -349,7 +444,7 @@ export const Accounts = {
       displayName: this.displayName, friendCode: this.friendCode,
       hideFromGlobal: this.hideFromGlobal, signedIn: this.signedIn,
       configured: isFirebaseConfigured(), facebookEnabled: FACEBOOK_PROVIDER_ENABLED,
-      hasCloud: !!this.fb,
+      hasCloud: !!this.fb, redirectError: this._redirectError || null,
     };
   },
 };

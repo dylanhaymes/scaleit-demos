@@ -29,6 +29,12 @@ function mulberry32(seed) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
+// Deterministic per-colour hash (galaxy speckles): same colour, same stars.
+function hashStr(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
+}
 function starPath(c, cx, cy, rO, rI, points = 5, rot = -Math.PI / 2) {
   c.beginPath();
   for (let i = 0; i < points * 2; i++) {
@@ -45,23 +51,58 @@ const CELL = 192;
 // ---- Glossy candy 3D block sprite for one colour (crayon palette) ----
 // Specular highlight, subtle bevel (light top edge, dark base), soft inner
 // shadow, grounded drop shadow. Light plastic-toy / glossy-eraser feel.
-// No markings, icons, lines or textures on the block itself.
-function renderBlockSprite(color) {
+// `material` (from js/cosmetics.js) changes the body gradient + adds the
+// pack's motif, clipped to the block — same lighting bar for every pack:
+// glossy, saturated, top-left light, tight specular, shallow bevel, soft
+// colored shadow. 'candy' is the original look, byte-identical to before.
+function renderBlockSprite(color, material = 'candy') {
   const cv = document.createElement('canvas');
   cv.width = cv.height = SPRITE;
   const c = cv.getContext('2d');
   const p = (SPRITE - CELL) / 2, r = 44;
+  // Construction paper: stacked cut-paper edges behind the top sheet.
+  if (material === 'paper') {
+    for (let k = 2; k >= 1; k--) {
+      const off = k * CELL * 0.055;
+      c.fillStyle = shade(color, -0.22 - k * 0.04);
+      rr(c, p + off, p + off, CELL, CELL, r); c.fill();
+    }
+  }
   // Grounded drop shadow, baked in (drawn once, not per frame).
   c.save();
   c.shadowColor = 'rgba(90,40,0,0.4)'; c.shadowBlur = 14; c.shadowOffsetY = 8;
   c.fillStyle = color; rr(c, p, p, CELL, CELL, r); c.fill();
   c.restore();
   // Body: candy lighting — bright top, saturated middle, deeper base.
+  // Materials tune the ramp (gummy/ocean brighter + softer base, galaxy
+  // darker + deeper base, frosted white-hot top); candy is unchanged.
   const grd = c.createLinearGradient(0, p, 0, p + CELL);
-  grd.addColorStop(0, shade(color, 0.3));
-  grd.addColorStop(0.4, color);
-  grd.addColorStop(1, shade(color, -0.26));
+  if (material === 'gummy' || material === 'ocean') {
+    grd.addColorStop(0, shade(color, 0.42));
+    grd.addColorStop(0.45, color);
+    grd.addColorStop(1, shade(color, -0.18));
+  } else if (material === 'galaxy') {
+    grd.addColorStop(0, shade(color, 0.12));
+    grd.addColorStop(0.45, color);
+    grd.addColorStop(1, shade(color, -0.34));
+  } else if (material === 'frosted') {
+    grd.addColorStop(0, '#ffffff');
+    grd.addColorStop(0.25, shade(color, 0.35));
+    grd.addColorStop(0.6, color);
+    grd.addColorStop(1, shade(color, -0.22));
+  } else {
+    grd.addColorStop(0, shade(color, 0.3));
+    grd.addColorStop(0.4, color);
+    grd.addColorStop(1, shade(color, -0.26));
+  }
   c.fillStyle = grd; rr(c, p, p, CELL, CELL, r); c.fill();
+  // Translucent gummy / sea-glass inner glow.
+  if (material === 'gummy' || material === 'ocean') {
+    const inner = c.createRadialGradient(p + CELL / 2, p + CELL / 2, 1, p + CELL / 2, p + CELL / 2, CELL * 0.62);
+    inner.addColorStop(0, 'rgba(255,255,255,0.34)');
+    inner.addColorStop(1, 'rgba(255,255,255,0)');
+    c.fillStyle = inner; rr(c, p, p, CELL, CELL, r); c.fill();
+  }
   // Big specular highlight: soft white gloss, upper left.
   const hi = c.createRadialGradient(p + CELL * 0.3, p + CELL * 0.2, 4, p + CELL * 0.3, p + CELL * 0.2, CELL * 0.6);
   hi.addColorStop(0, 'rgba(255,255,255,0.75)');
@@ -85,6 +126,116 @@ function renderBlockSprite(color) {
   // Fine rim light around the top edge.
   c.strokeStyle = 'rgba(255,255,255,0.4)'; c.lineWidth = 3;
   rr(c, p + 2, p + 2, CELL - 4, CELL - 4, r - 2); c.stroke();
+  // ---- material motif, clipped to the block (same motifs as the skins
+  // sheets in design5/skins/render.js — one source of truth for the look).
+  // Candy has no motif: the plain glossy block is the motif.
+  if (material !== 'candy') {
+    const cx = p + CELL / 2, cy = p + CELL / 2, s = CELL;
+    c.save();
+    rr(c, p, p, CELL, CELL, r); c.clip();
+    if (material === 'sticker') {
+      // White sticker border + gold star on every block.
+      c.strokeStyle = 'rgba(255,255,255,0.95)'; c.lineWidth = Math.max(1.5, s * 0.08);
+      rr(c, p + s * 0.05, p + s * 0.05, s * 0.9, s * 0.9, Math.max(2, r * 0.8)); c.stroke();
+      const sg = c.createLinearGradient(p, p, p + s, p + s);
+      sg.addColorStop(0, '#ffe98a'); sg.addColorStop(1, '#f5a623');
+      c.fillStyle = sg;
+      starPath(c, cx, cy, s * 0.27, s * 0.12); c.fill();
+      c.fillStyle = 'rgba(255,255,255,0.7)';
+      starPath(c, cx - s * 0.06, cy - s * 0.07, s * 0.09, s * 0.04); c.fill();
+    } else if (material === 'crayon') {
+      // Paper wrapper band + waxy diagonal streaks.
+      c.fillStyle = shade(color, 0.28);
+      c.globalAlpha = 0.9;
+      c.fillRect(p, p + s * 0.32, s, s * 0.36);
+      c.globalAlpha = 1;
+      c.strokeStyle = 'rgba(0,0,0,0.14)'; c.lineWidth = Math.max(1, s * 0.02);
+      c.beginPath(); c.moveTo(p, p + s * 0.32); c.lineTo(p + s, p + s * 0.32); c.stroke();
+      c.beginPath(); c.moveTo(p, p + s * 0.68); c.lineTo(p + s, p + s * 0.68); c.stroke();
+      c.strokeStyle = 'rgba(255,255,255,0.16)'; c.lineWidth = Math.max(1, s * 0.05);
+      c.beginPath(); c.moveTo(p - s * 0.2, p + s * 0.85); c.lineTo(p + s * 0.5, p - s * 0.1); c.stroke();
+      c.beginPath(); c.moveTo(p + s * 0.3, p + s * 1.1); c.lineTo(p + s * 1.1, p + s * 0.15); c.stroke();
+    } else if (material === 'paper') {
+      // Cut-paper fibre lines.
+      c.strokeStyle = 'rgba(0,0,0,0.09)'; c.lineWidth = Math.max(1, s * 0.025);
+      for (let i = 1; i <= 3; i++) {
+        c.beginPath(); c.moveTo(p + s * 0.08, p + (s * i) / 4); c.lineTo(p + s * 0.92, p + (s * i) / 4); c.stroke();
+      }
+      c.strokeStyle = 'rgba(255,255,255,0.35)'; c.lineWidth = Math.max(1, s * 0.03);
+      c.beginPath(); c.moveTo(p + s * 0.1, p + s * 0.14); c.lineTo(p + s * 0.9, p + s * 0.14); c.stroke();
+    } else if (material === 'gummy') {
+      // Tiny blossom: 5 white petals + gold centre.
+      c.fillStyle = 'rgba(255,255,255,0.9)';
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
+        c.beginPath();
+        c.arc(cx + Math.cos(a) * s * 0.16, cy + Math.sin(a) * s * 0.16, s * 0.1, 0, Math.PI * 2);
+        c.fill();
+      }
+      c.fillStyle = '#ffd21f';
+      c.beginPath(); c.arc(cx, cy, s * 0.08, 0, Math.PI * 2); c.fill();
+    } else if (material === 'galaxy') {
+      // Star speckles + one 4-point sparkle, deterministic per color.
+      const h = hashStr(color);
+      c.fillStyle = 'rgba(255,255,255,0.9)';
+      for (let i = 0; i < 5; i++) {
+        const px = p + s * (0.18 + ((h >> (i * 3)) % 60) / 100);
+        const py = p + s * (0.16 + ((h >> (i * 3 + 1)) % 60) / 100);
+        c.beginPath(); c.arc(px, py, Math.max(0.8, s * 0.028), 0, Math.PI * 2); c.fill();
+      }
+      const sx = p + s * 0.74, sy = p + s * 0.26, sr = s * 0.13;
+      c.beginPath();
+      c.moveTo(sx, sy - sr); c.quadraticCurveTo(sx, sy, sx + sr, sy);
+      c.quadraticCurveTo(sx, sy, sx, sy + sr); c.quadraticCurveTo(sx, sy, sx - sr, sy);
+      c.quadraticCurveTo(sx, sy, sx, sy - sr); c.fill();
+    } else if (material === 'ocean') {
+      // Rising bubbles.
+      c.strokeStyle = 'rgba(255,255,255,0.65)'; c.lineWidth = Math.max(1, s * 0.03);
+      const bubbles = [[0.68, 0.3, 0.09], [0.3, 0.62, 0.07], [0.55, 0.72, 0.05]];
+      for (const [bx, by, br] of bubbles) {
+        c.beginPath(); c.arc(p + s * bx, p + s * by, s * br, 0, Math.PI * 2); c.stroke();
+      }
+      c.fillStyle = 'rgba(255,255,255,0.5)';
+      c.beginPath(); c.arc(p + s * 0.68, p + s * 0.27, s * 0.03, 0, Math.PI * 2); c.fill();
+    } else if (material === 'citrus') {
+      // Extra-sharp hard-candy shine streak.
+      c.save();
+      c.translate(cx, cy); c.rotate(-0.6);
+      c.fillStyle = 'rgba(255,255,255,0.4)';
+      c.fillRect(-s * 0.7, -s * 0.09, s * 1.4, s * 0.18);
+      c.fillStyle = 'rgba(255,255,255,0.65)';
+      c.fillRect(-s * 0.7, -s * 0.045, s * 1.4, s * 0.07);
+      c.restore();
+    } else if (material === 'frosted') {
+      // Frost sheen on top + sparkle crosses.
+      const fg = c.createLinearGradient(0, p, 0, p + s * 0.45);
+      fg.addColorStop(0, 'rgba(255,255,255,0.5)');
+      fg.addColorStop(1, 'rgba(255,255,255,0)');
+      c.fillStyle = fg; c.fillRect(p, p, s, s * 0.45);
+      c.strokeStyle = 'rgba(255,255,255,0.9)'; c.lineWidth = Math.max(1, s * 0.03);
+      c.lineCap = 'round';
+      for (const [px, py, pr] of [[0.72, 0.3, 0.09], [0.3, 0.66, 0.07]]) {
+        const X = p + s * px, Y = p + s * py, R = s * pr;
+        c.beginPath(); c.moveTo(X - R, Y); c.lineTo(X + R, Y); c.stroke();
+        c.beginPath(); c.moveTo(X, Y - R); c.lineTo(X, Y + R); c.stroke();
+      }
+    } else if (material === 'swirl') {
+      // Rainbow lollipop spiral in white.
+      c.strokeStyle = 'rgba(255,255,255,0.85)';
+      c.lineWidth = Math.max(1, s * 0.07); c.lineCap = 'round';
+      c.beginPath();
+      const turns = 2.4;
+      for (let t = 0; t <= turns * Math.PI * 2; t += 0.25) {
+        const rr2 = s * 0.045 + (t / (turns * Math.PI * 2)) * s * 0.34;
+        const px = cx + Math.cos(t - 0.8) * rr2, py = cy + Math.sin(t - 0.8) * rr2;
+        if (t === 0) c.moveTo(px, py); else c.lineTo(px, py);
+      }
+      c.stroke();
+      c.fillStyle = 'rgba(255,255,255,0.9)';
+      c.beginPath(); c.arc(cx, cy, s * 0.05, 0, Math.PI * 2); c.fill();
+    }
+    c.restore();
+  }
   return cv;
 }
 
@@ -554,26 +705,83 @@ let blocks = null, petals = null, stars = null, confetti = null, whiteBlock = nu
 let boardSprite = null, boardKey = '';
 let bgSprite = null, bgKey = '';
 let iconCache = null, iconURLCache = null;
+// Equipped cosmetics pack (js/cosmetics.js): its palette + material drive
+// the block sprites. Classic Candy ('candy') is the default.
+let currentPack = null; // { slug, colors, material }
+let currentMaterial = 'candy';
+
+function buildBlockSprites(colors, material) {
+  const m = new Map();
+  for (const col of colors) m.set(col, renderBlockSprite(col, material));
+  return m;
+}
+function buildParticleSprites(colors) {
+  const p = new Map(), s = new Map(), f = new Map();
+  for (const col of [...colors, '#ffffff', '#ffd21f']) {
+    p.set(col, renderPetalSprite(col));
+    s.set(col, renderStarSprite(col));
+    f.set(col, renderConfettiSprite(col));
+  }
+  return { petals: p, stars: s, confetti: f };
+}
 
 export const Sprites = {
   get ready() { return !!blocks; },
-  init() {
+  get packSlug() { return currentPack ? currentPack.slug : 'classic-candy'; },
+  get packMaterial() { return currentMaterial; },
+  init(pack) {
     if (blocks) return;
-    blocks = new Map();
-    for (const col of PALETTE) blocks.set(col, renderBlockSprite(col));
-    whiteBlock = renderBlockSprite('#ffffff');
-    petals = new Map();
-    stars = new Map();
-    confetti = new Map();
-    for (const col of [...PALETTE, '#ffffff', '#ffd21f']) {
-      petals.set(col, renderPetalSprite(col));
-      stars.set(col, renderStarSprite(col));
-      confetti.set(col, renderConfettiSprite(col));
-    }
+    const colors = pack && pack.colors ? pack.colors : PALETTE;
+    currentPack = pack || null;
+    currentMaterial = (pack && pack.material) || 'candy';
+    blocks = buildBlockSprites(colors, currentMaterial);
+    // The white ghost block stays plain candy in every pack — it is a
+    // neutral placeholder, not a pack block.
+    whiteBlock = renderBlockSprite('#ffffff', 'candy');
+    const parts = buildParticleSprites(colors);
+    petals = parts.petals; stars = parts.stars; confetti = parts.confetti;
     iconCache = new Map();
     iconURLCache = new Map();
   },
-  block(color) { return blocks.get(color) || blocks.get(PALETTE[0]); },
+  // Swap the equipped pack: re-render every block + particle sprite in the
+  // new palette + material. Cheap (7 colours) and only on switch.
+  setPack(pack) {
+    if (!pack || !pack.colors) return false;
+    if (currentPack && currentPack.slug === pack.slug) return true;
+    currentPack = pack;
+    currentMaterial = pack.material || 'candy';
+    blocks = buildBlockSprites(pack.colors, currentMaterial);
+    whiteBlock = renderBlockSprite('#ffffff', 'candy');
+    const parts = buildParticleSprites(pack.colors);
+    petals = parts.petals; stars = parts.stars; confetti = parts.confetti;
+    return true;
+  },
+  block(color) {
+    if (!blocks) return null;
+    let sp = blocks.get(color);
+    if (!sp) {
+      // Unknown hex (tutorial colours, test blues, old saves): render it
+      // on demand in the current material instead of silently showing the
+      // wrong colour. Cached, so it costs one render per new colour.
+      sp = renderBlockSprite(color, currentMaterial);
+      blocks.set(color, sp);
+    }
+    return sp;
+  },
+  // Small preview strip for the skins picker: the pack's first three
+  // colours as glossy blocks, in the pack's own material. Same renderer
+  // as the game, so the preview is exactly what the board will look like.
+  packPreview(pack) {
+    const cv = document.createElement('canvas');
+    cv.width = 132; cv.height = 44;
+    const c = cv.getContext('2d');
+    const cols = (pack && pack.colors ? pack.colors : PALETTE).slice(0, 3);
+    cols.forEach((col, i) => {
+      const sp = renderBlockSprite(col, (pack && pack.material) || 'candy');
+      c.drawImage(sp, i * 44, 0, 44, 44);
+    });
+    return cv.toDataURL('image/png');
+  },
   white() { return whiteBlock; },
   petal(color) { return petals.get(color) || petals.get(PALETTE[0]); },
   star(color) { return stars.get(color) || stars.get('#ffd21f'); },

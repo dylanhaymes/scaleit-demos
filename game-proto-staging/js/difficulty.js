@@ -19,6 +19,14 @@
  *    level-0 value to its level-10 value (WEIGHTS below). Higher levels mean
  *    more big and awkward pieces, fewer tiny ones. Pieces are random within
  *    those weights.
+ *    Difficulty variation (Dylan, Nov 12): each game also rolls a variant —
+ *    Relaxed (2 in 3 games, ~10% easier) or Spicy (1 in 3, 5% harder) — net
+ *    ~5% easier overall. The variant only shifts the EFFECTIVE level used
+ *    for the mix (see dealTray); the displayed level, level-up timing,
+ *    timer, scoring and earn rules are untouched. The roll is random per
+ *    game (seeded for daily/challenge, so every player gets the same
+ *    variant that day / for that challenge) — the same distribution for
+ *    everyone, never ads, spend, history, device or country.
  * 3. Fair deal: when a new tray of 3 is dealt, if none of the 3 pieces fits
  *    anywhere on the board, the tray is re-rolled (up to 5 tries). This helps
  *    every player equally and never depends on anything but the board.
@@ -48,9 +56,9 @@
  * 8. Power-ups: earned only through play (POWERUPS below) — one charge per
  *    3-line combo and per 10 lines cleared, at most POWERUPS.maxCharges held.
  *    Never sold, never ad-gated, same rules for everyone, reset every game.
- *    Each charge lasts POWERUPS.chargeLifetimeSeconds seconds of PLAY time
- *    (the clock pauses whenever the game timer pauses, and while a banner is
- *    showing), oldest first; an expired charge fades away with no points.
+ *    Charges never expire: a charge stays until the player uses it (or it
+ *    is auto-used to save a no-moves board). (Dylan, Nov 12: the 30 s
+ *    use-it-or-lose-it expiry is removed.)
  *    If no tray piece fits while a charge is held, the game auto-uses one to
  *    save you — Reshuffle first, then the Bomb on the 3x3 that makes the most
  *    room for a tray piece, then the Sweep on the fullest row or column.
@@ -105,7 +113,7 @@ export function timeForClear(lines) {
 // +6 s per line above plus the Time Star's +15 s — there is no separate
 // +15 s per clear.
 export const POWERUPS = {
-  maxCharges: 3, linesMilestone: 10, timeStarSeconds: 15, chargeLifetimeSeconds: 30,
+  maxCharges: 3, linesMilestone: 10, timeStarSeconds: 15,
   earnOrder: ['bomb', 'sweep', 'reshuffle', 'star'],
   defs: {
     bomb: { name: 'Boom Bomb', icon: 'bomb', hint: 'Clears a 3x3 area.' },
@@ -119,17 +127,36 @@ export function powerUpPoints(cells) { return 10 * cells; }
 export const RULES_TEXT = [
   `Level goes up by 1 every ${LEVEL_EVERY} pieces you place. Everyone gets the same curve.`,
   'Higher levels shift the random mix toward bigger, more awkward pieces and away from tiny ones.',
+  'Difficulty mix: about 2 in 3 games are Relaxed — the piece mix runs a touch easier — and about 1 in 3 is Spicy — a touch harder. Which one you get is picked at random when the game starts, the same odds for everyone, and it never depends on ads, purchases, or how you have played before. The game tells you which one it is when it starts.',
   `Fair deal: if none of a new tray's 3 pieces fits anywhere, the tray is re-rolled (up to ${FAIR_REROLLS} tries).`,
   `Comeback helper: after ${HELPER.lossesNeeded} games in a row under half your best, your next game gets one helper piece (marked ✦) that fits and clears a line when the board gets crowded. Once per game.`,
   'Daily challenge: same rules and scoring, but everyone plays the same pieces for the same moves today. No helper piece in the daily. It keeps its own best score per day.',
   `How the timer works: every game starts with ${TIMER.start} seconds on the labelled TIME bar above the board. Each line you clear adds ${TIMER.perLine} seconds, plus ${TIMER.extraPerLine} more per extra line on a multi-line clear (2 lines = +${timeForClear(2)} s, 3 lines = +${timeForClear(3)} s). The bar caps at ${TIMER.cap} seconds. From ${TIMER.lowSeconds} seconds a big countdown shows and a gentle tick sounds. When it runs out, the game ends, just like having no moves left — and the same optional revive is offered once per game, which also refills the timer to ${TIMER.reviveRefill} seconds. Levelling up mid-game adds ${TIMER.levelUpBonus} seconds. The timer pauses during the tutorial, pause, settings, ads, and when the app is in the background. The same numbers apply to everyone.`,
   `Scoring: 1 point per cell placed; clearing lines scores 10 points per cleared cell, times the lines cleared at once, times your combo. Clearing the whole board earns a +${BOARD_CLEAR_BONUS} bonus. Your score is exactly what you earned.`,
-  `Power-ups, earned only by playing: clear 3 lines at once, or reach every ${POWERUPS.linesMilestone} lines, and you earn one charge (at most ${POWERUPS.maxCharges} held). Power-ups last 30 seconds, so use them fast! If you run out of moves, a held power-up saves you automatically. An expired charge fades away with a soft poof and no points. The ring on a filled slot drains as its oldest charge runs down (seconds left shown, pulsing under 5 s). If you run out of moves while holding a charge, the game uses one to save you automatically — Reshuffle first, then the Bomb on the 3x3 that makes the most room for a tray piece, then the Sweep on the fullest row or column — with a "SAVED!" banner. Boom Bomb clears a 3x3 area, Eraser Sweep clears one row or column you choose, Shuffle Tray deals a new tray, Time Star adds ${POWERUPS.timeStarSeconds} seconds. Tap a power-up, then tap its target — tap again or the ✕ to cancel. Power-up clears score 10 points per cell with no combo multiplier and never earn more power-ups. Charges reset every game.`,
+  `Power-ups, earned only by playing: clear 3 lines at once, or reach every ${POWERUPS.linesMilestone} lines, and you earn one charge (at most ${POWERUPS.maxCharges} held). Charges never expire — they stay until you use them. The ring on an empty slot shows your progress to the next charge (lines cleared toward ${POWERUPS.linesMilestone}). If you run out of moves while holding a charge, the game uses one to save you automatically — Reshuffle first, then the Bomb on the 3x3 that makes the most room for a tray piece, then the Sweep on the fullest row or column — with a "SAVED!" banner. Boom Bomb clears a 3x3 area, Eraser Sweep clears one row or column you choose, Shuffle Tray deals a new tray, Time Star adds ${POWERUPS.timeStarSeconds} seconds. Tap a power-up, then tap its target — tap again or the ✕ to cancel. Power-up clears score 10 points per cell with no combo multiplier and never earn more power-ups. Charges reset every game.`,
   `Levels: your in-game level starts at Level 1 and rises by 1 every ${LEVEL_EVERY} pieces you place (max Level 11) — the labelled LEVEL bar above the TIME bar shows your progress to the next level, and levelling up adds ${TIMER.levelUpBonus} seconds plus a celebration. Your lifetime player level grows from XP (10 per line, 5 per max combo, 25 per game played) and only ever unlocks cosmetic stickers, block skins, board frames and backgrounds — it never changes difficulty, pieces or timing for anyone.`,
   'Combos: clear lines again within 3 moves to raise your combo — each cleared cell scores more the higher your combo climbs.',
 ];
 
 export function levelFor(placed) { return Math.min(10, Math.floor(placed / LEVEL_EVERY)); }
+
+// Difficulty variation (Dylan, Nov 12): each game rolls Relaxed (2 in 3
+// games, ~10% easier) or Spicy (1 in 3, 5% harder) — net ~5% easier
+// overall. rollVariant takes the game's own RNG: for daily/challenge that
+// RNG is seeded, so every player gets the same variant that day / for that
+// challenge; for classic it is Math.random. The variant only shifts the
+// EFFECTIVE level used for the piece mix in dealTray — never the displayed
+// level, level-up timing, timer, scoring or earn rules. Same distribution
+// for everyone; never ads, spend, history, device or country.
+// Calibrated by sim (tests/sim1.mjs, 300 games each, vs the Update 5
+// baseline 123 s / 41 placed / 12 lines): relaxed shift -0.5 -> 141 s / 47 /
+// 15, spicy shift +1.5 -> 114 s / 38 / 12, the 2/3+1/3 mix -> 132 s / 44 /
+// 15. (Removing the 30 s charge expiry alone moved the no-variant baseline
+// to 138 s / 46 / 16, so the mix lands ~7% easier than Update 5 on length
+// and placed; lines move more because persistent charges auto-save — and
+// clear lines — instead of expiring.)
+export const VARIANT_MIX_SHIFT = { relaxed: -0.5, spicy: 1.5 };
+export function rollVariant(rng = Math.random) { return rng() < 1 / 3 ? 'spicy' : 'relaxed'; }
 
 function weightsFor(level) {
   const k = level / 10, out = {};
@@ -187,13 +214,17 @@ function findHelper(board) {
 
 /**
  * Deal a tray of 3 pieces.
- * ctx = { board, placed, helperAvailable } -> { tray, helperUsed, rerolls, level }
+ * ctx = { board, placed, helperAvailable, variant } -> { tray, helperUsed, rerolls, level }
+ * variant is 'relaxed' | 'spicy' | undefined (undefined = current behaviour).
+ * It shifts only the effective level used for the piece mix, never the
+ * returned level or the level-up timing.
  */
-export function dealTray({ board, placed, helperAvailable }, rng = Math.random) {
+export function dealTray({ board, placed, helperAvailable, variant }, rng = Math.random) {
   const level = levelFor(placed);
+  const mixLevel = Math.max(0, Math.min(10, level + (VARIANT_MIX_SHIFT[variant] || 0)));
   let tray, rerolls = 0;
   for (;;) {
-    tray = [0, 1, 2].map(() => makePiece(randomShape(level, rng), rng));
+    tray = [0, 1, 2].map(() => makePiece(randomShape(mixLevel, rng), rng));
     if (tray.some((p) => fitsAnywhere(board, p.shape)) || rerolls >= FAIR_REROLLS) break;
     rerolls++;
   }

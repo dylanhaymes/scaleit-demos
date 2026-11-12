@@ -7,6 +7,15 @@ let muted = localStorage.getItem('gb_sfx') ? localStorage.getItem('gb_sfx') === 
 let musicOn = localStorage.getItem('gb_music') !== '0';
 let musicBus = null, urgencyBus = null, schedTimer = null, duckTimer = null;
 let schedStart = 0, schedNextEighth = 0, urgencyOn = false;
+// Power-up sting duck: standard music level, the 7% dip while the sting
+// sounds, and the sharp 30 ms ramps (a real ramp so there is no click, but
+// tens of milliseconds — not a fade). STING_MS is the sting's audible
+// length; the music snaps back the moment it ends.
+const MUSIC_LEVEL = 0.32;
+const STING_DUCK = 0.93;
+const STING_RAMP = 0.03;
+const STING_MS = 500;
+let stingTimer = null, stingUntil = 0;
 
 function ac() {
   if (!ctx) {
@@ -49,6 +58,25 @@ function noise(dur, vol = 0.2, delay = 0, hp = 1200) {
   s.connect(f); f.connect(g); g.connect(master); s.start(t);
 }
 
+// Bell / glockenspiel voice: sine fundamental + a quiet inharmonic partial
+// (x2.76), fast attack, long decay. No other SFX uses this timbre —
+// everything else is a triangle/sine arpeggio — so a bell reads instantly
+// as "power-up" even mid-game, in the high register above the music.
+function bell(freq, dur, { vol = 0.28, delay = 0 } = {}) {
+  if (muted) return;
+  const c = ac(); if (!c) return;
+  const t = c.currentTime + delay;
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + 0.004);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  const o = c.createOscillator(); o.type = 'sine'; o.frequency.value = freq;
+  const o2 = c.createOscillator(); o2.type = 'sine'; o2.frequency.value = freq * 2.76;
+  const g2 = c.createGain(); g2.gain.value = 0.18;
+  o.connect(g); o2.connect(g2); g2.connect(g); g.connect(master);
+  o.start(t); o.stop(t + dur + 0.02); o2.start(t); o2.stop(t + dur + 0.02);
+}
+
 const PENTA = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.5, 1568, 1760];
 
 export const Sfx = {
@@ -77,8 +105,20 @@ export const Sfx = {
     const f = secsLeft <= 5 ? 880 + (5 - secsLeft) * 60 : 660;
     tone(f, 0.08, { type: 'triangle', vol: 0.14 });
   },
-  // Power-up earned: bright little chime.
-  powerup() { [784, 1046.5, 1318.5].forEach((f, i) => tone(f, 0.22, { type: 'triangle', vol: 0.2, delay: i * 0.07 })); },
+  // Power-up earned: a bright two-note bell sting (glockenspiel-like) —
+  // G6 ding, C7 ding a fourth up, E7 sparkle tail. The only bell voice in
+  // the game, in a high register (1568–2637 Hz) above the music melody
+  // (392–659 Hz) and above the clear chimes, so it cuts through the music
+  // instead of blending into it. While it sounds the music dips 7%
+  // (Music.duckSting) and snaps back the moment it ends. SFX muted means
+  // no sting and no duck — the early return covers both.
+  powerup() {
+    if (muted) return;
+    bell(1568, 0.5, { vol: 0.3 }); // G6 — ding
+    bell(2093, 0.45, { vol: 0.3, delay: 0.09 }); // C7 — ding, a fourth up
+    bell(2637, 0.3, { vol: 0.14, delay: 0.18 }); // E7 — sparkle tail
+    Music.duckSting(STING_MS);
+  },
   // Level-up fanfare.
   levelUp() { [523.25, 659.25, 783.99, 1046.5, 1046.5, 1318.5].forEach((f, i) => tone(f, 0.35, { type: 'triangle', vol: 0.22, delay: i * 0.09 })); },
 };
@@ -210,6 +250,10 @@ export const Music = {
   get ctxTime() { return ctx ? ctx.currentTime : 0; },
   get scheduled() { return schedNextEighth; },
   get schedulerOn() { return !!schedTimer; },
+  // Live music-bus level (for the sting-duck test): the standard level is
+  // MUSIC_LEVEL; while the power-up sting sounds it reads ~0.93x that.
+  get busGain() { return musicBus ? musicBus.gain.value : 0; },
+  get baseGain() { return MUSIC_LEVEL; },
   set(on) { musicOn = !!on; localStorage.setItem('gb_music', musicOn ? '1' : '0'); musicOn ? this.start() : this.stop(); return musicOn; },
   start() {
     const c = ac(); if (!c || schedTimer) return;
@@ -241,11 +285,41 @@ export const Music = {
     if (urgencyBus && ctx) urgencyBus.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.3);
   },
   // Duck the music briefly under a sound effect, then ease back up.
+  // Skipped while the power-up sting is sounding — the sting duck owns the
+  // bus then (see duckSting), so a clear/combo in the same tick cannot drag
+  // the music down to 0.12 mid-sting or delay its snap-back with a 900 ms
+  // restore timer.
   duck() {
     if (!musicBus || !ctx || !schedTimer) return;
+    if (stingUntil && ctx.currentTime < stingUntil) return;
     musicBus.gain.setTargetAtTime(0.12, ctx.currentTime, 0.1);
     clearTimeout(duckTimer);
     duckTimer = setTimeout(() => { if (musicBus && ctx) musicBus.gain.setTargetAtTime(0.32, ctx.currentTime, 0.5); }, 900);
+  },
+  // Power-up sting duck: music drops 7% (x0.93 of standard) on a sharp
+  // 30 ms ramp the moment the sting starts, and snaps back to standard on
+  // an equally sharp 30 ms ramp the moment the sting ends (ms). A real
+  // ramp both ways — not a hard cut (no click), not a slow fade. Cancels
+  // any pending generic-duck restore so nothing fires mid-sting. No-op when
+  // music is off or not playing (music muted needs no duck); the SFX-mute
+  // case never reaches here — Sfx.powerup() returns before calling this.
+  duckSting(ms) {
+    if (!musicBus || !ctx || !schedTimer || !musicOn) return;
+    const t = ctx.currentTime;
+    stingUntil = t + ms / 1000;
+    clearTimeout(duckTimer);
+    clearTimeout(stingTimer);
+    musicBus.gain.cancelScheduledValues(t);
+    musicBus.gain.setValueAtTime(musicBus.gain.value, t);
+    musicBus.gain.linearRampToValueAtTime(MUSIC_LEVEL * STING_DUCK, t + STING_RAMP);
+    stingTimer = setTimeout(() => {
+      if (!musicBus || !ctx) return;
+      const t2 = ctx.currentTime;
+      stingUntil = 0;
+      musicBus.gain.cancelScheduledValues(t2);
+      musicBus.gain.setValueAtTime(musicBus.gain.value, t2);
+      musicBus.gain.linearRampToValueAtTime(MUSIC_LEVEL, t2 + STING_RAMP);
+    }, ms);
   },
   // Last-20-seconds urgency layer: a light shaker fades in on every eighth
   // note. Same tempo — no speed-up, just urgency.
