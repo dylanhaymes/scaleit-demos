@@ -218,7 +218,7 @@ function update(dt) {
   for (const c of fx.clearing) c.t += dt;
   fx.clearing = fx.clearing.filter((c) => c.t < 0.45);
   for (const p of fx.popups) p.t += dt;
-  fx.popups = fx.popups.filter((p) => p.t < 1.2);
+  fx.popups = fx.popups.filter((p) => p.t < 1.2 + (p.delay || 0));
   for (const p of fx.placedFlash) p.t += dt;
   fx.placedFlash = fx.placedFlash.filter((p) => p.t < 0.25);
   for (const p of fx.squash) p.t += dt;
@@ -414,10 +414,16 @@ function draw(t) {
     else g.fillRect(L.bx + p.idx * L.cell + L.cell * 0.42, L.by, L.cell * 0.16, L.size);
     g.globalAlpha = 1;
   }
-  // popups — chunky display type
+  // popups — chunky display type. Each popup can carry a delay so a
+  // multi-line clear doesn't pile "Double! / Combo xN / Board clear +300"
+  // on top of each other mid-animation — they used to all start at t=0 in
+  // the middle of the board (see fix9-tut-powerup shots). The lanes are
+  // spread 0.20 of a board apart and the delays stagger the pop-in.
   for (const p of fx.popups) {
-    const k = p.t / 1.2;
-    g.globalAlpha = 1 - k * k; g.textAlign = 'center'; g.font = `800 ${p.size * (1 + 0.25 * easeOut(Math.min(1, p.t * 5)))}px 'Baloo 2', 'Fredoka', system-ui, sans-serif`;
+    const t = p.t - (p.delay || 0);
+    if (t < 0) continue;
+    const k = t / 1.2;
+    g.globalAlpha = 1 - k * k; g.textAlign = 'center'; g.font = `800 ${p.size * (1 + 0.25 * easeOut(Math.min(1, t * 5)))}px 'Baloo 2', 'Fredoka', system-ui, sans-serif`;
     g.lineWidth = 6; g.strokeStyle = 'rgba(122,60,0,0.75)'; g.strokeText(p.text, p.x, p.y - k * 50);
     g.fillStyle = p.color; g.fillText(p.text, p.x, p.y - k * 50); g.globalAlpha = 1;
   }
@@ -445,7 +451,17 @@ function jackpotBurst() {
       life: 0.9 + Math.random() * 0.7, size: 4 + Math.random() * 6, color, confetti: i % 2 === 0 });
   }
 }
-function popup(text, x, y, color = '#fff', size = 28) { fx.popups.push({ text, x, y, color, size, t: 0 }); }
+function popup(text, x, y, color = '#fff', size = 28, delay = 0) {
+  // One popup per lane: a newer clear replaces the still-fading one in the
+  // same lane instead of printing over it. Rapid combo chains used to show
+  // "Combo x2" under "Combo x3" and two "Board clear +300" at once
+  // (fix9-tut-powerup shot). Lanes have exactly equal y every time, so an
+  // exact-y match is the lane key; the piece-anchored +pts popup never
+  // shares a lane's y (cell centres sit between the lanes).
+  const old = fx.popups.find((p) => p.y === y);
+  if (old) { Object.assign(old, { text, x, y, color, size, t: 0, delay }); return; }
+  fx.popups.push({ text, x, y, color, size, t: 0, delay });
+}
 function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 1800); }
 // Big-moment banner (DOM, chunky display type). Visual juice only.
 let bannerTimer = null;
@@ -651,15 +667,20 @@ function place(slot, r, c) {
     let grants = lines >= 3 ? 1 : 0;
     for (let m = Math.floor(linesBefore / POWERUPS.linesMilestone) + 1; m <= Math.floor(S.lines / POWERUPS.linesMilestone); m++) grants++;
     for (let i = 0; i < grants; i++) grantCharge();
+    // Board clear (the whole board emptied by this placement): its own
+    // popup carries the moment, so the +pts popup is skipped here — it sits
+    // on the placed piece, which can land right on the Board-clear lane
+    // and the two texts print over each other (fix9-tut-powerup shot).
+    const boardCleared = S.board.every((row) => row.every((v) => !v));
     const cx = L.bx + (c + sh.w / 2) * L.cell, cy = L.by + (r + sh.h / 2) * L.cell;
-    popup(`+${pts}`, cx, cy, '#ffffff', 30 + lines * 4);
+    if (!boardCleared) popup(`+${pts}`, cx, cy, '#ffffff', 30 + lines * 4);
     popup(`+${bonus}s`, L.w / 2, L.by - 4, '#7cf0c9', 22);
-    if (lines >= 2) popup(['', '', 'Double!', 'Triple!', 'Mega!', 'Bloom!'][Math.min(5, lines)], L.w / 2, L.by + L.size * 0.35, '#7cf0c9', 40);
+    if (lines >= 2) popup(['', '', 'Double!', 'Triple!', 'Mega!', 'Bloom!'][Math.min(5, lines)], L.w / 2, L.by + L.size * 0.30, '#7cf0c9', 40, 0.12);
     // Combo banner: escalating words with rising pitch (visual juice only).
     if (S.combo >= 2) {
       const words = ['', '', 'Nice!', 'Great!', 'AMAZING!', 'INCREDIBLE!'];
       showBanner(words[Math.min(5, S.combo)], 900);
-      popup(`Combo x${S.combo}`, L.w / 2, L.by + L.size * 0.5, '#ff7ab6', 34);
+      popup(`Combo x${S.combo}`, L.w / 2, L.by + L.size * 0.50, '#ff7ab6', 34, 0.28);
       Sfx.combo(S.combo); Analytics.log('combo', { combo: S.combo });
     }
     // 4-line clear: jackpot-style burst (visual celebration, no reward).
@@ -667,7 +688,7 @@ function place(slot, r, c) {
     Sfx.clear(lines, S.combo); Haptics.medium();
     fx.shake = 4 + lines * 3;
     Analytics.log('lines_cleared', { lines, combo: S.combo, pts });
-    if (S.board.every((row) => row.every((v) => !v))) { gained += BOARD_CLEAR_BONUS; popup('Board clear +300', L.w / 2, L.by + L.size * 0.65, '#ffd166', 32); Sfx.boardClear(); Analytics.log('board_clear', {}); }
+    if (boardCleared) { gained += BOARD_CLEAR_BONUS; popup('Board clear +300', L.w / 2, L.by + L.size * 0.70, '#ffd166', 32, 0.44); Sfx.boardClear(); Analytics.log('board_clear', {}); }
   } else {
     Sfx.place(); Haptics.light();
     S.sinceClear++;
@@ -1366,16 +1387,14 @@ window.__gbBack = () => {
 
 S.board = emptyBoard();
 Sprites.init();
-// ---------- Hero type: glossy 3D numerals + wordmark (pre-rendered sprites) ----------
+// ---------- Hero type: glossy 3D numerals (pre-rendered sprites) ----------
 // Score / BEST / combo / game-over score / countdown are <img> sprites once
 // the hero type is ready; before that they show plain text (same value). The
 // rolling score counter reuses a small <img> pool so it never rebuilds the
-// DOM while animating.
-function setLogoImg() {
-  const logo = $('title').querySelector('.logo');
-  if (logo.querySelector('img')) return;
-  logo.innerHTML = `<img id="logo-img" src="${Sprites.wordmarkURL()}" alt="Clearbloom">`;
-}
+// DOM while animating. The wordmark itself is live CSS gradient text
+// (.logo in style.css, one continuous blend across the whole word — Dylan,
+// Nov 12: the pre-rendered wordmark sprite is out, the old text look is
+// back, gradients blended, no hard seam).
 const scoreImgs = [], bestImgs = [], ovScoreImgs = [], cdImgs = [];
 function renderDigitRow(pool, el, digits, pal) {
   if (el.dataset.mode !== 'img') { el.innerHTML = ''; el.dataset.mode = 'img'; }
@@ -1426,7 +1445,6 @@ function renderCountdown(secs) {
   renderDigitRow(cdImgs, nums, String(secs), pal);
 }
 Sprites.initHeroType().then(() => {
-  setLogoImg();
   lastCdShown = '';
   renderScore(S.score); renderBest(modeBest()); renderCombo();
   if ($('over').classList.contains('show')) renderOvScore(S.score);
@@ -1472,4 +1490,13 @@ if (new URLSearchParams(location.search).has('test')) {
   window.__gb.armPowerup = (type) => armPowerup(type);
   window.__gb.targetCell = (r, c) => { if (S.armed === 'bomb') applyBomb(r, c); else if (S.armed === 'sweep') applySweep(r, c); };
   window.__gb.grantCharge = () => grantCharge();
+  // Test hook: live canvas popups (text, stagger delay, position) — for
+  // asserting the clear-flow popups don't stack on one another.
+  window.__gb.popups = () => fx.popups.map((p) => ({ text: p.text, delay: p.delay || 0, x: Math.round(p.x), y: Math.round(p.y) }));
+  // Test hook: pre-rendered numeral sprite URL (digit, palette) — for
+  // asserting no hard line inside any digit glyph.
+  window.__gb.numeralURL = (d, p) => Sprites.numeralURL(d, p || 'gold');
+  // Test hook: pre-rendered icon sprite URL (name) — for asserting the
+  // bomb ball is centred in its disc (Dylan flagged it twice).
+  window.__gb.iconURL = (name) => Sprites.iconURL(name);
 }

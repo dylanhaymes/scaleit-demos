@@ -64,11 +64,15 @@ html,body{margin:0;height:100%;background:linear-gradient(160deg,#fff8e0 0%,#ffe
 .panel.scroll{max-height:88vh;overflow:auto;text-align:left}
 .panel.scroll::before{display:none}
 @keyframes pop{0%{transform:scale(.8)}60%{transform:scale(1.05)}100%{transform:scale(1)}}
-.logo{font-family:var(--display);font-size:52px;font-weight:800;letter-spacing:-.02em;line-height:1;color:#1e63d8;
-  background:linear-gradient(180deg,#1e63d8,#5b21d6);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
-  -webkit-text-stroke:1.5px #7a3c00;text-shadow:0 2px 0 rgba(122,60,0,.25),0 5px 12px rgba(122,60,0,.3)}
-.logo span{color:var(--accent);background:linear-gradient(180deg,#a313d6,#e0247e 60%,#c40e6e);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
-.logo img{width:100%;max-width:330px;height:auto;display:block;margin:0 auto;-webkit-text-stroke:0;text-shadow:none}
+.logo{font-family:var(--display);font-size:52px;font-weight:800;letter-spacing:-.02em;line-height:1;color:#2f8cff;
+  background:linear-gradient(135deg,#2f8cff 0%,#5b7dff 14%,#8a5cff 28%,#b04dff 42%,#d14de0 56%,#f0569a 70%,#ff5da2 84%,#e83e8c 100%);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  -webkit-text-stroke:1px #fff;text-shadow:0 3px 0 rgba(255,255,255,.8),0 6px 14px rgba(47,140,255,.3)}
+/* One continuous blend across the whole word: the span must NOT carry its
+   own gradient, or the blue/pink seam comes back as a hard line. The old
+   look was two separate gradients (blue "Clear", pink "bloom") meeting at
+   the span edge — that seam is what Dylan called the hard line. */
+.logo span{background:none;-webkit-text-fill-color:transparent}
 .tag{color:var(--ink-soft);margin:8px 0 18px;font-weight:600}
 h2{margin:0 0 10px;font-size:28px;font-family:var(--display);font-weight:800;color:#7a3c00}
 
@@ -84,6 +88,9 @@ h2{margin:0 0 10px;font-size:28px;font-family:var(--display);font-weight:800;col
 .btn.daily img{width:20px;height:20px;vertical-align:-4px}
 .small{font-size:13px;color:var(--muted)}
 .final{display:flex;flex-direction:column;margin:10px 0}
+#ov-new{margin-bottom:8px} /* badge clearance: at bestpop's 1.14 scale peak + its
+  drop shadow, the badge used to wash over the SCORE label below it (Dylan's
+  game-over shot caught it mid-pop) — 8px keeps the label clear at any scale */
 #ov-score{display:flex;justify-content:center;min-height:56px}
 #ov-score img{height:56px;width:auto;display:block}
 /* ---- NEW BEST badge: one glossy-toy gold medallion, used both for the
@@ -251,7 +258,7 @@ body.reduced-motion #countdown.pop #cd-nums,body.reduced-motion #countdown.urgen
 /* ---- Big-moment banner, edge flash, fly layer ---- */
 #banner{position:fixed;left:50%;top:34%;transform:translate(-50%,-50%);z-index:40;pointer-events:none;text-align:center}
 #banner-text{display:inline-block;font-family:var(--display);font-size:44px;font-weight:800;letter-spacing:.01em;
-  background:linear-gradient(180deg,#fff 10%,#ffd21f 45%,#ff8a1e 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  background:linear-gradient(180deg,#fff 10%,#ffe98a 28%,#ffd21f 45%,#ffab2e 70%,#ff8a1e 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
   -webkit-text-stroke:2px #7a3c00;text-shadow:0 4px 0 rgba(122,60,0,.35),0 10px 24px rgba(255,140,0,.5);
   animation:bannerpop .6s cubic-bezier(.2,1.8,.4,1)}
 @keyframes bannerpop{0%{transform:scale(.4) rotate(-6deg);opacity:0}60%{transform:scale(1.12) rotate(2deg);opacity:1}100%{transform:scale(1) rotate(0);opacity:1}}

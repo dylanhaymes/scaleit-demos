@@ -775,17 +775,32 @@ await test('timer: countdown goes red in the last 5s, hides above 20s', async ()
   await page.close();
 });
 
-await test('hero type: wordmark sprite on home, gold numerals for score + BEST', async () => {
+await test('hero type: text wordmark with smooth blended gradient on home, gold numerals for score + BEST', async () => {
   const { page } = await newPage();
   await page.waitForSelector('#btn-play');
   await waitFor(async () => (await page.evaluate(() => window.__gb.state().heroTypeReady)), 5000, 'hero type ready');
   const logo = await page.evaluate(() => {
-    const img = document.querySelector('#logo-img');
-    return img ? { data: img.src.startsWith('data:image/png'), w: img.naturalWidth, h: img.naturalHeight } : null;
+    const el = document.querySelector('.logo');
+    const cs = getComputedStyle(el);
+    const spanCs = getComputedStyle(el.querySelector('span'));
+    return {
+      text: el.textContent.trim(),
+      hasImg: !!el.querySelector('img'),
+      bg: cs.backgroundImage,
+      fill: cs.webkitTextFillColor,
+      spanBg: spanCs.backgroundImage,
+    };
   });
-  ok(logo, 'logo is an <img> sprite');
-  ok(logo.data, 'logo src is a data URL');
-  ok(logo.w > 800, 'wordmark rendered sharp (naturalWidth > 800)');
+  eq(logo.text, 'Clearbloom', 'wordmark reads Clearbloom as live text');
+  ok(!logo.hasImg, 'no sprite img in the wordmark (Dylan Nov 12: text look is back)');
+  ok(logo.bg.includes('linear-gradient'), 'wordmark has a gradient');
+  // Smooth blend, not hard lines: many colour stops, and no two adjacent
+  // stops at the same position (a shared position is what a hard seam is).
+  const stops = [...logo.bg.matchAll(/(#[0-9a-f]{6}|rgba?\([^)]*\))\s*([\d.]+)%/gi)].map((m) => ({ c: m[1], p: parseFloat(m[2]) }));
+  ok(stops.length >= 6, `gradient has ${stops.length} stops (want >= 6, smooth blend)`);
+  ok(stops.every((s, i) => i === 0 || s.p > stops[i - 1].p), 'gradient stops strictly increase (no hard-stop seam)');
+  ok(logo.spanBg === 'none', 'span carries no own gradient (single blend across the word)');
+  eq(logo.fill === 'transparent' || logo.fill === 'rgba(0, 0, 0, 0)', true, 'text fill is transparent so the gradient shows');
   const score = await page.evaluate(() => {
     const imgs = [...document.querySelectorAll('#score img')];
     return { n: imgs.length, allData: imgs.every((i) => i.src.startsWith('data:image/png')) };
@@ -798,6 +813,172 @@ await test('hero type: wordmark sprite on home, gold numerals for score + BEST',
   });
   eq(best.n, 1, 'BEST 0 renders one numeral img');
   ok(best.allData, 'BEST numerals are data URLs');
+  await page.close();
+});
+
+// Punch list (Nov 12): a multi-line clear used to pile Double! / Combo xN /
+// Board clear +300 on top of each other mid-animation (all started at t=0
+// in the middle of the board — see fix9-tut-powerup shots). They now pop
+// in staggered, on lanes 0.20 of a board apart.
+const CROSS = ['.......#', '.......#', '.......#', '.......#', '.......#', '.......#', '.......#', '#######.'];
+await test('popups: clear-flow popups are staggered, not stacked', async () => {
+  const { page } = await newPage();
+  await startClassic(page);
+  await setupBoard(page, ROW7, [0, 0, 0]);
+  await page.evaluate(() => window.__gb.place(0, 7, 7)); // 1 line, combo 1
+  await setupBoard(page, CROSS, [0, 0, 0]);
+  await page.evaluate(() => window.__gb.place(0, 7, 7)); // row 7 + col 7 = 2 lines, combo 2, board empty
+  const pops = await page.evaluate(() => window.__gb.popups());
+  const byText = (t) => pops.find((p) => p.text.includes(t));
+  const dbl = byText('Double!');
+  const combo = byText('Combo x2');
+  const clear = byText('Board clear +300');
+  ok(dbl, 'Double! popup fired on the 2-line clear');
+  ok(combo, 'Combo x2 popup fired');
+  ok(clear, 'Board clear +300 popup fired');
+  ok(dbl.delay < combo.delay && combo.delay < clear.delay,
+    `popups stagger in time (Double ${dbl.delay}s, Combo ${combo.delay}s, Board clear ${clear.delay}s)`);
+  const ys = [dbl.y, combo.y, clear.y].sort((a, b) => a - b);
+  ok(ys[1] - ys[0] >= 40 && ys[2] - ys[1] >= 40, `popup lanes separated (${ys.join(', ')})`);
+  await page.close();
+});
+
+// Same-lane dedupe: three quick 1-line clears in a row — the Combo popup
+// in the 0.50 lane must be the latest one only, never "Combo x2" under
+// "Combo x3", and the same for the Board-clear popup.
+await test('popups: a newer clear replaces the fading popup in the same lane', async () => {
+  const { page } = await newPage();
+  await startClassic(page);
+  for (let i = 0; i < 3; i++) {
+    await setupBoard(page, ROW7, [0, 0, 0]);
+    await page.evaluate(() => window.__gb.place(0, 7, 7));
+  }
+  const pops = await page.evaluate(() => window.__gb.popups());
+  const combos = pops.filter((p) => p.text.startsWith('Combo'));
+  eq(combos.length, 1, 'one Combo popup live after three quick clears');
+  eq(combos[0].text, 'Combo x3', 'the live Combo popup is the latest one');
+  const clears = pops.filter((p) => p.text.startsWith('Board clear'));
+  eq(clears.length, 1, 'one Board-clear popup live after three quick clears');
+  await page.close();
+});
+
+// Dylan, Nov 12 (game-over "1468" screenshot): no hard lines inside text
+// anywhere. The old numeral sprites had two: a 7px solid white specular
+// rect across each glyph, and a 3-stop face ramp that bent at 45% (the eye
+// reads the bend as a line). Both are gone — 5-stop eased face ramp, soft
+// multi-stop sheen, no solid bar. Asserted on pixels: the per-row median
+// luminance inside any digit must not jump in a single row.
+await test('numerals: no hard line inside any digit glyph', async () => {
+  const { page } = await newPage();
+  await page.waitForSelector('#btn-play');
+  const worst = await page.evaluate(async () => {
+    const jobs = [];
+    for (const d of '0123456789') jobs.push(['gold', d]);
+    jobs.push(['amber', '8'], ['red', '8']);
+    let worstStep = 0, worstAt = '';
+    for (const [pal, d] of jobs) {
+      const url = window.__gb.numeralURL(d, pal);
+      const img = new Image();
+      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+      const cv = document.createElement('canvas');
+      cv.width = img.naturalWidth; cv.height = img.naturalHeight;
+      const c = cv.getContext('2d');
+      c.drawImage(img, 0, 0);
+      const data = c.getImageData(0, 0, cv.width, cv.height).data;
+      const rows = [];
+      for (let y = 0; y < cv.height; y++) {
+        const vals = [];
+        for (let x = 0; x < cv.width; x++) {
+          const i = (y * cv.width + x) * 4;
+          // Face pixels only: the gold/amber/red face ramps all keep the red
+          // channel >= 217, while the dark outline (122) and the extrusion
+          // side (<= 201) sit below 210. Sampling all opaque pixels flips
+          // the median from outline to face wherever the glyph narrows (the
+          // stem of "4" reads as a ~100 step) — that is the outline, not a
+          // line in the face, so it must not be counted.
+          if (data[i + 3] > 200 && data[i] > 210) vals.push(0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2]);
+        }
+        if (vals.length > 4) { vals.sort((a, b) => a - b); rows.push(vals[Math.floor(vals.length / 2)]); }
+        else rows.push(null);
+      }
+      const solid = rows.map((v, i) => [v, i]).filter(([v]) => v !== null);
+      const top = solid[0][1], bot = solid[solid.length - 1][1];
+      let prev = null;
+      for (const [v, i] of solid) {
+        if (i < top + 18 || i > bot - 18) { prev = v; continue; } // outline + extrusion live at the edges
+        if (prev !== null) {
+          const step = Math.abs(v - prev);
+          if (step > worstStep) { worstStep = step; worstAt = `${pal}:${d} row ${i}`; }
+        }
+        prev = v;
+      }
+    }
+    return { worstStep: Math.round(worstStep * 10) / 10, worstAt };
+  });
+  ok(worst.worstStep < 30, `no hard luminance step inside any digit (worst ${worst.worstStep} at ${worst.worstAt}, want < 30)`);
+  await page.close();
+});
+
+// Dylan re-raised it (Nov 12, 4:42 AM): the bomb ball sat low in its disc.
+// The old code centred the unit's EXTENT (spark tip to ball bottom), which
+// left the ball 13px below centre. Assert the dark ball's bounding box is
+// centred on the canvas (48, 48). Bbox, not centroid: the white gloss
+// lightens the ball's upper-left and would bias a centroid down-right.
+await test('icons: bomb ball is centred in its disc', async () => {
+  const { page } = await newPage();
+  await page.waitForSelector('#btn-play');
+  const m = await page.evaluate(async () => {
+    const url = window.__gb.iconURL('bomb');
+    const img = new Image();
+    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+    const cv = document.createElement('canvas');
+    cv.width = img.naturalWidth; cv.height = img.naturalHeight;
+    const c = cv.getContext('2d');
+    c.drawImage(img, 0, 0);
+    const data = c.getImageData(0, 0, cv.width, cv.height).data;
+    // Ball pixels: the dark slate fill (#3a3a4d) — low near-equal RGB with
+    // a slight blue lift. Fuse is brown, spark is yellow, gloss is white:
+    // none of them pass this filter.
+    let minX = 1e9, maxX = -1, minY = 1e9, maxY = -1, n = 0;
+    for (let y = 0; y < cv.height; y++) {
+      for (let x = 0; x < cv.width; x++) {
+        const i = (y * cv.width + x) * 4;
+        const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3];
+        if (a > 200 && r < 110 && g < 110 && b < 130 && b >= r) {
+          if (x < minX) minX = x; if (x > maxX) maxX = x;
+          if (y < minY) minY = y; if (y > maxY) maxY = y;
+          n++;
+        }
+      }
+    }
+    return { cx: cv.width / 2, cy: cv.height / 2, bx: (minX + maxX) / 2, by: (minY + maxY) / 2, dia: maxX - minX, n };
+  });
+  ok(m.n > 1000, `bomb ball has ${m.n} dark pixels (want > 1000)`);
+  ok(Math.abs(m.dia - 54) <= 4, `bomb ball diameter ${m.dia}px (want ~54)`);
+  ok(Math.abs(m.bx - m.cx) <= 3 && Math.abs(m.by - m.cy) <= 3, `bomb ball centred at (${m.bx.toFixed(1)}, ${m.by.toFixed(1)}) vs canvas centre (${m.cx}, ${m.cy})`);
+  await page.close();
+});
+
+// Dylan's game-over shot caught the NEW BEST badge mid-pop washing over the
+// SCORE label (bestpop peaks at scale 1.14 + a big drop shadow). The badge
+// now has 8px of clearance below it — assert the label stays clear even
+// while the badge is still popping.
+await test('game over: NEW BEST badge never covers the SCORE label', async () => {
+  const { page } = await newPage();
+  await startClassic(page);
+  await setupBoard(page, ROW7, [0, 0, 0]);
+  await page.evaluate(() => window.__gb.place(0, 7, 7)); // score > 0, new best
+  await page.evaluate(() => window.__gb.setTimeLeft(0.3));
+  await waitFor(async () => page.locator('#revive.show').isVisible(), 6000, 'revive overlay');
+  await page.click('#btn-norevive');
+  await waitFor(async () => page.locator('#over.show').isVisible(), 5000, 'game-over panel');
+  await sleep(300); // badge mid-pop (bestpop runs 0.6s, peaks ~0.33s)
+  const r = await page.evaluate(() => {
+    const b = document.querySelector('#ov-new').getBoundingClientRect();
+    const l = document.querySelector('#over .final .label').getBoundingClientRect();
+    return { badgeBottom: Math.round(b.bottom), labelTop: Math.round(l.top), gap: Math.round(l.top - b.bottom) };
+  });
+  ok(r.gap >= 4, `badge clears the SCORE label by ${r.gap}px mid-pop (want >= 4)`);
   await page.close();
 });
 
