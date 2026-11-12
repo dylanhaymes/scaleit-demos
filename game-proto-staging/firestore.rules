@@ -1,0 +1,130 @@
+// Firestore rules for Clearbloom (Update 3, batch 4).
+//
+// WRITE THE FILES ONLY — DO NOT DEPLOY. Deployment needs the Firebase CLI
+// authenticated (`firebase deploy --only firestore:rules,firestore:indexes`
+// in the clearbloom-game project); that is a separate step for the parent.
+// Until these rules deploy, Firestore stays deny-by-default and every
+// account/leaderboard/challenge call fails gracefully with { ok: false }.
+//
+// VERIFIED BY INSPECTION ONLY (Nov 12): no emulator run — the Firebase
+// emulator was not run in this VM. Before deploying, validate with
+// `firebase emulators:start --only firestore` + the rules unit tests, or at
+// minimum `firebase deploy --only firestore:rules --dry-run` if available.
+//
+// Principles:
+// - A player can only ever write their OWN data (own player doc, own score
+//   docs, own scores entry inside a challenge). Nobody writes anyone else's.
+// - Scores are validated in the rules (0–999999 ints), not just in the app.
+// - Challenges: only the two players can read one; only the challenger
+//   creates it; an update may only touch `scores` + `status`, and only the
+//   caller's own scores entry may change. Challenges are never deleted —
+//   they expire (48h, enforced by the app + the stored expiresAt).
+// - Leaderboard score docs are readable by any signed-in player (that is
+//   what a global board is); the doc id must be "<key>_<uid>" and the uid
+//   inside must match the caller. hideFromGlobal is honoured by the query,
+//   not by hiding the doc.
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(uid) { return isSignedIn() && request.auth.uid == uid; }
+    function validScore(s) { return s is int && s >= 0 && s <= 999999; }
+    function validCount(n) { return n is int && n >= 0 && n <= 10000; }
+
+    // ---- Player profiles ----
+    match /players/{uid} {
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() >= 2
+        && request.resource.data.displayName.size() <= 16
+        && request.resource.data.friendCode is string
+        && request.resource.data.friendCode.matches('^[A-Z0-9]{6}$')
+        && request.resource.data.hideFromGlobal is bool
+        && request.resource.data.xp is int && request.resource.data.xp >= 0
+        && request.resource.data.games is int && request.resource.data.games >= 0
+        && validScore(request.resource.data.best);
+      // Account deletion wipes the player doc (the app deletes scores too).
+      allow delete: if isOwner(uid);
+    }
+
+    // ---- Daily leaderboard scores: doc id "<YYYY-MM-DD>_<uid>" ----
+    match /scores_daily/{docId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.uid == request.auth.uid
+        && docId == request.resource.data.date + '_' + request.auth.uid
+        && request.resource.data.date is string
+        && request.resource.data.date.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && validScore(request.resource.data.score)
+        && validCount(request.resource.data.lines)
+        && validCount(request.resource.data.maxCombo)
+        && request.resource.data.hideFromGlobal is bool;
+      allow update: if isSignedIn()
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.date == resource.data.date
+        && validScore(request.resource.data.score)
+        && validCount(request.resource.data.lines)
+        && validCount(request.resource.data.maxCombo)
+        && request.resource.data.hideFromGlobal is bool;
+      allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    // ---- Weekly leaderboard scores: doc id "<YYYY-Www>_<uid>" ----
+    match /scores_weekly/{docId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.uid == request.auth.uid
+        && docId == request.resource.data.week + '_' + request.auth.uid
+        && request.resource.data.week is string
+        && request.resource.data.week.matches('^\\d{4}-W\\d{2}$')
+        && validScore(request.resource.data.score)
+        && validCount(request.resource.data.lines)
+        && validCount(request.resource.data.maxCombo)
+        && request.resource.data.hideFromGlobal is bool;
+      allow update: if isSignedIn()
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.week == resource.data.week
+        && validScore(request.resource.data.score)
+        && validCount(request.resource.data.lines)
+        && validCount(request.resource.data.maxCombo)
+        && request.resource.data.hideFromGlobal is bool;
+      allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    // ---- Head-to-head challenges ----
+    match /challenges/{id} {
+      allow read: if isSignedIn()
+        && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);
+      allow create: if isSignedIn()
+        && request.resource.data.fromUid == request.auth.uid
+        && request.resource.data.toUid is string
+        && request.resource.data.toUid != request.auth.uid
+        && request.resource.data.fromName is string
+        && request.resource.data.toName is string
+        && request.resource.data.seed is string
+        && request.resource.data.seed.matches('^[0-9a-f]{12}$')
+        && request.resource.data.mode == 'challenge'
+        && request.resource.data.status == 'pending'
+        && request.resource.data.scores == {}
+        && request.resource.data.createdAt is int
+        && request.resource.data.expiresAt is int
+        && request.resource.data.expiresAt - request.resource.data.createdAt == 172800000;
+      // Only `scores` + `status` may change, and only the caller's own
+      // scores entry may be added/changed. Nothing else is writable.
+      allow update: if isSignedIn()
+        && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['scores', 'status'])
+        && request.resource.data.status in ['pending', 'done']
+        && request.resource.data.scores.diff(resource.data.scores).affectedKeys().hasOnly([request.auth.uid])
+        && request.resource.data.scores[request.auth.uid] is map
+        && validScore(request.resource.data.scores[request.auth.uid].score)
+        && request.resource.data.scores[request.auth.uid].ts is int;
+      // Challenges are never deleted — they expire after 48h.
+      allow delete: if false;
+    }
+  }
+}

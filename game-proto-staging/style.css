@@ -56,10 +56,10 @@ html,body{margin:0;height:100%;background:linear-gradient(160deg,#fff8e0 0%,#ffe
 @keyframes shine{from{background-position:180% 0}to{background-position:-80% 0}}
 
 /* ---- Overlays / panels: rich cream cards with a ribbon ---- */
-.overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(90,50,0,.45);backdrop-filter:blur(4px);z-index:10;padding:20px}
+.overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(90,50,0,.45);backdrop-filter:blur(4px);z-index:10;padding:20px;overflow-y:auto}
 .overlay.show{display:flex;animation:fade .25s ease}
 @keyframes fade{from{opacity:0}to{opacity:1}}
-.panel{position:relative;background:linear-gradient(180deg,#fffdf4,#ffefd0);border:3px solid #f5c86b;border-radius:26px;padding:30px 22px 26px;width:min(360px,100%);text-align:center;color:var(--ink);box-shadow:0 18px 50px rgba(122,60,0,.4),inset 0 2px 0 #fff;animation:pop .35s cubic-bezier(.2,1.6,.4,1)}
+.panel{position:relative;margin:auto;background:linear-gradient(180deg,#fffdf4,#ffefd0);border:3px solid #f5c86b;border-radius:26px;padding:30px 22px 26px;width:min(360px,100%);text-align:center;color:var(--ink);box-shadow:0 18px 50px rgba(122,60,0,.4),inset 0 2px 0 #fff;animation:pop .35s cubic-bezier(.2,1.6,.4,1)}
 .panel::before{content:"";position:absolute;top:-14px;left:50%;transform:translateX(-50%) rotate(-2deg);width:150px;height:26px;background:linear-gradient(180deg,#ff5da2,#e83e8c);border-radius:6px;box-shadow:0 3px 8px rgba(0,0,0,.25)}
 .panel.scroll{max-height:88vh;overflow:auto;text-align:left}
 .panel.scroll::before{display:none}
@@ -270,3 +270,80 @@ body.reduced-motion #countdown.pop #cd-nums,body.reduced-motion #countdown.urgen
 .fly-icon img{width:100%;height:100%;display:block;filter:drop-shadow(0 4px 8px rgba(0,0,0,.35))}
 .fly-spark{position:absolute;width:10px;height:10px;border-radius:50%;background:#ffd21f;box-shadow:0 0 8px #ffd21f;pointer-events:none}
 .pu-first-star img{width:56px;height:56px;display:block;margin:0 auto 4px}
+
+/* ---- Account & sign-in (Update 3) ---- */
+/* Title-screen account card: same white card treatment as #player-card. */
+#acct-card{display:flex;align-items:center;gap:10px;background:#fff;border:2px solid #f5c86b;border-radius:18px;padding:10px 12px;margin:0 0 6px;box-shadow:0 4px 0 #d9a441,0 6px 14px rgba(122,60,0,.18)}
+.acct-info{flex:1;text-align:left;min-width:0}
+#acct-name{display:block;font-family:var(--display);font-weight:800;font-size:15px;color:#7a3c00;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#acct-sub{display:block}
+#acct-card .btn{margin-top:0;flex:none}
+/* "Your rank" teaser chip (Update 3, #5): same white card language as
+   #acct-card; a button so it opens the boards. Never claims a live rank
+   it doesn't have — the sub-line always says Sample or Live. */
+.rank-chip{display:flex;align-items:center;gap:10px;width:100%;background:#fff;border:2px solid #f5c86b;border-radius:18px;padding:10px 12px;margin:0 0 6px;box-shadow:0 4px 0 #d9a441,0 6px 14px rgba(122,60,0,.18);cursor:pointer;font-family:inherit;text-align:left}
+.rank-chip:active{transform:translateY(2px);box-shadow:0 2px 0 #d9a441,0 4px 8px rgba(122,60,0,.18)}
+.rank-star img{width:28px;height:28px;display:block}
+.rank-text{flex:1;min-width:0}
+#rank-chip-main{display:block;font-family:var(--display);font-weight:800;font-size:18px;color:#7a3c00}
+.rank-chip.top1 #rank-chip-main{color:#b97e0e}
+#rank-chip-sub{display:block}
+.rank-chev{font-family:var(--display);font-weight:800;font-size:22px;color:var(--muted);flex:none}
+.rank-chip.pop{animation:rankpop .35s ease-out}
+@keyframes rankpop{0%{transform:scale(1)}40%{transform:scale(1.03)}100%{transform:scale(1)}}
+/* Small buttons (account card, name save, copy code): same chunky 21px
+   type as every other button in the game, just less padding. */
+.btn.sm{width:auto;font-size:21px;padding:10px 16px;margin-top:10px}
+.btn.danger{background:linear-gradient(180deg,#ffb3b3,#ff6b6b 55%,#e04848);color:#fff;box-shadow:0 6px 0 #b02e2e,0 10px 20px rgba(0,0,0,.25),inset 0 2px 0 rgba(255,255,255,.6)}
+.btn.danger:active{box-shadow:0 2px 0 #b02e2e,0 4px 10px rgba(0,0,0,.25),inset 0 2px 0 rgba(255,255,255,.6)}
+.btn.armed-danger{background:linear-gradient(180deg,#ff8a8a,#d92b2b 55%,#a81f1f);color:#fff;box-shadow:0 6px 0 #7c1616,0 10px 20px rgba(0,0,0,.25),inset 0 2px 0 rgba(255,255,255,.6)}
+/* Account panel internals. */
+#account .panel{text-align:left}
+#account h2{text-align:center}
+#acct-msg{min-height:16px;margin:0 0 6px;text-align:center}
+#acct-msg.error{color:#c22;font-weight:700}
+.acct-label{display:block;font-weight:800;font-size:14px;color:#7a3c00;margin:10px 0 4px}
+.acct-name-row{display:flex;gap:8px;align-items:center}
+#acct-name-input{flex:1;min-width:0;font-family:var(--display);font-size:18px;font-weight:700;color:var(--ink);background:#fff;border:2px solid #f5c86b;border-radius:14px;padding:10px 12px;outline:none}
+#acct-name-input:focus{border-color:#2f8cff;box-shadow:0 0 0 3px rgba(47,140,255,.25)}
+.acct-row{display:flex;align-items:center;gap:10px}
+.friend-code{font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:.18em;color:#7a3c00}
+#acct-signin .btn{margin-top:10px}
+#acct-signin .btn:disabled{filter:saturate(.4);opacity:.6;cursor:default}
+.privacy{font-size:13px;line-height:1.5;color:var(--muted);text-align:left;margin:14px 0 4px}
+
+/* ---- Leaderboards (Update 3, batch 2) ---- */
+#boards .panel{text-align:left}
+#boards h2{text-align:center}
+.board-tabs{display:flex;gap:8px;justify-content:center;margin:6px 0}
+.board-tabs .btn{margin-top:0}
+.board-tabs .btn.on{background:#7a3c00;color:#ffd21f;border-color:#7a3c00}
+#board-note{min-height:16px;margin:4px 0 6px;text-align:center}
+.board-list{list-style:none;margin:0;padding:0}
+.board-row{display:flex;align-items:center;gap:10px;background:#fff;border:2px solid #f5c86b;border-radius:14px;padding:9px 12px;margin-bottom:6px;box-shadow:0 2px 0 #d9a441}
+.board-rank{font-family:var(--display);font-weight:800;font-size:18px;color:#7a3c00;width:26px;text-align:center;flex:none}
+.board-row.gold .board-rank{color:#b97e0e}
+.board-row.silver .board-rank{color:#7d8aa5}
+.board-row.bronze .board-rank{color:#a86a3c}
+.board-name{flex:1;font-weight:700;font-size:16px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.board-score{font-family:var(--display);font-weight:800;font-size:17px;color:#7a3c00;flex:none}
+.board-row.own{border-color:#2f8cff;background:#eaf3ff}
+.board-you{display:inline-block;background:#2f8cff;color:#fff;border-radius:999px;font-size:11px;font-weight:800;padding:2px 7px;margin-left:6px;vertical-align:2px}
+.board-empty{text-align:center;color:var(--muted);font-weight:700;padding:18px 0}
+#board-rank{text-align:center;font-weight:700;color:#7a3c00;min-height:16px}
+.friend-list{margin-top:8px}
+.friend-row{display:flex;align-items:center;gap:10px;background:#fff;border:2px solid #f5c86b;border-radius:14px;padding:8px 12px;margin-bottom:6px}
+.friend-row .board-name{flex:1}
+.friend-code-sm{font-family:var(--display);font-weight:800;font-size:14px;letter-spacing:.12em;color:#7a3c00}
+.friend-remove{background:none;border:none;font-size:18px;font-weight:800;color:#c22;cursor:pointer;padding:2px 6px;line-height:1}
+
+/* ---- Store (Update 3, batch 4) ---- */
+#store .panel{text-align:left}
+#store h2{text-align:center}
+.store-product{display:flex;align-items:center;gap:10px;background:#fff;border:2px solid #f5c86b;border-radius:14px;padding:10px 12px;margin-bottom:6px;box-shadow:0 2px 0 #d9a441}
+.store-info{flex:1;min-width:0}
+.store-name{font-weight:800;font-size:16px;color:var(--ink)}
+.store-blurb{font-size:13px;line-height:1.35;color:var(--muted);margin-top:2px}
+.store-price{font-family:var(--display);font-weight:800;font-size:17px;color:#7a3c00;flex:none}
+.store-test{display:inline-block;background:#7a3c00;color:#ffd21f;border-radius:999px;font-size:11px;font-weight:800;padding:2px 7px;margin-left:6px;vertical-align:2px}
+#btn-restore{margin-top:6px}

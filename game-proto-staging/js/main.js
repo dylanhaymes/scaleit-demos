@@ -9,6 +9,10 @@ import { dailyRng, localDateKey } from './rng.js';
 import { SHAPES, makePiece } from './pieces.js';
 import { APP_NAME } from './brand.js';
 import { Sprites } from './sprites.js';
+import { Accounts } from './accounts.js';
+import { Leaderboards, mockBoard, sampleRank, boardKey, weekKeyFor, escapeHtml } from './leaderboards.js';
+import { Challenges, challengeRng, challengeStatus, timeLeftText } from './challenges.js';
+import { Store } from './store.js';
 
 const $ = (id) => document.getElementById(id);
 const cv = $('cv'), g = cv.getContext('2d');
@@ -40,6 +44,10 @@ const S = {
   board: [], tray: [null, null, null], score: 0, shownScore: 0, combo: 0, sinceClear: 0, maxCombo: 0,
   lines: 0, placed: 0, revived: false, helperAvailable: false, running: false, gamesThisSession: 0,
   startBest: 0, startedAt: 0, mode: 'classic', dateKey: null, rng: Math.random,
+  // Challenge game (Update 3, batch 3): the challenge doc id, the score to
+  // beat (the opponent's best so far, 0 if they haven't played), their name,
+  // and their score (null until they play). dateKey holds the challenge seed.
+  challengeId: null, challengeToBeat: 0, challengeOpponent: '', challengeOpponentScore: null,
   timeLeft: TIMER.start, timerStarted: false, lowTonePlayed: false,
   charges: { bomb: 0, sweep: 0, reshuffle: 0, star: 0 }, earnIdx: 0,
   // Each held charge has its own 30 s play-time clock (oldest first).
@@ -114,7 +122,7 @@ function renderChargeClocks() {
     }
   });
 }
-const modeBest = () => (S.mode === 'daily' ? store.dailyBest(S.dateKey) : store.best);
+const modeBest = () => (S.mode === 'daily' ? store.dailyBest(S.dateKey) : S.mode === 'challenge' ? S.challengeToBeat : store.best);
 const fx = { particles: [], clearing: [], popups: [], shake: 0, placedFlash: [], trayIn: 0, glow: 0, shimmer: 0, squash: [], rings: [], beams: [], trayFlip: 0 };
 let L = {}; // layout
 let drag = null;
@@ -551,12 +559,17 @@ function renderPlayerCard() {
 }
 
 function setModeUI() {
-  $('best-label').textContent = S.mode === 'daily' ? 'DAILY BEST' : 'BEST';
+  $('best-label').textContent = S.mode === 'daily' ? 'DAILY BEST' : S.mode === 'challenge' ? 'TO BEAT' : 'BEST';
   renderBest(modeBest());
 }
 function startGame(mode = 'classic', dateKey = localDateKey()) {
-  S.mode = mode; S.dateKey = mode === 'daily' ? dateKey : null;
-  S.rng = mode === 'daily' ? dailyRng(dateKey) : Math.random;
+  S.mode = mode; S.dateKey = (mode === 'daily' || mode === 'challenge') ? dateKey : null;
+  // Challenge games reuse the seeded deal: dateKey IS the challenge seed,
+  // so both players get the same pieces in the same order.
+  S.rng = mode === 'daily' ? dailyRng(dateKey) : mode === 'challenge' ? challengeRng(dateKey) : Math.random;
+  // A non-challenge game clears the challenge context (a stale challengeId
+  // must never ride along into a classic/daily game).
+  if (mode !== 'challenge') { S.challengeId = null; S.challengeToBeat = 0; S.challengeOpponent = ''; S.challengeOpponentScore = null; }
   S.board = emptyBoard(); S.score = 0; S.shownScore = 0; S.combo = 0; S.sinceClear = 0; S.maxCombo = 0; S.lines = 0; S.placed = 0;
   S.revived = false; S.running = true; S.startBest = modeBest(); S.startedAt = Date.now();
   // Timer: full bar every game. It starts now unless the first-game tutorial
@@ -586,6 +599,7 @@ function saveGame() {
   if (!S.running && !S.awaitingRevive) return;
   const data = {
     v: SAVE_V, mode: S.mode, dateKey: S.dateKey, rngState: S.rng.getState ? S.rng.getState() : null,
+    challengeId: S.challengeId, challengeToBeat: S.challengeToBeat, challengeOpponent: S.challengeOpponent, challengeOpponentScore: S.challengeOpponentScore,
     board: S.board, tray: S.tray.map((p) => p && { id: p.shape.id, color: p.color, helper: !!p.helper }),
     score: S.score, combo: S.combo, sinceClear: S.sinceClear, maxCombo: S.maxCombo, lines: S.lines, placed: S.placed,
     revived: S.revived, helperAvailable: S.helperAvailable, startBest: S.startBest, elapsed: Date.now() - S.startedAt, savedAt: Date.now(),
@@ -603,8 +617,10 @@ function readSave() {
   } catch { return null; }
 }
 function restoreGame(d) {
-  S.mode = d.mode === 'daily' ? 'daily' : 'classic'; S.dateKey = d.dateKey || null;
-  S.rng = S.mode === 'daily' ? dailyRng(S.dateKey) : Math.random;
+  S.mode = d.mode === 'daily' ? 'daily' : d.mode === 'challenge' ? 'challenge' : 'classic'; S.dateKey = d.dateKey || null;
+  S.rng = S.mode === 'daily' ? dailyRng(S.dateKey) : S.mode === 'challenge' ? challengeRng(S.dateKey) : Math.random;
+  S.challengeId = d.challengeId || null; S.challengeToBeat = d.challengeToBeat || 0;
+  S.challengeOpponent = d.challengeOpponent || ''; S.challengeOpponentScore = d.challengeOpponentScore ?? null;
   if (S.rng.setState && d.rngState != null) S.rng.setState(d.rngState);
   S.board = d.board.map((row) => row.map((v) => v || null));
   S.tray = d.tray.map((p) => { if (!p || !SHAPES[p.id]) return null; const pc = makePiece(SHAPES[p.id]); pc.color = p.color; pc.helper = !!p.helper; return pc; });
@@ -1038,9 +1054,13 @@ function finishGame() {
   cancelArmed();
   if (Music.setUrgency) Music.setUrgency(false);
   const daily = S.mode === 'daily';
+  const challenge = S.mode === 'challenge';
   const prevBest = modeBest(), isBest = S.score > prevBest;
-  if (isBest) { if (daily) store.setDailyBest(S.dateKey, S.score); else store.best = S.score; Sfx.best(); Analytics.log('new_high_score', { score: S.score, prev: prevBest, mode: S.mode }); }
-  if (!daily) store.pushHistory(S.score); // daily games never feed the comeback-helper history
+  // Challenge games never touch the local bests: the deal is shared with
+  // one opponent, not a random classic game, so the score belongs to the
+  // challenge doc, not to the classic/daily bests.
+  if (isBest && !challenge) { if (daily) store.setDailyBest(S.dateKey, S.score); else store.best = S.score; Sfx.best(); Analytics.log('new_high_score', { score: S.score, prev: prevBest, mode: S.mode }); }
+  if (!daily && !challenge) store.pushHistory(S.score); // daily + challenge games never feed the comeback-helper history
   // Lifetime player XP: 10/line + 5/max combo + 25/game. Cosmetics only.
   const xpBefore = store.xp, lvlBefore = playerLevelFor(xpBefore);
   const gained = xpForGame(S.lines, S.maxCombo);
@@ -1050,10 +1070,23 @@ function finishGame() {
   const newRewards = rewardsForLevel(lvlAfter).filter((r) => !rewardsForLevel(lvlBefore).includes(r));
   Analytics.log('game_over', { mode: S.mode, score: S.score, lines: S.lines, max_combo: S.maxCombo, placed: S.placed, revived: S.revived, secs: Math.round((Date.now() - S.startedAt) / 1000), xp_gained: gained, player_level: lvlAfter });
   renderOvScore(S.score); $('ov-best').textContent = modeBest(); $('ov-lines').textContent = S.lines; $('ov-combo').textContent = S.maxCombo;
-  $('ov-new').classList.toggle('hidden', !isBest);
+  $('ov-new').classList.toggle('hidden', !isBest || challenge);
+  // Challenge result line (the NEW BEST badge stays hidden for challenges —
+  // the result is against one opponent, not a personal best).
+  const ovCh = $('ov-challenge');
+  if (challenge && ovCh) {
+    const opp = S.challengeOpponent || 'your opponent';
+    const oppScore = S.challengeOpponentScore;
+    ovCh.textContent = oppScore == null
+      ? `Waiting for ${opp} to play — your score: ${S.score}`
+      : S.score > oppScore ? `You beat ${opp} ${S.score}–${oppScore}!`
+      : S.score === oppScore ? `Tied with ${opp} at ${S.score}!`
+      : `${opp} leads ${oppScore}–${S.score} — play again to beat them!`;
+    ovCh.classList.remove('hidden');
+  } else if (ovCh) ovCh.classList.add('hidden');
   $('ov-xp').textContent = `+${gained} XP  ·  Player Level ${lvlAfter}${newRewards.length ? ` — unlocked: ${newRewards.join(', ')}!` : ''}`;
   renderBest(modeBest());
-  $('over').querySelector('h2').textContent = daily ? 'Daily challenge over' : 'Game over';
+  $('over').querySelector('h2').textContent = daily ? 'Daily challenge over' : challenge ? 'Challenge over' : 'Game over';
   // The date never goes in the heading — it sits in smaller text underneath.
   const ovDate = $('ov-date');
   if (daily) { ovDate.textContent = friendlyDate(S.dateKey); ovDate.classList.remove('hidden'); }
@@ -1071,10 +1104,24 @@ function finishGame() {
   // same medallion as the panel badge), then the panel opens with the badge
   // inside it. Showing both at once stacks two badges on top of each other
   // — that was the doubled-badge look in the game-over screenshot.
-  if (isBest) { jackpotBurst(); showBestBadge(1500); setTimeout(showPanel, 1500); }
+  // Challenges skip the badge beat (no NEW BEST for a challenge game).
+  if (isBest && !challenge) { jackpotBurst(); showBestBadge(1500); setTimeout(showPanel, 1500); }
   else showPanel();
   if (lvlAfter > lvlBefore) showBanner(`PLAYER LEVEL ${lvlAfter}!`, 1600);
   renderPlayerCard();
+  // Accounts (Update 3): merge this game's progress into the cloud player
+  // doc when signed in. Guests: no-op — nothing leaves the device.
+  Accounts.recordGame().catch(() => {});
+  // Leaderboards (Update 3, batch 2): daily games go to the daily board,
+  // classic games to the weekly board. Best-only, validated, signed-in
+  // only — guests: no-op, nothing leaves the device. Challenge games never
+  // submit to the boards (their deal is shared with one opponent).
+  if (!challenge) {
+    const board = S.mode === 'daily' ? 'daily' : 'weekly';
+    Leaderboards.submitScore({ board, score: S.score, lines: S.lines, maxCombo: S.maxCombo }).catch(() => {});
+  }
+  // Challenges (Update 3, batch 3): best-only submit to the challenge doc.
+  if (challenge && S.challengeId) Challenges.submitChallengeScore(S.challengeId, S.score).catch(() => {});
 }
 
 // ---------- Input ----------
@@ -1138,6 +1185,57 @@ function refreshTitle() {
   $('btn-play').textContent = sv ? (sv.mode === 'daily' ? '▶ Continue daily' : '▶ Continue') : 'Play';
   $('btn-new').classList.toggle('hidden', !sv);
   renderPlayerCard();
+  refreshRankChip();
+}
+
+// ---- "Your rank" teaser chip (Update 3, #5) ----
+// Always renders instantly from the deterministic sample board (pure, no
+// network) so the title never waits on anything. Signed-in players get a
+// live upgrade in the background when the daily fetch resolves with a
+// rank; anything else (offline, no index, outside the top 50) leaves the
+// honest sample text in place. The chip never claims a live rank it
+// doesn't have, and never presents sample ranks as real.
+let rankChipSeq = 0, rankChipInit = false;
+function refreshRankChip() {
+  const chip = $('rank-chip'), main = $('rank-chip-main'), sub = $('rank-chip-sub');
+  if (!chip || !main || !sub) return Promise.resolve();
+  const seq = ++rankChipSeq;
+  const fmt = (n) => Number(n || 0).toLocaleString('en-US');
+  const dailyBest = store.dailyBest(localDateKey());
+  const classicBest = store.best;
+  const setChip = (mainText, subText, { live = false, top1 = false } = {}) => {
+    if (rankChipInit && main.textContent !== mainText) {
+      chip.classList.remove('pop'); void chip.offsetWidth; chip.classList.add('pop');
+    }
+    rankChipInit = true;
+    main.textContent = mainText;
+    sub.textContent = subText;
+    chip.dataset.live = live ? '1' : '0';
+    chip.classList.toggle('top1', top1);
+  };
+  if (dailyBest > 0) {
+    const rank = sampleRank('daily', 'global', boardKey('daily'), dailyBest);
+    if (rank) {
+      setChip(rank === 1 ? "You'd be #1 today!" : `You'd be #${rank} today`, `Daily best ${fmt(dailyBest)} · Sample board`, { top1: rank === 1 });
+    } else {
+      setChip('Outside the top 10 — keep playing!', `Daily best ${fmt(dailyBest)} · Sample board`);
+    }
+  } else if (classicBest > 0) {
+    setChip('Play to claim your rank!', `Classic best ${fmt(classicBest)} · play today's daily to rank it`);
+  } else {
+    setChip('Play to claim your rank!', 'Your first score lands here');
+  }
+  if (!Accounts.signedIn) return Promise.resolve();
+  return Leaderboards.fetchBoard({ board: 'daily', scope: 'global' }).then((res) => {
+    if (seq !== rankChipSeq || !res || !res.ok) return;
+    const best = store.dailyBest(localDateKey());
+    if (best <= 0) return; // daily best changed underneath us; refreshTitle will re-render
+    if (res.ownRank) {
+      setChip(res.ownRank === 1 ? "You're #1 today!" : `You're #${res.ownRank} today!`, `Daily best ${fmt(best)} · Live board`, { live: true, top1: res.ownRank === 1 });
+    } else if (res.entries && res.entries.length) {
+      setChip('Outside the top 50 — keep playing!', `Daily best ${fmt(best)} · Live board`, { live: true });
+    }
+  }).catch(() => {});
 }
 // 3D icons: every [data-icon] <img> gets its pre-rendered sprite URL.
 function initIcons() {
@@ -1167,12 +1265,362 @@ function applyMotionClass() { document.body.classList.toggle('reduced-motion', r
 $('btn-set-close').onclick = () => show('settings', false);
 $('btn-pu-first').onclick = () => show('pu-first', false);
 $('btn-tut-again').onclick = () => { show('settings', false); localStorage.removeItem('gb_tut_done'); if (S.running) Tutorial.start(); else { leaveTitle(); startGame('classic'); } };
+
+// ---- Account & sign-in (Update 3) ----
+// Guests play everything except social; sign-in is optional and never
+// required to play. Safe to call before Accounts.init() resolves.
+function refreshAccountUI() {
+  const st = Accounts.debugState();
+  const nameEl = $('acct-name'), subEl = $('acct-sub'), codeEl = $('acct-code');
+  if (nameEl) nameEl.textContent = st.displayName;
+  if (subEl) subEl.textContent = st.signedIn
+    ? (st.provider === 'google' ? 'Signed in with Google'
+       : st.provider === 'facebook' ? 'Signed in with Facebook'
+       : 'Signed in — no account needed')
+    : 'Progress saved on this device only';
+  if (codeEl) codeEl.textContent = st.friendCode || '------';
+  const input = $('acct-name-input');
+  if (input && document.activeElement !== input) input.value = st.displayName === 'Guest' ? '' : st.displayName;
+  const hide = $('set-hide-global');
+  if (hide) hide.checked = st.hideFromGlobal;
+  const cfg = st.configured;
+  const setBtn = (id, enabled, title) => { const b = $(id); if (!b) return; b.disabled = !enabled; if (title !== undefined) b.title = title; };
+  setBtn('btn-sign-google', cfg && !st.signedIn, cfg ? '' : "Sign-in isn't set up yet — keep playing as a guest");
+  // Facebook is built but disabled until the provider exists in the console.
+  setBtn('btn-sign-facebook', false, "Facebook sign-in isn't set up yet");
+  setBtn('btn-sign-anon', cfg && !st.signedIn, cfg ? '' : "Sign-in isn't set up yet — keep playing as a guest");
+  const out = $('btn-sign-out');
+  if (out) out.classList.toggle('hidden', !st.signedIn);
+  const msg = $('acct-msg');
+  if (msg && !msg.dataset.sticky) { msg.textContent = ''; msg.classList.remove('error'); }
+  refreshRankChip(); // sign-in state changes which rank path the chip uses
+}
+function acctMsg(text, isError) {
+  const msg = $('acct-msg');
+  if (!msg) return;
+  msg.textContent = text || '';
+  msg.classList.toggle('error', !!isError);
+  if (text) { msg.dataset.sticky = '1'; } else { delete msg.dataset.sticky; }
+}
+function openAccount() { refreshAccountUI(); acctMsg(''); show('account', true); }
+$('btn-account').onclick = openAccount;
+$('btn-set-account').onclick = () => { show('settings', false); openAccount(); };
+$('btn-acct-close').onclick = () => show('account', false);
+$('btn-name-save').onclick = () => {
+  const input = $('acct-name-input');
+  const res = Accounts.setDisplayName(input ? input.value : '');
+  if (res.ok) { toast('Name saved'); acctMsg(''); refreshAccountUI(); }
+  else acctMsg(Accounts.nameRejectMessage(res.reason), true);
+};
+$('btn-copy-code').onclick = async () => {
+  const code = Accounts.friendCode;
+  if (!code) return;
+  try {
+    await navigator.clipboard.writeText(code);
+    toast('Friend code copied');
+  } catch {
+    acctMsg('Your friend code: ' + code, false);
+  }
+};
+$('set-hide-global').onchange = (e) => { Accounts.setHideFromGlobal(e.target.checked).catch(() => {}); };
+$('btn-sign-google').onclick = async () => {
+  const res = await Accounts.signInGoogle();
+  if (res.ok) { toast('Signed in'); acctMsg(''); refreshAccountUI(); }
+  else acctMsg(res.reason === 'not-configured' ? "Sign-in isn't set up yet — the game is still being set up. Keep playing as a guest." : "Couldn't sign in — try again.", true);
+};
+$('btn-sign-anon').onclick = async () => {
+  const res = await Accounts.signInAnonymous();
+  if (res.ok) { toast('Signed in'); acctMsg(''); refreshAccountUI(); }
+  else acctMsg(res.reason === 'not-configured' ? "Sign-in isn't set up yet — the game is still being set up. Keep playing as a guest." : "Couldn't sign in — try again.", true);
+};
+$('btn-sign-out').onclick = async () => {
+  await Accounts.signOut();
+  toast('Signed out'); refreshAccountUI();
+};
+// Two-step delete: first tap arms it, second tap wipes. Arms itself back
+// after 5s so a stray tap can't delete anything.
+let deleteArmed = false, deleteTimer = 0;
+$('btn-delete-account').onclick = async () => {
+  const btn = $('btn-delete-account');
+  if (!deleteArmed) {
+    deleteArmed = true;
+    btn.dataset.armed = '1';
+    btn.textContent = 'Tap again to delete everything';
+    btn.classList.add('armed-danger');
+    clearTimeout(deleteTimer);
+    deleteTimer = setTimeout(() => {
+      deleteArmed = false;
+      btn.textContent = 'Delete account…';
+      btn.classList.remove('armed-danger');
+    }, 5000);
+    return;
+  }
+  clearTimeout(deleteTimer);
+  deleteArmed = false;
+  btn.textContent = 'Delete account…';
+  btn.classList.remove('armed-danger');
+  const res = await Accounts.deleteAccount();
+  if (res.ok) {
+    refreshTitle();
+    renderPlayerCard();
+    refreshAccountUI();
+    show('settings', false);
+    toast('Account deleted');
+  } else if (res.reason === 'reauth-required') {
+    toast('For safety, sign out and sign back in, then delete again');
+  } else {
+    toast("Couldn't delete — try again when you're back online");
+  }
+};
+refreshAccountUI();
+Accounts.onChange(() => refreshAccountUI());
+
+// ---- Leaderboards (Update 3, batch 2) ----
+let boardTab = 'daily', boardScope = 'global';
+function syncBoardTabs() {
+  const t = (id, on) => { const b = $(id); if (b) b.classList.toggle('on', on); };
+  t('board-tab-daily', boardTab === 'daily');
+  t('board-tab-weekly', boardTab === 'weekly');
+  t('board-scope-global', boardScope === 'global');
+  t('board-scope-friends', boardScope === 'friends');
+}
+function boardNoteFor(res, sample) {
+  if (sample) return 'Sample leaderboard — sign in to play for real.';
+  if (!res) return '';
+  if (res.reason === 'needs-index') return 'Leaderboards are still being set up — check back soon.';
+  if (res.reason === 'fetch-failed') return "Couldn't load the board — check your connection and try again.";
+  if (res.empty === 'no-friends') return 'No friends yet — share your invite link below.';
+  if (res.empty === 'no-scores') return 'No scores yet — be the first!';
+  return boardTab === 'daily' ? `Daily challenge — ${boardKey('daily')}` : `Weekly classic — ${boardKey('weekly')}`;
+}
+function renderFriendList() {
+  const el = $('friend-list');
+  if (!el) return;
+  const friends = Leaderboards.friends();
+  el.innerHTML = friends.length
+    ? friends.map((f) => `<div class="friend-row"><span class="board-name">${escapeHtml(f.displayName)}</span><span class="friend-code-sm">${escapeHtml(f.code)}</span><button class="btn ghost sm friend-challenge" data-uid="${escapeHtml(f.uid)}" data-name="${escapeHtml(f.displayName)}">Challenge</button><button class="friend-remove" data-uid="${escapeHtml(f.uid)}" aria-label="Remove ${escapeHtml(f.displayName)}">✕</button></div>`).join('')
+    : '';
+}
+async function loadBoard() {
+  const list = $('board-list'), note = $('board-note'), rank = $('board-rank');
+  if (!list) return;
+  list.innerHTML = '<li class="board-empty">Loading…</li>';
+  if (note) note.textContent = '';
+  if (rank) rank.textContent = '';
+  if (!Accounts.signedIn) {
+    if (boardScope === 'friends') {
+      // No sample names under "Friends" — that would imply these are
+      // your friends. Guests see the honest empty state instead.
+      list.innerHTML = '<li class="board-empty">No friends yet — sign in and share your invite link to add friends.</li>';
+      if (note) note.textContent = 'Sign in to play on the real leaderboards.';
+      renderFriendList();
+      return;
+    }
+    // Guests see a clearly-labelled sample board — never fake ranks.
+    // The own row uses the board's own best: daily best on the daily
+    // board, classic best on the weekly board (they are different games).
+    const ownScore = boardTab === 'daily' ? store.dailyBest(boardKey('daily')) : (+localStorage.getItem('gb_best') || 0);
+    const entries = mockBoard(boardTab, boardScope, boardKey(boardTab), Accounts.displayName, ownScore);
+    Leaderboards.renderInto(list, entries, 'you');
+    if (note) note.textContent = boardNoteFor(null, true);
+    renderFriendList();
+    return;
+  }
+  const res = await Leaderboards.fetchBoard({ board: boardTab, scope: boardScope });
+  if (!res.ok) {
+    list.innerHTML = '<li class="board-empty">Leaderboard unavailable right now.</li>';
+    if (note) note.textContent = boardNoteFor(res, false);
+    renderFriendList();
+    return;
+  }
+  Leaderboards.renderInto(list, res.entries, Accounts.uid);
+  if (note) note.textContent = boardNoteFor(res, false);
+  if (rank) rank.textContent = res.ownRank ? `Your rank: #${res.ownRank}` : (res.entries.length ? 'Your score is outside the top 50 — keep playing!' : '');
+  renderFriendList();
+}
+function openBoards(board = 'daily', scope = 'global') {
+  boardTab = board; boardScope = scope;
+  syncBoardTabs();
+  show('boards', true);
+  loadBoard();
+  renderChallengeList();
+}
+$('btn-boards').onclick = () => openBoards();
+$('rank-chip').onclick = () => openBoards();
+$('btn-boards-close').onclick = () => show('boards', false);
+$('board-tab-daily').onclick = () => { boardTab = 'daily'; syncBoardTabs(); loadBoard(); };
+$('board-tab-weekly').onclick = () => { boardTab = 'weekly'; syncBoardTabs(); loadBoard(); };
+$('board-scope-global').onclick = () => { boardScope = 'global'; syncBoardTabs(); loadBoard(); };
+$('board-scope-friends').onclick = () => { boardScope = 'friends'; syncBoardTabs(); loadBoard(); };
+$('btn-copy-invite').onclick = async () => {
+  const link = Leaderboards.inviteLink();
+  if (!link) { toast('Sign in to invite friends'); return; }
+  try {
+    await navigator.clipboard.writeText(link);
+    toast('Invite link copied');
+  } catch {
+    const note = $('board-note');
+    if (note) note.textContent = link;
+  }
+};
+$('friend-list').onclick = async (e) => {
+  const chBtn = e.target.closest ? e.target.closest('.friend-challenge') : null;
+  if (chBtn) {
+    if (!Accounts.signedIn) { toast('Sign in to challenge friends'); return; }
+    const res = await Challenges.createChallenge({ toUid: chBtn.dataset.uid, toName: chBtn.dataset.name });
+    if (!res.ok) { toast(res.reason === 'rules-not-deployed' ? 'Challenges are still being set up — check back soon.' : "Couldn't create the challenge"); return; }
+    try { await navigator.clipboard.writeText(res.link); } catch {}
+    toast(`Challenge sent to ${chBtn.dataset.name} — link copied, share it with them`);
+    renderChallengeList();
+    return;
+  }
+  const btn = e.target.closest ? e.target.closest('.friend-remove') : null;
+  if (!btn) return;
+  Leaderboards.removeFriend(btn.dataset.uid);
+  renderFriendList();
+};
+
+// ---- Challenges (Update 3, batch 3) ----
+function challengeRowHTML(c, opp, myScore, dir) {
+  const oppName = escapeHtml(opp ? opp.name : 'Opponent');
+  const oppScore = opp ? opp.score : null;
+  const left = timeLeftText(c);
+  if (c.status === 'expired') {
+    const result = (myScore != null && oppScore != null)
+      ? (myScore > oppScore ? ' — you won!' : myScore === oppScore ? ' — tied!' : ' — you lost.')
+      : '';
+    return `<div class="friend-row"><span class="board-name">${oppName} · expired${result}</span><button class="btn ghost sm" data-challenge-rematch="${escapeHtml(c.id)}" data-uid="${escapeHtml(opp ? opp.uid : '')}" data-name="${oppName}">Rematch</button></div>`;
+  }
+  if (c.status === 'done') {
+    const result = (myScore != null && oppScore != null)
+      ? (myScore > oppScore ? 'You won!' : myScore === oppScore ? 'Tied!' : 'You lost.')
+      : '';
+    return `<div class="friend-row"><span class="board-name">${oppName} · ${myScore ?? '–'}–${oppScore ?? '–'} · ${result}</span><button class="btn ghost sm" data-challenge-rematch="${escapeHtml(c.id)}" data-uid="${escapeHtml(opp ? opp.uid : '')}" data-name="${oppName}">Rematch</button></div>`;
+  }
+  if (dir === 'incoming') {
+    const vs = oppScore != null ? ` · they scored ${oppScore}` : '';
+    return `<div class="friend-row"><span class="board-name">${oppName} challenged you${vs} · ${left}</span><button class="btn ghost sm" data-challenge-play="${escapeHtml(c.id)}">Play</button></div>`;
+  }
+  const waiting = myScore != null ? ` · you scored ${myScore}, waiting for them` : ' · waiting for them';
+  return `<div class="friend-row"><span class="board-name">${oppName}${waiting} · ${left}</span><button class="btn ghost sm" data-challenge-copy="${escapeHtml(c.id)}">Copy link</button></div>`;
+}
+async function renderChallengeList() {
+  const el = $('challenge-list');
+  if (!el) return;
+  if (!Accounts.signedIn) {
+    el.innerHTML = '<p class="small">Sign in to challenge friends.</p>';
+    return;
+  }
+  el.innerHTML = '<p class="small">Loading…</p>';
+  const res = await Challenges.fetchChallenges();
+  if (!res.ok) {
+    el.innerHTML = `<p class="small">${res.reason === 'rules-not-deployed' ? 'Challenges are still being set up — check back soon.' : "Couldn't load challenges — check your connection."}</p>`;
+    return;
+  }
+  const rows = [];
+  for (const c of res.incoming) rows.push(challengeRowHTML(c, Challenges.opponentOf(c, Accounts.uid), (c.scores || {})[Accounts.uid]?.score, 'incoming'));
+  for (const c of res.outgoing) rows.push(challengeRowHTML(c, Challenges.opponentOf(c, Accounts.uid), (c.scores || {})[Accounts.uid]?.score, 'outgoing'));
+  el.innerHTML = rows.length ? rows.join('') : '<p class="small">No challenges yet — tap Challenge on a friend to start one.</p>';
+}
+$('challenge-list').onclick = async (e) => {
+  const t = e.target.closest ? e.target.closest('[data-challenge-play], [data-challenge-copy], [data-challenge-rematch]') : null;
+  if (!t) return;
+  if (t.hasAttribute('data-challenge-play')) { startChallengeGame(t.dataset.challengePlay); return; }
+  if (t.hasAttribute('data-challenge-copy')) {
+    try { await navigator.clipboard.writeText(Challenges.challengeLink(t.dataset.challengeCopy)); toast('Challenge link copied'); }
+    catch { toast('Could not copy the link'); }
+    return;
+  }
+  if (t.hasAttribute('data-challenge-rematch')) {
+    const res = await Challenges.createChallenge({ toUid: t.dataset.uid, toName: t.dataset.name });
+    if (!res.ok) { toast("Couldn't create the rematch"); return; }
+    try { await navigator.clipboard.writeText(res.link); } catch {}
+    toast(`Rematch sent to ${t.dataset.name} — link copied`);
+    renderChallengeList();
+  }
+};
+// Start a challenge game: same seed as the opponent, so the same pieces
+// arrive in the same order. The HUD shows the score to beat.
+async function startChallengeGame(id) {
+  const res = await Challenges.fetchChallenge(id);
+  if (!res.ok) {
+    toast(res.reason === 'guest' ? 'Sign in to play this challenge' : res.reason === 'not-found' ? 'Challenge not found' : res.reason === 'rules-not-deployed' ? 'Challenges are still being set up — check back soon.' : "Couldn't load this challenge");
+    return;
+  }
+  if (res.status === 'expired') { toast('This challenge has expired'); return; }
+  const ch = res.challenge;
+  const opp = Challenges.opponentOf(ch, Accounts.uid);
+  S.challengeId = id;
+  S.challengeOpponent = opp ? opp.name : '';
+  S.challengeOpponentScore = opp ? opp.score : null;
+  S.challengeToBeat = (opp && opp.score != null) ? opp.score : 0;
+  show('boards', false);
+  leaveTitle(); clearSave(); startGame('challenge', ch.seed);
+}
+// A challenge link was opened? Show the challenge in the boards overlay
+// with a Play button — never auto-start a game from a link.
+async function checkChallengeLink() {
+  const id = Challenges.parseChallengeLink(location.href);
+  if (!id) return;
+  try {
+    const url = new URL(location.href);
+    url.searchParams.delete('challenge');
+    const qs = url.searchParams.toString();
+    history.replaceState(null, '', url.pathname + (qs ? '?' + qs : '') + url.hash);
+  } catch {}
+  const res = await Challenges.fetchChallenge(id);
+  if (!res.ok) { toast(res.reason === 'guest' ? 'Sign in to play a challenge' : 'Challenge not found or expired'); return; }
+  const opp = Challenges.opponentOf(res.challenge, Accounts.uid);
+  openBoards();
+  toast(opp ? `Challenge from ${opp.name} — tap Play when you're ready` : "Challenge ready — tap Play when you're ready");
+}
+
+// ---- Store (Update 3, batch 4): TEST products only. No billing is wired
+// up in v1, so every buy/restore tap answers honestly that purchases are
+// not live yet. No network call, no checkout, no charge.
+function renderStore() {
+  const el = $('store-products');
+  if (!el) return;
+  el.innerHTML = Store.products().map((p) => `<div class="store-product"><div class="store-info"><div class="store-name">${escapeHtml(p.name)}<span class="store-test">TEST</span></div><div class="store-blurb">${escapeHtml(p.blurb)}</div></div><span class="store-price">${escapeHtml(p.price)}</span><button class="btn ghost sm" data-buy="${escapeHtml(p.id)}">Buy</button></div>`).join('');
+}
+function openStore() {
+  renderStore();
+  show('store', true);
+}
+$('btn-store').onclick = () => openStore();
+$('btn-store-close').onclick = () => show('store', false);
+$('store-products').onclick = (e) => {
+  const btn = e.target.closest ? e.target.closest('[data-buy]') : null;
+  if (!btn) return;
+  const res = Store.buy(btn.dataset.buy);
+  if (res.reason === 'test-only') toast('Test product — purchases are not live yet');
+  else toast("Couldn't find that product");
+};
+$('btn-restore').onclick = () => {
+  const res = Store.restore();
+  if (res.reason === 'test-only') toast('Nothing to restore — purchases are not live yet');
+  else toast("Couldn't check purchases right now");
+};
+// Invite link opened? Add the friend (the link is the invitation) and
+// clean the params so a reload does not re-add.
+function checkInviteLink() {
+  const invite = Leaderboards.parseInviteLink(location.href);
+  if (!invite) return;
+  const res = Leaderboards.addFriend(invite);
+  if (res.ok) toast(`Added ${res.name} as a friend`);
+  try {
+    const url = new URL(location.href);
+    url.searchParams.delete('friend'); url.searchParams.delete('code'); url.searchParams.delete('name');
+    const qs = url.searchParams.toString();
+    history.replaceState(null, '', url.pathname + (qs ? '?' + qs : '') + url.hash);
+  } catch {}
+}
 $('btn-menu').onclick = () => { if (Tutorial.active) return; show('menu', true); Analytics.log('menu_open', {}); };
 // Settings lives inside the pause menu now (the top-right gear is gone;
 // the hamburger is the single top-right control).
 $('btn-menu-settings').onclick = () => { show('menu', false); syncSettings(); show('settings', true); };
 $('btn-resume').onclick = () => show('menu', false);
-$('btn-restart').onclick = () => { show('menu', false); if (S.running) { S.running = false; Analytics.log('game_abandon', { score: S.score }); } clearSave(); startGame(S.mode === 'daily' ? 'daily' : 'classic', S.dateKey || localDateKey()); };
+$('btn-restart').onclick = () => { show('menu', false); if (S.running) { S.running = false; Analytics.log('game_abandon', { score: S.score }); } clearSave(); startGame(S.mode === 'daily' ? 'daily' : S.mode === 'challenge' ? 'challenge' : 'classic', S.dateKey || localDateKey()); };
 $('btn-log').onclick = () => { const el = $('log'); el.classList.toggle('hidden'); el.textContent = Analytics.all().slice(-60).map((e) => JSON.stringify(e)).join('\n'); };
 // Hidden debug path only: the analytics log stays out of the player UI
 // unless the page is opened with ?debug=1.
@@ -1185,7 +1633,8 @@ $('pu-cancel').onclick = cancelArmed;
 $('pu-mode-row-btn').onclick = () => { S.sweepMode = 'row'; renderPowerups(); };
 $('pu-mode-col-btn').onclick = () => { S.sweepMode = 'col'; renderPowerups(); };
 renderPowerups(); renderTimerBar();
-$('btn-again').onclick = async () => { show('over', false); await Ads.maybeInterstitialAtBreak(S.gamesThisSession); startGame(S.mode === 'daily' ? 'daily' : 'classic', localDateKey()); };
+$('btn-again').onclick = async () => { show('over', false); await Ads.maybeInterstitialAtBreak(S.gamesThisSession); startGame(S.mode === 'daily' ? 'daily' : S.mode === 'challenge' ? 'challenge' : 'classic', S.mode === 'classic' ? localDateKey() : S.dateKey); };
+$('btn-over-boards').onclick = () => { show('over', false); openBoards(); };
 $('btn-home').onclick = () => { show('over', false); refreshTitle(); show('title', true); };
 
 // ---------- Scripted first-game tutorial: 5 steps, shown once ----------
@@ -1453,6 +1902,9 @@ Sprites.initHeroType().then(() => {
 initIcons();
 syncSoundBtn(); // after initIcons: it would overwrite the mute icon with the default 'sound' art
 applyMotionClass();
+// Accounts (Update 3): guest profile is created locally; guests never
+// load the SDK — it loads only on sign-in or for a returning session.
+Accounts.init().then(() => { refreshAccountUI(); checkInviteLink(); checkChallengeLink(); }).catch(() => refreshAccountUI());
 layout();
 Ads.init();
 requestAnimationFrame(frame);
@@ -1466,8 +1918,67 @@ window.__gb = {
   state: () => ({ board: S.board.map((r) => r.map(Boolean)), tray: S.tray.map((p) => p && { id: p.shape.id, cells: p.shape.cells, w: p.shape.w, h: p.shape.h, helper: p.helper }), score: S.score, combo: S.combo, lines: S.lines, running: S.running, placed: S.placed, revived: S.revived, mode: S.mode, dateKey: S.dateKey, helperAvailable: S.helperAvailable, tutorialStep: Tutorial.step, timeLeft: Math.round(S.timeLeft * 10) / 10, timerStarted: S.timerStarted, charges: { ...S.charges }, chargeSecs: Object.fromEntries(Object.entries(S.chargeClocks).map(([t, arr]) => [t, arr.length ? Math.round(arr[0] * 10) / 10 : null])), autoSaving: S.autoSaving, armed: S.armed, sweepMode: S.sweepMode, musicOn: Music.on, musicBpm: Music.bpm, musicLoopSeconds: Music.loopSeconds, musicLoopEvents: Music.loopEvents, musicUrgency: Music.urgency, audioState: Music.ctxState, audioTime: Music.ctxTime, musicScheduled: Music.scheduled, musicScheduler: Music.schedulerOn, sfxMuted: Sfx.muted, spritesReady: Sprites.ready, timerPaused: timerPaused(), level: S.level, xp: store.xp, playerLevel: playerLevelFor(store.xp), reducedMotion: reducedMotion(), countdownVisible: $('countdown').classList.contains('on'), countdownText: $('countdown').dataset.secs || '', heroTypeReady: Sprites.heroReady,
     layout: { size: L.size, cell: Math.round(L.cell * 10) / 10, bx: Math.round(L.bx * 10) / 10, by: Math.round(L.by * 10) / 10, trayX: Math.round(L.trayX * 10) / 10, trayY: Math.round(L.trayY * 10) / 10, trayH: Math.round(L.trayH * 10) / 10, slotW: Math.round(L.slotW * 10) / 10, trayCellMax: Math.round(L.trayCell * 10) / 10, stageW: L.w, stageH: L.h },
     dragScale: drag ? Math.round(drag.scale * 100) / 100 : null, dragStartScale: drag ? Math.round(drag.startScale * 100) / 100 : null }),
+  // Accounts (Update 3, batch 1): read-only state for tests.
+  accounts: () => Accounts.debugState(),
 };
 if (new URLSearchParams(location.search).has('test')) {
+  // Accounts (Update 3): mutation hooks, test-only like the rest here.
+  window.__gb.setAccountName = (n) => Accounts.setDisplayName(n);
+  window.__gb.setHideGlobal = (v) => Accounts.setHideFromGlobal(v);
+  window.__gb.signInGoogle = () => Accounts.signInGoogle();
+  window.__gb.signInFacebook = () => Accounts.signInFacebook();
+  window.__gb.signInAnonymous = () => Accounts.signInAnonymous();
+  window.__gb.signOut = () => Accounts.signOut();
+  window.__gb.accountRecordGame = () => Accounts.recordGame();
+  window.__gb.deleteAccount = () => Accounts.deleteAccount();
+  // Test hook: preview the signed-in UI without the network (same idea as
+  // setCharges for the dock) — sets the local profile to a signed-in
+  // identity and refreshes the UI. Screenshots + the signed-in UI test
+  // use it; it never touches Firebase and nothing leaves the device.
+  window.__gb.setAccountPreview = (provider) => {
+    if (!Accounts.profile) return null;
+    Accounts.profile.provider = provider || 'anonymous';
+    Accounts.profile.cloudUid = 'preview-' + (provider || 'anonymous');
+    Accounts.saveProfile();
+    refreshAccountUI();
+    return Accounts.debugState();
+  };
+  // Leaderboards (Update 3, batch 2): state + actions for tests.
+  window.__gb.submitScore = (o) => Leaderboards.submitScore(o);
+  window.__gb.fetchBoard = (o) => Leaderboards.fetchBoard(o);
+  window.__gb.mockBoard = (b, s, k, n, sc) => mockBoard(b, s, k, n, sc);
+  window.__gb.addFriend = (f) => Leaderboards.addFriend(f);
+  window.__gb.friendsList = () => Leaderboards.friends();
+  window.__gb.inviteLink = () => Leaderboards.inviteLink();
+  window.__gb.showBoards = (b, s) => openBoards(b || 'daily', s || 'global');
+  window.__gb.boardState = () => ({ board: boardTab, scope: boardScope });
+  window.__gb.refreshTitle = () => { refreshTitle(); };
+  window.__gb.todayKey = () => localDateKey();
+  window.__gb.refreshRankChip = () => refreshRankChip();
+  window.__gb.rankChip = () => {
+    const c = $('rank-chip');
+    if (!c) return null;
+    return { main: $('rank-chip-main')?.textContent || '', sub: $('rank-chip-sub')?.textContent || '', top1: c.classList.contains('top1'), live: c.dataset.live === '1' };
+  };
+  window.__gb.weekKey = (d) => weekKeyFor(d ? new Date(d) : undefined);
+  // Challenges (Update 3, batch 3): state + actions for tests.
+  window.__gb.createChallenge = (o) => Challenges.createChallenge(o);
+  window.__gb.fetchChallenge = (id) => Challenges.fetchChallenge(id);
+  window.__gb.fetchChallenges = () => Challenges.fetchChallenges();
+  window.__gb.submitChallengeScore = (id, s) => Challenges.submitChallengeScore(id, s);
+  window.__gb.challengeStatus = (ch, now) => challengeStatus(ch, now);
+  window.__gb.challengeLink = (id) => Challenges.challengeLink(id);
+  window.__gb.parseChallengeLink = (u) => Challenges.parseChallengeLink(u);
+  window.__gb.startChallenge = (id, seed, toBeat, oppName, oppScore) => {
+    S.challengeId = id; S.challengeToBeat = toBeat || 0; S.challengeOpponent = oppName || ''; S.challengeOpponentScore = oppScore ?? null;
+    show('title', false); clearSave(); startGame('challenge', seed);
+  };
+  window.__gb.startChallengeGame = (id) => startChallengeGame(id);
+  // Store (Update 3, batch 4): test products only, no checkout.
+  window.__gb.storeProducts = () => Store.products();
+  window.__gb.buyProduct = (id) => Store.buy(id);
+  window.__gb.restorePurchases = () => Store.restore();
+  window.__gb.showStore = () => openStore();
   window.__gb.setBoard = (rows) => { S.board = rows.map((row) => [...row].map((ch) => (ch === '#' ? '#5aa2ff' : null))); };
   window.__gb.startDaily = (k) => { show('title', false); clearSave(); startGame('daily', k); };
   window.__gb.startGame = (mode, k) => { show('title', false); clearSave(); startGame(mode || 'classic', k || localDateKey()); };

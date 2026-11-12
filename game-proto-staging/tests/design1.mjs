@@ -1605,6 +1605,673 @@ await test('review fixes 3: Sweep + Tray icons are the new action art', async ()
   await page.close();
 });
 
+// ---------- Update 3, batch 1: accounts ----------
+await test('accounts: guest by default, stable 6-char friend code, real config live', async () => {
+  const { ctx, page } = await newPage();
+  const st = await page.evaluate(() => window.__gb.accounts());
+  eq(st.status, 'guest', 'guest by default');
+  eq(st.displayName, 'Guest', 'default name Guest');
+  eq(st.signedIn, false, 'not signed in');
+  eq(st.configured, true, 'Firebase config is live');
+  eq(st.facebookEnabled, false, 'Facebook provider still disabled');
+  ok(/^[A-Z2-9]{6}$/.test(st.friendCode), 'friend code is 6 unambiguous chars, got ' + st.friendCode);
+  await page.reload();
+  await page.waitForSelector('#btn-play');
+  const st2 = await page.evaluate(() => window.__gb.accounts());
+  eq(st2.friendCode, st.friendCode, 'friend code survives reload');
+  eq(st2.status, 'guest', 'still guest after reload');
+  await ctx.close();
+});
+
+await test('accounts: config module has exactly the six live keys', async () => {
+  const { ctx, page } = await newPage();
+  const cfg = await page.evaluate(async () => {
+    const m = await import('/js/firebase-config.js');
+    return { keys: Object.keys(m.FIREBASE_CONFIG), values: m.FIREBASE_CONFIG, configured: m.isFirebaseConfigured(), fb: m.FACEBOOK_PROVIDER_ENABLED };
+  });
+  eq(JSON.stringify(cfg.keys), JSON.stringify(['apiKey', 'authDomain', 'projectId', 'storageBucket', 'messagingSenderId', 'appId']), 'exactly six keys');
+  for (const k of cfg.keys) ok(typeof cfg.values[k] === 'string' && cfg.values[k].length > 0 && cfg.values[k] !== 'TODO', 'key ' + k + ' is a real value');
+  eq(cfg.values.projectId, 'clearbloom-game', 'project is clearbloom-game');
+  eq(cfg.configured, true, 'isFirebaseConfigured true');
+  eq(cfg.fb, false, 'Facebook flag false');
+  await ctx.close();
+});
+
+await test('accounts: display-name filter rejects rude, short, link, reserved and impersonator names', async () => {
+  const { ctx, page } = await newPage();
+  const tryName = async (n) => page.evaluate((v) => window.__gb.setAccountName(v), n);
+  eq((await tryName('fuck')).ok, false, 'profanity rejected');
+  eq((await tryName('fuck')).reason, 'blocked', 'blocked-word reason');
+  eq((await tryName('x')).reason, 'short', 'short reason');
+  eq((await tryName('https://evil.com')).reason, 'link', 'link reason');
+  eq((await tryName('Guest')).reason, 'reserved', 'reserved reason');
+  eq((await tryName('Admin')).reason, 'impersonation', 'impersonation reason');
+  const good = await tryName('  cool   player  ');
+  eq(good.ok, true, 'good name accepted');
+  eq(good.name, 'Cool Player', 'name cleaned + title-cased');
+  eq((await page.evaluate(() => window.__gb.accounts())).displayName, 'Cool Player', 'name persisted in state');
+  // Pure-function checks — these bypass the UI path, which truncates
+  // over-long input to 16 chars before the filter ever sees it.
+  const codes = await page.evaluate(async () => {
+    const m = await import('/js/names.js');
+    return { long: m.nameIsClean('abcdefghijklmnopq').reason, empty: m.nameIsClean('   ').reason, msgReserved: m.nameRejectMessage('reserved') };
+  });
+  eq(codes.long, 'long', 'over-16 reason');
+  eq(codes.empty, 'short', 'blank name reason');
+  ok(codes.msgReserved.includes('taken'), 'reserved message is human-readable');
+  await ctx.close();
+});
+
+await test('accounts: Facebook sign-in stays refused while the provider is unconfigured', async () => {
+  const { ctx, page } = await newPage();
+  const res = await page.evaluate(() => window.__gb.signInFacebook());
+  eq(res.ok, false, 'Facebook sign-in refused');
+  eq(res.reason, 'facebook-not-configured', 'reason is facebook-not-configured');
+  await ctx.close();
+});
+
+await test('accounts: hide-from-global persists across reload', async () => {
+  const { ctx, page } = await newPage();
+  await page.evaluate(() => window.__gb.setHideGlobal(true));
+  eq((await page.evaluate(() => window.__gb.accounts())).hideFromGlobal, true, 'hide on');
+  await page.reload();
+  await page.waitForSelector('#btn-play');
+  eq((await page.evaluate(() => window.__gb.accounts())).hideFromGlobal, true, 'hide survives reload');
+  await page.evaluate(() => window.__gb.setHideGlobal(false));
+  eq((await page.evaluate(() => window.__gb.accounts())).hideFromGlobal, false, 'hide off');
+  await ctx.close();
+});
+
+await test('accounts: recordGame is a no-op for guests', async () => {
+  const { ctx, page } = await newPage();
+  const res = await page.evaluate(() => window.__gb.accountRecordGame());
+  eq(res.ok, false, 'guest recordGame no-op');
+  eq(res.reason, 'guest', 'reason is guest');
+  await ctx.close();
+});
+
+await test('accounts: anonymous sign-in reaches Firebase Auth (live project; skips only on VM network block)', async () => {
+  // This test owns its page + error list: a sign-in attempt from headless
+  // Chromium in this VM logs one ERR_TUNNEL_CONNECTION_FAILED (Chromium
+  // cannot use the VM's egress proxy — curl reaches Google fine, Chromium
+  // does not). That single environmental signature is excluded here; any
+  // other error on this page still fails the test.
+  const ctx2 = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+  const page = await ctx2.newPage();
+  const localErrors = [];
+  page.on('console', (m) => { if (m.type() === 'error') localErrors.push('console: ' + m.text()); });
+  page.on('pageerror', (e) => localErrors.push('pageerror: ' + e.message));
+  await page.addInitScript(() => { localStorage.setItem('gb_tut_done', '1'); });
+  await page.goto(`http://localhost:${PORT}/?test=1`);
+  await page.waitForSelector('#btn-play');
+  const res = await page.evaluate(async () => {
+    const r = await window.__gb.signInAnonymous();
+    if (!r.ok) return r;
+    // Wait for the auth listener to adopt the user.
+    const t0 = Date.now();
+    while (Date.now() - t0 < 15000) {
+      if (window.__gb.accounts().signedIn) break;
+      await new Promise((rr) => setTimeout(rr, 200));
+    }
+    return { ok: true, state: window.__gb.accounts() };
+  });
+  // Any failure that is not the live project accepting us is real — except
+  // the VM's network block, which is environmental. The live project is
+  // verified separately via the Identity Toolkit REST API (see PROGRESS.md).
+  if (!res.ok && res.reason === 'auth/network-request-failed') {
+    console.log('SKIP accounts: anonymous sign-in — VM cannot reach Firebase Auth from headless Chromium (auth/network-request-failed); live project verified via REST');
+  } else {
+    eq(res.ok, true, 'anonymous sign-in ok: ' + JSON.stringify(res));
+    eq(res.state.signedIn, true, 'signed in after anonymous sign-in');
+    eq(res.state.provider, 'anonymous', 'provider is anonymous');
+    ok(typeof res.state.friendCode === 'string' && res.state.friendCode.length === 6, 'friend code kept after sign-in');
+    const out = await page.evaluate(async () => { await window.__gb.signOut(); return window.__gb.accounts(); });
+    eq(out.signedIn, false, 'signed out');
+    eq(out.status, 'guest', 'back to guest after sign-out');
+  }
+  const other = localErrors.filter((e) => !e.includes('ERR_TUNNEL_CONNECTION_FAILED'));
+  eq(other.length, 0, 'non-network page errors on the sign-in page: ' + other.slice(0, 3).join(' | '));
+  await ctx2.close();
+});
+
+await test('accounts: signed-in UI renders (card, panel, sign-out) via preview hook', async () => {
+  const { ctx, page } = await newPage();
+  await page.evaluate(() => window.__gb.setAccountPreview('anonymous'));
+  eq(await page.locator('#acct-sub').textContent(), 'Signed in — no account needed', 'card shows signed-in sub');
+  await page.click('#btn-account');
+  ok(await page.locator('#btn-sign-out').isVisible(), 'sign-out visible when signed in');
+  ok(await page.locator('#btn-sign-google').isDisabled(), 'Google button disabled when signed in');
+  ok(await page.locator('#btn-sign-anon').isDisabled(), 'anonymous button disabled when signed in');
+  await page.click('#btn-sign-out');
+  await waitFor(async () => (await page.evaluate(() => window.__gb.accounts())).status === 'guest', 5000, 'back to guest');
+  eq(await page.locator('#acct-sub').textContent(), 'Progress saved on this device only', 'card back to guest sub');
+  await ctx.close();
+});
+
+await test('accounts: title card + account panel show guest state, sign-in buttons enabled, Facebook disabled', async () => {
+  const { ctx, page } = await newPage();
+  ok(await page.locator('#acct-card').isVisible(), 'account card visible on title');
+  eq(await page.locator('#acct-name').textContent(), 'Guest', 'card shows Guest');
+  ok((await page.locator('#acct-sub').textContent()).includes('this device'), 'card says progress is on-device');
+  await page.click('#btn-account');
+  ok(await page.locator('#account.show').isVisible(), 'account panel opens');
+  eq(await page.locator('#acct-code').textContent(), (await page.evaluate(() => window.__gb.accounts())).friendCode, 'panel shows the friend code');
+  ok(await page.locator('#btn-sign-google').isEnabled(), 'Google button enabled with live config');
+  ok(await page.locator('#btn-sign-anon').isEnabled(), 'anonymous button enabled with live config');
+  ok(!(await page.locator('#btn-sign-facebook').isEnabled()), 'Facebook button disabled');
+  ok(await page.locator('#btn-sign-out').isHidden(), 'sign-out hidden while guest');
+  await page.click('#btn-acct-close');
+  ok(await page.locator('#account.show').isHidden(), 'account panel closes');
+  await ctx.close();
+});
+
+await test('accounts: Settings has privacy notice, Account button, and two-step delete', async () => {
+  const { ctx, page } = await newPage();
+  await page.click('#btn-title-settings');
+  const privacy = await page.locator('.privacy').textContent();
+  ok(privacy.includes('leaderboards'), 'privacy notice mentions leaderboards');
+  ok(privacy.includes('Deleting your account'), 'privacy notice mentions deletion');
+  ok(await page.locator('#btn-set-account').isVisible(), 'Account button in Settings');
+  ok(await page.locator('#btn-delete-account').isVisible(), 'delete button in Settings');
+  // Arm, then let it disarm by itself — a stray tap must not delete.
+  await page.click('#btn-delete-account');
+  eq(await page.locator('#btn-delete-account').textContent(), 'Tap again to delete everything', 'delete arms on first tap');
+  await sleep(5200);
+  eq(await page.locator('#btn-delete-account').textContent(), 'Delete account…', 'delete disarms after 5s');
+  await ctx.close();
+});
+
+await test('accounts: two-step delete wipes identity + progress and starts a fresh guest', async () => {
+  const { ctx, page } = await newPage();
+  await page.evaluate(() => window.__gb.setAccountName('Deleteme'));
+  await page.evaluate(() => localStorage.setItem('gb_best', '1234'));
+  const before = await page.evaluate(() => window.__gb.accounts());
+  await page.click('#btn-title-settings');
+  await page.click('#btn-delete-account');
+  await page.click('#btn-delete-account');
+  await waitFor(async () => (await page.evaluate(() => window.__gb.accounts())).displayName === 'Guest', 5000, 'fresh guest after delete');
+  const after = await page.evaluate(() => window.__gb.accounts());
+  ok(after.friendCode !== before.friendCode, 'fresh friend code after delete');
+  eq(await page.evaluate(() => localStorage.getItem('gb_best')), null, 'best wiped by delete');
+  eq(await page.evaluate(() => localStorage.getItem('gb_xp')), null, 'xp wiped by delete');
+  await ctx.close();
+});
+
+await test('accounts: guest can still play a full game start', async () => {
+  const { ctx, page } = await newPage();
+  await startClassic(page);
+  const st = await page.evaluate(() => window.__gb.state());
+  eq(st.running, true, 'game runs as guest');
+  eq((await page.evaluate(() => window.__gb.accounts())).status, 'guest', 'still guest in game');
+  await ctx.close();
+});
+
+await test('accounts: no Firebase SDK loads for guests (no vendor SDK requests at boot)', async () => {
+  const { ctx, page } = await newPage();
+  const fired = [];
+  page.on('request', (r) => { if (r.url().includes('firebase-') && r.url().endsWith('-compat.js')) fired.push(r.url()); });
+  await page.reload();
+  await page.waitForSelector('#btn-play');
+  await sleep(1500);
+  eq(fired.length, 0, 'no Firebase SDK requests for a guest: ' + fired.join(', '));
+  eq(typeof (await page.evaluate(() => window.firebase)), 'undefined', 'window.firebase stays undefined for guests');
+  await ctx.close();
+});
+
+// ---------- Update 3, batch 2: leaderboards ----------
+await test('boards: week keys are ISO weeks', async () => {
+  const { ctx, page } = await newPage();
+  const keys = await page.evaluate(() => ({
+    jan1: window.__gb.weekKey('2026-01-01T12:00:00'),
+    dec31: window.__gb.weekKey('2026-12-31T12:00:00'),
+    mon: window.__gb.weekKey('2026-11-09T12:00:00'),
+    sun: window.__gb.weekKey('2026-11-15T12:00:00'),
+    prevSun: window.__gb.weekKey('2026-11-08T12:00:00'),
+  }));
+  eq(keys.jan1, '2026-W01', 'Jan 1 2026 (Thu) is ISO week 1');
+  eq(keys.dec31, '2026-W53', 'Dec 31 2026 (Thu) is ISO week 53');
+  eq(keys.mon, keys.sun, 'Mon–Sun of one week share a key');
+  ok(keys.mon !== keys.prevSun, 'Sunday before starts a different week');
+  ok(/^\d{4}-W\d{2}$/.test(keys.mon), 'week key format');
+  await ctx.close();
+});
+
+await test('boards: score validation rejects bad scores', async () => {
+  const { ctx, page } = await newPage();
+  const v = await page.evaluate(async () => {
+    const m = await import('/js/leaderboards.js');
+    return {
+      neg: m.validateScore(-1),
+      tooBig: m.validateScore(1000000),
+      max: m.validateScore(999999),
+      zero: m.validateScore(0),
+      frac: m.validateScore(10.5),
+      badLines: m.validateScore(100, -2),
+    };
+  });
+  eq(v.neg.ok, false, 'negative rejected');
+  eq(v.tooBig.ok, false, 'over max rejected');
+  eq(v.max.ok, true, 'max accepted');
+  eq(v.zero.ok, true, 'zero accepted');
+  eq(v.frac.ok, false, 'fraction rejected');
+  eq(v.badLines.ok, false, 'negative lines rejected');
+  await ctx.close();
+});
+
+await test('boards: mock board is deterministic, sorted, flagged sample', async () => {
+  const { ctx, page } = await newPage();
+  const b = await page.evaluate(() => {
+    const a = window.__gb.mockBoard('daily', 'global', '2026-11-12');
+    const again = window.__gb.mockBoard('daily', 'global', '2026-11-12');
+    const other = window.__gb.mockBoard('daily', 'global', '2026-11-13');
+    return { a, same: JSON.stringify(a) === JSON.stringify(again), diff: JSON.stringify(a) !== JSON.stringify(other) };
+  });
+  eq(b.a.length, 10, '10 sample entries');
+  ok(b.a.every((e) => e.sample === true), 'every entry flagged sample');
+  for (let i = 1; i < b.a.length; i++) ok(b.a[i - 1].score >= b.a[i].score, 'sorted desc');
+  ok(b.same, 'same key, same board');
+  ok(b.diff, 'different key, different board');
+  await ctx.close();
+});
+
+await test('boards: guest submit + fetch are no-ops', async () => {
+  const { ctx, page } = await newPage();
+  const sub = await page.evaluate(() => window.__gb.submitScore({ board: 'daily', score: 100, lines: 3, maxCombo: 2 }));
+  eq(sub.ok, false, 'guest submit no-op');
+  eq(sub.reason, 'guest', 'guest reason');
+  const bad = await page.evaluate(() => window.__gb.submitScore({ board: 'daily', score: -5 }));
+  eq(bad.reason, 'bad-score', 'validation runs before the guest check');
+  const fetch = await page.evaluate(() => window.__gb.fetchBoard({ board: 'daily', scope: 'global' }));
+  eq(fetch.ok, false, 'guest fetch no-op');
+  eq(fetch.reason, 'guest', 'fetch guest reason');
+  await ctx.close();
+});
+
+await test('boards: friends add/remove + invite link rules', async () => {
+  const { ctx, page } = await newPage();
+  const bad = await page.evaluate(() => window.__gb.addFriend({ uid: 'u1', code: 'bad', displayName: 'Nope' }));
+  eq(bad.ok, false, 'bad code rejected');
+  eq(bad.reason, 'bad-invite', 'bad-invite reason');
+  const good = await page.evaluate(() => window.__gb.addFriend({ uid: 'u1', code: 'ABC123', displayName: '  pal  ' }));
+  eq(good.ok, true, 'good friend added');
+  eq(good.name, 'Pal', 'friend name cleaned');
+  await page.evaluate(() => window.__gb.addFriend({ uid: 'u1', code: 'ABC123', displayName: 'Pal Two' }));
+  eq((await page.evaluate(() => window.__gb.friendsList())).length, 1, 're-add dedupes by uid');
+  eq(await page.evaluate(() => window.__gb.inviteLink()), null, 'guests get no invite link');
+  const parsed = await page.evaluate(async () => {
+    const m = await import('/js/leaderboards.js');
+    return {
+      good: m.parseInviteLink('https://example.com/game/?friend=abc123&code=ABC123&name=Cool%20Player'),
+      badCode: m.parseInviteLink('https://example.com/game/?friend=abc123&code=nope&name=X'),
+      none: m.parseInviteLink('https://example.com/game/'),
+    };
+  });
+  eq(parsed.good.uid, 'abc123', 'invite uid parsed');
+  eq(parsed.good.code, 'ABC123', 'invite code parsed');
+  eq(parsed.good.displayName, 'Cool Player', 'invite name parsed');
+  eq(parsed.badCode, null, 'bad invite code rejected');
+  eq(parsed.none, null, 'no params, no invite');
+  await ctx.close();
+});
+
+await test('boards: sample board UI opens for guests, tabs + scope switch, note is honest', async () => {
+  const { ctx, page } = await newPage();
+  await page.click('#btn-boards');
+  ok(await page.locator('#boards.show').isVisible(), 'boards panel opens');
+  eq(await page.locator('#board-list .board-row').count(), 10, '10 sample rows');
+  ok((await page.locator('#board-note').textContent()).includes('Sample'), 'note says Sample');
+  ok((await page.locator('#board-note').textContent()).includes('sign in'), 'note says sign in');
+  await page.click('#board-tab-weekly');
+  eq((await page.evaluate(() => window.__gb.boardState())).board, 'weekly', 'weekly tab active');
+  eq(await page.locator('#board-list .board-row').count(), 10, 'weekly sample still 10 rows');
+  await page.click('#board-scope-friends');
+  eq((await page.evaluate(() => window.__gb.boardState())).scope, 'friends', 'friends scope active');
+  eq(await page.locator('#board-list .board-row').count(), 0, 'no sample names under Friends for guests');
+  ok((await page.locator('#board-list').textContent()).includes('No friends yet'), 'honest empty-friends state');
+  await page.click('#btn-copy-invite');
+  await sleep(200);
+  eq(await page.locator('#toast').textContent(), 'Sign in to invite friends', 'guest invite prompts sign-in');
+  await page.click('#btn-boards-close');
+  ok(await page.locator('#boards.show').isHidden(), 'boards panel closes');
+  await ctx.close();
+});
+
+await test('boards: rowHTML escapes names and marks YOU + medals', async () => {
+  const { ctx, page } = await newPage();
+  const rows = await page.evaluate(async () => {
+    const m = await import('/js/leaderboards.js');
+    return {
+      evil: m.rowHTML({ uid: 'x', displayName: '<b>Evil</b>', score: 1234 }, 1, 'you'),
+      you: m.rowHTML({ uid: 'you', displayName: 'Me', score: 500 }, 2, 'you'),
+      plain: m.rowHTML({ uid: 'z', displayName: 'Zed', score: 100 }, 5, 'you'),
+    };
+  });
+  ok(rows.evil.includes('&lt;b&gt;'), 'name HTML-escaped');
+  ok(!rows.evil.includes('<b>Evil</b>'), 'no raw tags');
+  ok(rows.evil.includes('gold'), 'rank 1 gets gold');
+  ok(rows.you.includes('YOU'), 'own row gets YOU badge');
+  ok(rows.you.includes('silver'), 'rank 2 gets silver');
+  ok(rows.you.includes('own'), 'own row gets own class');
+  ok(!rows.plain.includes('gold') && !rows.plain.includes('silver') && !rows.plain.includes('bronze'), 'rank 5 gets no medal');
+  ok(rows.plain.includes('1,234') || rows.evil.includes('1,234'), 'score has thousands separator');
+  await ctx.close();
+});
+
+await test('boards: board keys use the local date + ISO week', async () => {
+  const { ctx, page } = await newPage();
+  const k = await page.evaluate(async () => {
+    const m = await import('/js/leaderboards.js');
+    const r = await import('/js/rng.js');
+    return { daily: m.boardKey('daily'), local: r.localDateKey(), weekly: m.boardKey('weekly'), week: m.weekKeyFor() };
+  });
+  eq(k.daily, k.local, 'daily key is the local date key');
+  eq(k.weekly, k.week, 'weekly key is the ISO week key');
+  ok(k.daily !== k.weekly, 'daily and weekly keys differ');
+  await ctx.close();
+});
+
+// ---------- Update 3, batch 3: head-to-head challenges ----------
+await test('challenges: same seed deals the same pieces, different seed deals different', async () => {
+  const { ctx, page } = await newPage();
+  await page.evaluate(() => window.__gb.startGame('challenge', 'abc123'));
+  const a = await page.evaluate(() => window.__gb.state());
+  eq(a.mode, 'challenge', 'challenge mode');
+  eq(a.dateKey, 'abc123', 'seed stored as dateKey');
+  const trayA = JSON.stringify(a.tray);
+  await page.evaluate(() => window.__gb.startGame('challenge', 'abc123'));
+  const trayA2 = JSON.stringify((await page.evaluate(() => window.__gb.state())).tray);
+  eq(trayA2, trayA, 'same seed, same first tray');
+  await page.evaluate(() => window.__gb.startGame('challenge', 'zzz999'));
+  const trayB = JSON.stringify((await page.evaluate(() => window.__gb.state())).tray);
+  ok(trayB !== trayA, 'different seed, different first tray');
+  await ctx.close();
+});
+
+await test('challenges: challengeRng is deterministic, newSeed is 12 hex chars', async () => {
+  const { ctx, page } = await newPage();
+  const r = await page.evaluate(async () => {
+    const m = await import('/js/challenges.js');
+    const seq = (rng) => [rng(), rng(), rng(), rng(), rng()].join(',');
+    const a = seq(m.challengeRng('seed1'));
+    const b = seq(m.challengeRng('seed1'));
+    const c = seq(m.challengeRng('seed2'));
+    return { a, same: a === b, diff: a !== c, s1: m.newSeed(), s2: m.newSeed() };
+  });
+  ok(r.same, 'same seed, same sequence');
+  ok(r.diff, 'different seed, different sequence');
+  ok(/^[0-9a-f]{12}$/.test(r.s1), 'seed is 12 hex chars (rules require exactly 12)');
+  ok(r.s1 !== r.s2, 'seeds are unique');
+  await ctx.close();
+});
+
+await test('challenges: status is expired/done/pending from the doc fields', async () => {
+  const { ctx, page } = await newPage();
+  const s = await page.evaluate(() => {
+    const now = Date.now();
+    const st = window.__gb.challengeStatus;
+    return {
+      pending: st({ fromUid: 'a', toUid: 'b', expiresAt: now + 3600000, scores: {} }, now),
+      done: st({ fromUid: 'a', toUid: 'b', expiresAt: now + 3600000, scores: { a: { score: 10 }, b: { score: 20 } } }, now),
+      expired: st({ fromUid: 'a', toUid: 'b', expiresAt: now - 1000, scores: {} }, now),
+      expiredBeatsDone: st({ fromUid: 'a', toUid: 'b', expiresAt: now - 1000, scores: { a: { score: 10 }, b: { score: 20 } } }, now),
+      ts: st({ fromUid: 'a', toUid: 'b', expiresAt: { toMillis: () => now + 3600000 }, scores: {} }, now),
+      none: st(null, now),
+    };
+  });
+  eq(s.pending, 'pending', 'no scores yet');
+  eq(s.done, 'done', 'both scores in');
+  eq(s.expired, 'expired', 'past expiry');
+  eq(s.expiredBeatsDone, 'expired', 'expiry beats done');
+  eq(s.ts, 'pending', 'Firestore Timestamp expiry works');
+  eq(s.none, 'not-found', 'null doc');
+  await ctx.close();
+});
+
+await test('challenges: guest create/submit/fetch are no-ops', async () => {
+  const { ctx, page } = await newPage();
+  const create = await page.evaluate(() => window.__gb.createChallenge({ toUid: 'u1', toName: 'Pal' }));
+  eq(create.ok, false, 'guest create no-op');
+  eq(create.reason, 'guest', 'guest reason');
+  const sub = await page.evaluate(() => window.__gb.submitChallengeScore('c1', 100));
+  eq(sub.reason, 'guest', 'guest submit no-op');
+  const fetch = await page.evaluate(() => window.__gb.fetchChallenges());
+  eq(fetch.reason, 'guest', 'guest fetch no-op');
+  const one = await page.evaluate(() => window.__gb.fetchChallenge('c1'));
+  eq(one.reason, 'guest', 'guest fetch-one no-op');
+  await ctx.close();
+});
+
+await test('challenges: link round-trip + validation', async () => {
+  const { ctx, page } = await newPage();
+  const l = await page.evaluate(() => {
+    const link = window.__gb.challengeLink('abc123');
+    return {
+      link,
+      roundTrip: window.__gb.parseChallengeLink(link),
+      bad: window.__gb.parseChallengeLink('https://example.com/game/?challenge=..%2F..%2Fx'),
+      none: window.__gb.parseChallengeLink('https://example.com/game/'),
+    };
+  });
+  ok(l.link.includes('?challenge=abc123'), 'link carries the id');
+  eq(l.roundTrip, 'abc123', 'id parses back');
+  eq(l.bad, null, 'path-traversal id rejected');
+  eq(l.none, null, 'no param, no challenge');
+  await ctx.close();
+});
+
+await test('challenges: challenge game never pollutes the classic best', async () => {
+  const { ctx, page } = await newPage();
+  await page.evaluate(() => window.__gb.startChallenge('c1', 'seed99', 250, 'Pal', null));
+  await sleep(300);
+  eq(await page.locator('#best-label').textContent(), 'TO BEAT', 'HUD label is TO BEAT in a challenge');
+  const st0 = await page.evaluate(() => window.__gb.state());
+  eq(st0.mode, 'challenge', 'challenge mode');
+  eq(st0.dateKey, 'seed99', 'seed stored as dateKey');
+  const tray0 = JSON.stringify(st0.tray);
+  await setupBoard(page, ROW7, [0, 0, 0]);
+  await page.evaluate(() => window.__gb.place(0, 7, 7)); // score > 0
+  const scored = (await page.evaluate(() => window.__gb.state())).score;
+  ok(scored > 0, `scored ${scored}`);
+  await page.evaluate(() => window.__gb.setTimeLeft(0.3));
+  await waitFor(async () => page.locator('#revive.show').isVisible(), 6000, 'revive overlay');
+  await page.click('#btn-norevive');
+  await waitFor(async () => page.locator('#over.show').isVisible(), 5000, 'game-over panel');
+  eq(await page.locator('#over h2').textContent(), 'Challenge over', 'heading is Challenge over');
+  ok((await page.locator('#ov-challenge').textContent()).includes('Waiting for Pal to play'), 'waiting line names the opponent');
+  ok(await page.evaluate(() => document.querySelector('#ov-new').classList.contains('hidden')), 'no NEW BEST badge for a challenge game');
+  const best = await page.evaluate(() => localStorage.getItem('gb_best'));
+  ok(best == null || best === '0', `classic best untouched (gb_best=${best})`);
+  // Play again restarts the SAME challenge seed, same first tray.
+  await page.click('#btn-again');
+  await waitFor(async () => (await page.evaluate(() => window.__gb.state())).running, 5000, 'challenge restarted');
+  const st1 = await page.evaluate(() => window.__gb.state());
+  eq(st1.mode, 'challenge', 'play-again stays a challenge');
+  eq(st1.dateKey, 'seed99', 'play-again keeps the seed');
+  eq(JSON.stringify(st1.tray), tray0, 'play-again deals the same first tray');
+  await ctx.close();
+});
+
+await test('challenges: boards overlay shows the challenges section + friend Challenge button (guest)', async () => {
+  const { ctx, page } = await newPage();
+  await page.click('#btn-boards');
+  ok((await page.locator('#challenge-list').textContent()).includes('Sign in to challenge friends'), 'guests see the sign-in prompt');
+  await page.evaluate(() => window.__gb.addFriend({ uid: 'u1', code: 'ABC123', displayName: 'Pal' }));
+  await page.click('#btn-boards-close');
+  await sleep(200);
+  await page.click('#btn-boards');
+  await sleep(300);
+  eq(await page.locator('.friend-challenge').count(), 1, 'friend row has a Challenge button');
+  await page.click('.friend-challenge');
+  await sleep(200);
+  eq(await page.locator('#toast').textContent(), 'Sign in to challenge friends', 'guest challenge prompts sign-in');
+  await page.click('#btn-boards-close');
+  await ctx.close();
+});
+
+// ---------- Update 3, batch 4: store (TEST products only) + rules ----------
+await test('store: exactly 3 test products with the right names + prices', async () => {
+  const { ctx, page } = await newPage();
+  const products = await page.evaluate(() => window.__gb.storeProducts());
+  eq(products.length, 3, '3 products');
+  eq(products.map((p) => p.id).join(','), 'remove_ads,cosmetic_pack,supporter', 'product ids');
+  eq(products.find((p) => p.id === 'remove_ads').price, '$3.99', 'Remove Ads $3.99');
+  eq(products.find((p) => p.id === 'cosmetic_pack').price, '$1.99', 'Cosmetic Pack $1.99');
+  eq(products.find((p) => p.id === 'supporter').price, '$5.99', 'Supporter Bundle $5.99');
+  await ctx.close();
+});
+
+await test('store: buy always refuses test-only, never charges', async () => {
+  const { ctx, page } = await newPage();
+  const buy = await page.evaluate(() => window.__gb.buyProduct('remove_ads'));
+  eq(buy.ok, false, 'buy refuses');
+  eq(buy.reason, 'test-only', 'test-only reason');
+  const bad = await page.evaluate(() => window.__gb.buyProduct('nope'));
+  eq(bad.reason, 'bad-product', 'unknown product rejected');
+  await ctx.close();
+});
+
+await test('store: restore refuses test-only', async () => {
+  const { ctx, page } = await newPage();
+  const r = await page.evaluate(() => window.__gb.restorePurchases());
+  eq(r.ok, false, 'restore refuses');
+  eq(r.reason, 'test-only', 'test-only reason');
+  await ctx.close();
+});
+
+await test('store: overlay opens, 3 cards each labelled TEST, buy + restore toast honestly', async () => {
+  const { ctx, page } = await newPage();
+  await page.click('#btn-store');
+  ok(await page.locator('#store.show').isVisible(), 'store panel opens');
+  eq(await page.locator('.store-product').count(), 3, '3 product cards');
+  eq(await page.locator('.store-test').count(), 3, 'every card labelled TEST');
+  ok((await page.locator('#store').textContent()).includes('not live yet'), 'panel says purchases are not live yet');
+  await page.click('[data-buy="remove_ads"]');
+  await sleep(200);
+  eq(await page.locator('#toast').textContent(), 'Test product — purchases are not live yet', 'buy toasts honestly');
+  await page.click('#btn-restore');
+  await sleep(200);
+  eq(await page.locator('#toast').textContent(), 'Nothing to restore — purchases are not live yet', 'restore toasts honestly');
+  await page.click('#btn-store-close');
+  ok(await page.locator('#store.show').isHidden(), 'store panel closes');
+  await ctx.close();
+});
+
+await test('store: no paid power-ups, continues, loot boxes or streak restores anywhere', async () => {
+  const { ctx, page } = await newPage();
+  const products = await page.evaluate(() => window.__gb.storeProducts());
+  const text = products.map((p) => `${p.name} ${p.blurb}`).join(' ').toLowerCase();
+  for (const banned of ['power-up', 'powerup', 'continue', 'loot', 'streak', 'gamble', 'coins', 'gems']) {
+    ok(!text.includes(banned), `no "${banned}" in the store`);
+  }
+  await ctx.close();
+});
+
+// ---------- Update 3, #5: "Your rank" teaser chip on the title ----------
+await test('rank chip: guest with no scores sees the claim-your-rank teaser, tap opens boards', async () => {
+  const { ctx, page } = await newPage();
+  ok(await page.locator('#rank-chip').isVisible(), 'chip visible on title');
+  eq(await page.locator('#rank-chip-main').textContent(), 'Play to claim your rank!', 'no-score teaser');
+  ok((await page.locator('#rank-chip-sub').textContent()).includes('first score'), 'sub is honest about no score');
+  await page.click('#rank-chip');
+  ok(await page.locator('#boards.show').isVisible(), 'tap opens leaderboards');
+  await page.click('#btn-boards-close');
+  await ctx.close();
+});
+
+await test('rank chip: guest with a daily best shows the sample rank + Sample label, matching mockBoard', async () => {
+  const { ctx, page } = await newPage();
+  const key = await page.evaluate(() => window.__gb.todayKey());
+  // 9000 beats every sample score (max 8500), so the rank is #1 for sure.
+  await page.evaluate(([k]) => localStorage.setItem('gb_daily_best', JSON.stringify({ [k]: 9000 })), [key]);
+  await page.evaluate(() => window.__gb.refreshTitle());
+  const chip = await page.evaluate(() => window.__gb.rankChip());
+  eq(chip.main, "You'd be #1 today!", 'rank #1 on the sample');
+  ok(chip.top1, '#1 gets the gold treatment');
+  ok(chip.sub.includes('Sample'), 'sub labels it Sample');
+  ok(chip.sub.includes('9,000'), 'sub shows the daily best');
+  ok(!chip.live, 'guest chip never claims live');
+  // A tiny score falls outside the shown top 10 — the chip says so honestly.
+  await page.evaluate(([k]) => localStorage.setItem('gb_daily_best', JSON.stringify({ [k]: 100 })), [key]);
+  await page.evaluate(() => window.__gb.refreshTitle());
+  eq((await page.evaluate(() => window.__gb.rankChip())).main, 'Outside the top 10 — keep playing!', 'too-low score is outside, not faked');
+  await ctx.close();
+});
+
+await test('rank chip: classic best alone does not fake a daily rank', async () => {
+  const { ctx, page } = await newPage();
+  await page.evaluate(() => localStorage.setItem('gb_best', '9000'));
+  await page.evaluate(() => window.__gb.refreshTitle());
+  const chip = await page.evaluate(() => window.__gb.rankChip());
+  eq(chip.main, 'Play to claim your rank!', 'no daily best, no daily rank');
+  ok(chip.sub.includes('Classic best 9,000'), 'sub names the classic best');
+  await ctx.close();
+});
+
+await test('boards: daily sample board uses the daily best, weekly uses the classic best', async () => {
+  const { ctx, page } = await newPage();
+  const key = await page.evaluate(() => window.__gb.todayKey());
+  await page.evaluate(([k]) => {
+    localStorage.setItem('gb_best', '9000');
+    localStorage.setItem('gb_daily_best', JSON.stringify({ [k]: 8000 }));
+  }, [key]);
+  await page.evaluate(() => window.__gb.showBoards('daily', 'global'));
+  await sleep(200);
+  eq(await page.locator('.board-row.own .board-score').textContent(), '8,000', 'daily sample shows the daily best');
+  await page.click('#board-tab-weekly');
+  await sleep(200);
+  eq(await page.locator('.board-row.own .board-score').textContent(), '9,000', 'weekly sample shows the classic best');
+  await ctx.close();
+});
+
+await test('rank chip: preview signed-in + unreachable live board falls back to the sample, never throws', async () => {
+  const { ctx, page } = await newPage();
+  const key = await page.evaluate(() => window.__gb.todayKey());
+  await page.evaluate(([k]) => localStorage.setItem('gb_daily_best', JSON.stringify({ [k]: 9000 })), [key]);
+  await page.evaluate(() => window.__gb.setAccountPreview('anonymous'));
+  await page.evaluate(() => { void window.__gb.refreshRankChip(); });
+  await sleep(2500);
+  const chip = await page.evaluate(() => window.__gb.rankChip());
+  ok(chip.main.includes("You'd be #"), 'still the sample teaser when the live board is unreachable');
+  ok(chip.sub.includes('Sample'), 'still labelled Sample');
+  await ctx.close();
+});
+
+await test('title: wordmark fully visible on load, phone + desktop (no flex-centre clip)', async () => {
+  // Update 3 added title rows (account card, rank chip, Leaderboards,
+  // Store) and the panel grew past 800px: with plain flex centring the
+  // overflow cut the wordmark off the top and it was unreachable (the
+  // fixed overlay did not scroll). The overlay scrolls now and the panel
+  // uses margin:auto, so a too-tall panel top-aligns instead of clipping.
+  for (const [name, vp] of [['phone', { width: 390, height: 844 }], ['desktop', { width: 1280, height: 800 }]]) {
+    const ctx = await browser.newContext({ viewport: vp, deviceScaleFactor: name === 'phone' ? 2 : 1 });
+    const page = await ctx.newPage();
+    page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
+    page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
+    await page.addInitScript(() => { localStorage.setItem('gb_tut_done', '1'); });
+    await page.goto(`http://localhost:${PORT}/?test=1`);
+    await page.waitForSelector('#btn-play');
+    await sleep(400);
+    const r = await page.evaluate(() => {
+      const logo = document.querySelector('#title .logo');
+      const b = logo.getBoundingClientRect();
+      const play = document.getElementById('btn-play').getBoundingClientRect();
+      return { top: b.top, bottom: b.bottom, vh: innerHeight, playTop: play.top };
+    });
+    ok(r.top >= 0, `${name}: wordmark top visible, got ${r.top}`);
+    ok(r.bottom <= r.vh, `${name}: wordmark bottom in view, got ${r.bottom} of ${r.vh}`);
+    ok(r.playTop < r.vh, `${name}: Play reachable without scrolling, got ${r.playTop}`);
+    // The whole panel must be reachable by scrolling the overlay.
+    const s = await page.evaluate(() => {
+      const ov = document.getElementById('title');
+      ov.scrollTop = ov.scrollHeight;
+      const b = document.getElementById('btn-title-settings').getBoundingClientRect();
+      return { bottom: b.bottom, vh: innerHeight };
+    });
+    ok(s.bottom <= s.vh, `${name}: Settings reachable after scrolling, got ${s.bottom} of ${s.vh}`);
+    await ctx.close();
+  }
+});
+
 await test('console: 0 errors across all tests', async () => {
   eq(errors.length, 0, 'console/page errors: ' + errors.slice(0, 5).join(' | '));
 });
