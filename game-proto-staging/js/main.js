@@ -1481,6 +1481,34 @@ $('btn-copy-invite').onclick = async () => {
     if (note) note.textContent = link;
   }
 };
+// Add friend by code: the input normalizes (trim + uppercase) inside
+// findByCode, which does the directory lookup and adds the friend. Every
+// failure is an inline message, never a crash; guests get the sign-in
+// toast instead. Enter in the input submits.
+async function submitFriendCode() {
+  const input = $('friend-code-input'), msg = $('friend-add-msg');
+  if (!input) return;
+  const setMsg = (t) => { if (msg) msg.textContent = t; };
+  if (!Accounts.signedIn) { toast('Sign in to add friends by code'); return; }
+  const res = await Leaderboards.findByCode(input.value);
+  if (res.ok) {
+    input.value = '';
+    setMsg('');
+    toast(`Added ${res.name}!`);
+    renderFriendList();
+    loadBoard();
+    return;
+  }
+  setMsg(
+    res.reason === 'bad-code' ? "That doesn't look like a friend code — 6 letters and numbers."
+    : res.reason === 'own-code' ? "That's your own code."
+    : res.reason === 'not-found' ? 'No player with that code — check the code or ask them to share their invite link.'
+    : res.reason === 'lookup-unavailable' ? "Friend-code lookup isn't live yet — ask them to share their invite link instead."
+    : "Couldn't add that friend — try again."
+  );
+}
+$('btn-add-friend').onclick = submitFriendCode;
+$('friend-code-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); submitFriendCode(); } });
 $('friend-list').onclick = async (e) => {
   const chBtn = e.target.closest ? e.target.closest('.friend-challenge') : null;
   if (chBtn) {
@@ -2077,6 +2105,7 @@ if (new URLSearchParams(location.search).has('test')) {
   window.__gb.fetchBoard = (o) => Leaderboards.fetchBoard(o);
   window.__gb.mockBoard = (b, s, k, n, sc) => mockBoard(b, s, k, n, sc);
   window.__gb.addFriend = (f) => Leaderboards.addFriend(f);
+  window.__gb.findByCode = (c) => Leaderboards.findByCode(c);
   window.__gb.friendsList = () => Leaderboards.friends();
   window.__gb.inviteLink = () => Leaderboards.inviteLink();
   window.__gb.showBoards = (b, s) => openBoards(b || 'daily', s || 'global');

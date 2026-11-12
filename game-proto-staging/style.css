@@ -80,7 +80,7 @@ html,body{margin:0;height:100%;min-height:100vh;min-height:100dvh;background:lin
   background:linear-gradient(135deg,#3a8df8 0%,#5e7ff7 14%,#8961f7 28%,#ad55f7 42%,#cc56db 56%,#ea5e9a 70%,#f965a2 84%,#e2488c 100%);
   background:linear-gradient(135deg in oklab,#3a8df8 0%,#5e7ff7 14%,#8961f7 28%,#ad55f7 42%,#cc56db 56%,#ea5e9a 70%,#f965a2 84%,#e2488c 100%);
   -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
-  -webkit-text-stroke:1px #fff;filter:drop-shadow(0 3px 0 rgba(255,255,255,.8)) drop-shadow(0 6px 10px rgba(47,140,255,.3))}
+  -webkit-text-stroke:1px #fff;filter:drop-shadow(0 6px 10px rgba(47,140,255,.3))}
 /* One continuous blend across the whole word: the span must NOT carry its
    own gradient, or the blue/pink seam comes back as a hard line. The old
    look was two separate gradients (blue "Clear", pink "bloom") meeting at
@@ -88,9 +88,14 @@ html,body{margin:0;height:100%;min-height:100vh;min-height:100dvh;background:lin
 /* NO text-shadow on .logo (Dylan, Nov 12 ~2:46 PM — hard lines STILL in the
    menu text): with transparent fill + background-clip:text, Chromium paints
    the shadow THROUGH the glyphs as horizontal white bands — probe-verified
-   A/B (shadow on = banded + washed out; shadow off = clean). The lift is
-   now filter:drop-shadow, which shadows the glyph silhouette from OUTSIDE
-   only and cannot paint inside the text. Gradient interpolates in oklab
+   A/B (shadow on = banded + washed out; shadow off = clean). The lift was
+   then filter:drop-shadow — but the 0-blur WHITE drop-shadow (0 3px 0) is
+   a hard-edged white copy of each glyph, and on iOS Safari/WebKit it paints
+   THROUGH background-clip:text the same way (Dylan's 4:50 PM iPhone shot:
+   lines STILL in the wordmark while Chromium shots were clean). So NO
+   0-blur drop-shadow on gradient-clipped text, ever: only blurred shadows,
+   which cannot read as a hard line. The white outline now comes from
+   -webkit-text-stroke alone. Gradient interpolates in oklab
    (sRGB line above is the fallback for older browsers) so the blue→pink
    middle stays vivid instead of dipping muddy. Saturation history (all
    OKLCH chroma, gamut-mapped, numerically inverted matrices, round-trip
@@ -298,14 +303,17 @@ body.reduced-motion #countdown.pop #cd-nums,body.reduced-motion #countdown.urgen
   background:linear-gradient(180deg in oklab,#fff 10%,#ffe98a 28%,#ffd21f 45%,#ffab2e 70%,#ff8a1e 100%);
   -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
   -webkit-text-stroke:2px #7a3c00;
-  filter:drop-shadow(0 4px 0 rgba(122,60,0,.35)) drop-shadow(0 10px 24px rgba(255,140,0,.5));
+  filter:drop-shadow(0 10px 24px rgba(255,140,0,.5));
   animation:bannerpop .6s cubic-bezier(.2,1.8,.4,1)}
 /* NO text-shadow on #banner-text (Dylan, Nov 12 ~3:01 PM — "text that pops
    up" still had hard lines): same cause as the wordmark — with transparent
    fill + background-clip:text, Chromium paints the shadow THROUGH the
    glyphs as horizontal bands ("Nice!" in the fix11 before-shot). The lift
-   is now filter:drop-shadow, which shadows the glyph silhouette from
-   OUTSIDE only. Gradient interpolates in oklab (sRGB line above is the
+   was filter:drop-shadow — but a 0-blur drop-shadow is a hard-edged copy
+   of each glyph, and on iOS Safari it paints through background-clip:text
+   the same way (wordmark, Nov 12 4:50 PM iPhone shot). So the 0-blur
+   brown drop-shadow (0 4px 0) is OUT too: only the blurred orange glow
+   remains. Gradient interpolates in oklab (sRGB line above is the
    fallback), same stops and hues — only the lines are gone. */
 @keyframes bannerpop{0%{transform:scale(.4) rotate(-6deg);opacity:0}60%{transform:scale(1.12) rotate(2deg);opacity:1}100%{transform:scale(1) rotate(0);opacity:1}}
 #edge-flash{position:fixed;inset:0;pointer-events:none;z-index:35;opacity:0;box-shadow:inset 0 0 60px 18px rgba(255,210,31,.9)}
@@ -352,6 +360,9 @@ body.reduced-motion #countdown.pop #cd-nums,body.reduced-motion #countdown.urgen
 .acct-name-row{display:flex;gap:8px;align-items:center}
 #acct-name-input{flex:1;min-width:0;font-family:var(--display);font-size:18px;font-weight:700;color:var(--ink);background:#fff;border:2px solid #f5c86b;border-radius:14px;padding:10px 12px;outline:none}
 #acct-name-input:focus{border-color:#2f8cff;box-shadow:0 0 0 3px rgba(47,140,255,.25)}
+#friend-code-input{flex:1;min-width:0;font-family:var(--display);font-size:18px;font-weight:700;color:var(--ink);background:#fff;border:2px solid #f5c86b;border-radius:14px;padding:10px 12px;outline:none;text-transform:uppercase;letter-spacing:.12em}
+#friend-code-input:focus{border-color:#2f8cff;box-shadow:0 0 0 3px rgba(47,140,255,.25)}
+#friend-add-msg{min-height:16px;margin:4px 0 0}
 .acct-row{display:flex;align-items:center;gap:10px}
 .friend-code{font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:.18em;color:#7a3c00}
 #acct-signin .btn{margin-top:10px}

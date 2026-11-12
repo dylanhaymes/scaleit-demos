@@ -816,6 +816,7 @@ await test('hero type: text wordmark with smooth blended gradient on home, gold 
       hasImg: !!el.querySelector('img'),
       bg: cs.backgroundImage,
       fill: cs.webkitTextFillColor,
+      filter: cs.filter,
       spanBg: spanCs.backgroundImage,
     };
   });
@@ -829,6 +830,27 @@ await test('hero type: text wordmark with smooth blended gradient on home, gold 
   ok(stops.every((s, i) => i === 0 || s.p > stops[i - 1].p), 'gradient stops strictly increase (no hard-stop seam)');
   ok(logo.spanBg === 'none', 'span carries no own gradient (single blend across the word)');
   eq(logo.fill === 'transparent' || logo.fill === 'rgba(0, 0, 0, 0)', true, 'text fill is transparent so the gradient shows');
+  // Dylan, Nov 12 ~4:50 PM (iPhone shot): hard lines STILL in the wordmark
+  // on Safari. The 0-blur white drop-shadow (the "lift") is a hard-edged
+  // white copy of each glyph; on WebKit it paints through
+  // background-clip:text as horizontal lines, while Chromium stays clean.
+  // Only blurred shadows may sit on gradient-clipped text.
+  ok(!/drop-shadow\(\s*0(?:px)?\s+[\d.]+px\s+0(?:px)?\s/.test(logo.filter), 'wordmark filter has no 0-blur drop-shadow');
+  const clipFilters = await page.evaluate(() => {
+    const out = {};
+    for (const sheet of document.styleSheets) {
+      let rules;
+      try { rules = sheet.cssRules; } catch { continue; }
+      for (const r of rules) {
+        if (r.selectorText === '.logo' || r.selectorText === '#banner-text') out[r.selectorText] = r.style.filter || '';
+      }
+    }
+    return out;
+  });
+  eq(Object.keys(clipFilters).length, 2, 'found .logo + #banner-text rules in the stylesheet');
+  for (const [sel, f] of Object.entries(clipFilters)) {
+    ok(!/drop-shadow\(\s*0(?:px)?\s+[\d.]+px\s+0(?:px)?\s/.test(f), `${sel}: no 0-blur drop-shadow on gradient-clipped text`);
+  }
   const score = await page.evaluate(() => {
     const imgs = [...document.querySelectorAll('#score img')];
     return { n: imgs.length, allData: imgs.every((i) => i.src.startsWith('data:image/png')) };
@@ -2290,6 +2312,50 @@ await test('boards: friends add/remove + invite link rules', async () => {
   eq(parsed.good.displayName, 'Cool Player', 'invite name parsed');
   eq(parsed.badCode, null, 'bad invite code rejected');
   eq(parsed.none, null, 'no params, no invite');
+  await ctx.close();
+});
+
+await test('boards: add friend by code — input, validation, own code, normalization', async () => {
+  const { ctx, page } = await newPage();
+  await page.click('#btn-boards');
+  // (a) The code entry UI lives in the friends section.
+  eq(await page.locator('#board-friends #friend-code-input').count(), 1, 'friend code input exists');
+  eq(await page.locator('#board-friends #btn-add-friend').count(), 1, 'add friend button exists');
+  ok(!(await page.locator('#board-friends').textContent()).includes("can't find players"), 'no stale copy claiming codes cannot find players');
+  // Guests get the sign-in toast, not the code flow.
+  await page.fill('#friend-code-input', 'ABC123');
+  await page.click('#btn-add-friend');
+  await sleep(200);
+  eq(await page.locator('#toast').textContent(), 'Sign in to add friends by code', 'guest add-by-code prompts sign-in');
+  // Signed-in preview identity (no network): bad shape -> inline message,
+  // and the Firebase SDK never loads (no network call for a bad code).
+  await page.evaluate(() => window.__gb.setAccountPreview('anonymous'));
+  await page.fill('#friend-code-input', 'nope');
+  await page.click('#btn-add-friend');
+  await sleep(200);
+  eq(await page.locator('#friend-add-msg').textContent(), "That doesn't look like a friend code — 6 letters and numbers.", 'bad-code message');
+  eq(await page.evaluate(() => typeof window.firebase), 'undefined', 'no Firebase load for a bad code');
+  // (c) Your own code, typed lowercase, normalizes and is recognised as
+  // your own — no network call either. (Spaces are covered by the
+  // module-level check below: fill() types into a maxlength=6 input, so
+  // the padded form would be truncated before submit.)
+  const own = await page.evaluate(() => window.__gb.accounts().friendCode);
+  await page.fill('#friend-code-input', own.toLowerCase());
+  await page.click('#btn-add-friend');
+  await sleep(200);
+  eq(await page.locator('#friend-add-msg').textContent(), "That's your own code.", 'own-code message');
+  eq(await page.evaluate(() => typeof window.firebase), 'undefined', 'no Firebase load for own code');
+  // (d) Normalization at the module level: lowercase + spaces -> trimmed uppercase.
+  const norm = await page.evaluate(async () => {
+    const m = await import('/js/leaderboards.js');
+    return { a: m.normalizeFriendCode(' abc123 '), b: m.normalizeFriendCode('k7m2qx'), c: m.normalizeFriendCode('') };
+  });
+  eq(norm.a, 'ABC123', 'lowercase + spaces normalize');
+  eq(norm.b, 'K7M2QX', 'lowercase normalizes');
+  eq(norm.c, '', 'empty stays empty');
+  // No live-Firestore lookup test: the suite has no prod access, and the
+  // friendCodes directory only answers once firestore.rules deploys
+  // (separate step — Firebase CLI auth is still blocked).
   await ctx.close();
 });
 

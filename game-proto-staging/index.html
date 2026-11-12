@@ -153,7 +153,12 @@
     </div>
     <div id="board-friends">
       <span class="acct-label">Your friends</span>
-      <p class="small">Share your invite link and friends can add you. Codes alone can't find players yet — the link carries everything needed.</p>
+      <p class="small">Enter a friend's code to add them — or share your invite link.</p>
+      <div class="acct-name-row">
+        <input id="friend-code-input" type="text" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Enter a friend code">
+        <button id="btn-add-friend" class="btn ghost sm">Add friend</button>
+      </div>
+      <p id="friend-add-msg" class="small"></p>
       <div class="acct-name-row">
         <button id="btn-copy-invite" class="btn ghost sm">Copy my invite link</button>
       </div>

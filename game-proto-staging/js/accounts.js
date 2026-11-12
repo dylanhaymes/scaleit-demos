@@ -31,6 +31,10 @@
 //                              hideFromGlobal, ts }
 //   challenges/{id}            (batch 3) { fromUid, toUid, seed, mode,
 //                              status, createdAt, expiresAt, scores: {} }
+//   friendCodes/{code}         (add-friend-by-code) { uid, displayName,
+//                              updatedAt } — public directory, one doc get
+//                              per lookup; written right after the player
+//                              doc sync below, deleted with the account.
 import { FIREBASE_CONFIG, isFirebaseConfigured, FACEBOOK_PROVIDER_ENABLED, FIREBASE_SDK_URLS } from './firebase-config.js';
 import { cleanDisplayName, nameIsClean, nameRejectMessage, defaultGuestName } from './names.js';
 import { Analytics } from './analytics.js';
@@ -41,6 +45,7 @@ export const COLLECTIONS = {
   scoresDaily: 'scores_daily',
   scoresWeekly: 'scores_weekly',
   challenges: 'challenges',
+  friendCodes: 'friendCodes',
 };
 // Local keys wiped by account deletion (identity + progress, not settings:
 // music/sfx/haptics/motion + the tutorial flag are device preferences).
@@ -296,6 +301,19 @@ export const Accounts = {
         provider: this.profile.provider,
         updatedAt: FieldValue ? FieldValue.serverTimestamp() : Date.now(),
       }, { merge: true });
+      // Friend-code directory (public lookup for "add friend by code"):
+      // friendCodes/{code} -> { uid, displayName, updatedAt }. Best
+      // effort — a squatted code (someone else claimed it first) just
+      // means lookup won't find this player by code; the player doc
+      // above is the source of truth and is already saved. Display-name
+      // changes flow through this same sync, so the entry stays current.
+      try {
+        await fb.db.collection(COLLECTIONS.friendCodes).doc(this.profile.friendCode).set({
+          uid: fb.user.uid,
+          displayName: this.profile.displayName,
+          updatedAt: FieldValue ? FieldValue.serverTimestamp() : Date.now(),
+        }, { merge: true });
+      } catch {}
       return { ok: true };
     } catch (e) { return { ok: false, reason: 'sync-failed' }; }
   },
@@ -409,6 +427,13 @@ export const Accounts = {
         const uid = fb.user.uid;
         const db = fb.db;
         await db.collection(COLLECTIONS.players).doc(uid).delete();
+        // Friend-code directory entry, best-effort in its own try so a
+        // failed delete never aborts the rest of the wipe (the rules
+        // make it owner-only, so no other player can delete it either —
+        // a stale entry can only linger after a failed call).
+        if (this.profile?.friendCode) {
+          try { await db.collection(COLLECTIONS.friendCodes).doc(this.profile.friendCode).delete(); } catch {}
+        }
         for (const coll of [COLLECTIONS.scoresDaily, COLLECTIONS.scoresWeekly]) {
           const snap = await db.collection(coll).where('uid', '==', uid).get();
           const batch = db.batch();

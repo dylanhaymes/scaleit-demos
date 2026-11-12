@@ -12,12 +12,16 @@
 //   if an index is missing Firestore answers failed-precondition and the
 //   fetch returns { ok: false, reason: 'needs-index' } instead of
 //   throwing — the UI says the board is still being set up.
-// - Friends are invite-link only in v1: a link carries uid + friend code
-//   + name (`?friend=<uid>&code=<CODE>&name=<Name>`). There is NO
-//   code→uid lookup — that would need a query over all player docs, which
-//   the rules deliberately forbid. Friends live in localStorage
-//   (`gb_friends`); the friends board filters the same public score docs
-//   to those uids (+ yourself). No cloud function, no extra permissions.
+// - Friends come in two ways: an invite link (carries uid + friend code
+//   + name in `?friend=<uid>&code=<CODE>&name=<Name>`) or a friend code
+//   typed in the boards panel. Code entry looks the code up in the public
+//   friendCodes/{code} directory (findByCode) — one doc get by code, so
+//   there is still NO query over player docs, which the rules deliberately
+//   forbid. The directory only answers once firestore.rules deploys; until
+//   then findByCode returns 'lookup-unavailable' and the UI says so
+//   honestly. Friends live in localStorage (`gb_friends`); the friends
+//   board filters the same public score docs to those uids (+ yourself).
+//   No cloud function, no extra permissions.
 // - SAMPLE BOARDS ARE NEVER PRESENTED AS REAL. Guests (and anyone with
 //   `?sample=1`) see a clearly-labelled "Sample leaderboard" built from
 //   deterministic mock data, so the UI is demonstrable without faking
@@ -104,6 +108,12 @@ export function sampleRank(board, scope, key, ownScore) {
   return idx >= 0 ? idx + 1 : null;
 }
 
+// Normalize a typed friend code: trim + uppercase. Pure — the suite
+// calls it directly; the UI also normalizes on submit.
+export function normalizeFriendCode(code) {
+  return String(code || '').trim().toUpperCase();
+}
+
 // Parse a friend invite link back into { uid, code, displayName }, or
 // null when it isn't one. Module-level export (the suite calls it
 // directly); the Leaderboards method below is the same function.
@@ -128,7 +138,7 @@ export function rowHTML(entry, rank, ownUid) {
 }
 
 export const Leaderboards = {
-  // --- Friends (local list; invite links are the only way in, v1) ---
+  // --- Friends (local list; invite links + typed codes) ---
   friends() {
     try {
       const list = JSON.parse(localStorage.getItem(FRIENDS_KEY) || '[]');
@@ -167,6 +177,33 @@ export const Leaderboards = {
     return `${base}?${p.toString()}`;
   },
   parseInviteLink,
+  // --- Add friend by code (public friendCodes directory) ---
+  // Returns { ok, name } or { ok: false, reason } — 'bad-code' (not 6
+  // letters/numbers), 'own-code', 'guest', 'not-found', or
+  // 'lookup-unavailable' (any fetch failure, including permission-denied
+  // while the friendCodes rules haven't deployed yet — the UI says the
+  // lookup isn't live yet instead of blaming the code). Validation runs
+  // before any Firebase call, so a bad/own code never touches the
+  // network. No live-Firestore test in the suite: the suite has no prod
+  // access, and the directory only answers once firestore.rules deploys.
+  async findByCode(rawCode) {
+    const code = normalizeFriendCode(rawCode);
+    if (!/^[A-Z0-9]{6}$/.test(code)) return { ok: false, reason: 'bad-code' };
+    if (code === Accounts.friendCode) return { ok: false, reason: 'own-code' };
+    const fb = await Accounts.ensureFirebase();
+    if (!fb || !fb.user) return { ok: false, reason: 'guest' };
+    try {
+      const snap = await fb.db.collection(COLLECTIONS.friendCodes).doc(code).get();
+      if (!snap.exists) return { ok: false, reason: 'not-found' };
+      const data = snap.data() || {};
+      if (!data.uid || typeof data.uid !== 'string') return { ok: false, reason: 'not-found' };
+      const added = this.addFriend({ uid: data.uid, code, displayName: data.displayName || 'Friend' });
+      if (!added.ok) return { ok: false, reason: 'bad-invite' };
+      return { ok: true, name: added.name };
+    } catch (e) {
+      return { ok: false, reason: 'lookup-unavailable' };
+    }
+  },
 
   // --- Submit (best-only; signed-in players only; never throws) ---
   async submitScore({ board = 'daily', score, lines = 0, maxCombo = 0, key = boardKey(board) } = {}) {
