@@ -145,13 +145,19 @@ if (!bug) {
   await startGame(page);
   await page.evaluate(() => window.__gb.setCharges({ bomb: 1, sweep: 0, reshuffle: 0, star: 0 }));
   await page.evaluate(() => window.__gb.setTimeLeft(120));
+  // Blocks on the board FIRST: on a fresh empty board the bomb clears
+  // nothing and the board legitimately paints 0 px — the old probe asserted
+  // px >= 200 on that empty board and failed spuriously. 4 full rows, bomb
+  // at (1,4) clears a 3x3 patch and leaves 23 blocks behind.
+  await page.evaluate(() => window.__gb.setBoard(['########', '########', '########', '########', '........', '........', '........', '........']));
   await page.evaluate(() => window.__gb.armPowerup('bomb'));
-  await page.evaluate(() => window.__gb.targetCell(4, 4));
+  await page.evaluate(() => window.__gb.targetCell(1, 4));
   await sleep(2000); // burst particles live <= 1.6s; a throw kills the loop at once
   if (errors.length) fail('pageerror-during-bomb', { errors: errors.slice(-3) });
   else {
     const s = await st(page);
     console.log(`after bomb: running=${s.running} score=${s.score} charges=${JSON.stringify(s.charges)}`);
+    if (s.score <= 0) fail('setup', { msg: 'bomb cleared no blocks (score 0) — burst not exercised' });
     await assertLoopAlive(page, 'bomb');
     const lay = await L(page);
     const n = await pxCount(page, lay.bx, lay.by, lay.size, lay.size);

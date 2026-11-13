@@ -141,17 +141,18 @@ await test('daily: finish by timeout -> no Continue daily', async () => {
   } finally { await ctx.close(); }
 });
 
-// C. saveNow() while awaitingRevive must NOT persist the dead board.
-await test('daily: close during revive offer writes no save', async () => {
+// C. saveNow() while the game is ending must NOT persist the dead board.
+await test('daily: close during game-over writes no save', async () => {
   const { ctx, page } = await newPage();
   try {
     const key = await todayKey(page);
     await page.evaluate((k) => window.__gb.startDaily(k), key);
     await waitFor(async () => (await page.evaluate(() => window.__gb.state().running)), 5000, 'daily running');
-    // End the game (no moves), then save in the same tick — while the revive
-    // offer is pending (awaitingRevive) — exactly what pagehide does when
-    // the tab is closed on the offer. The stored save must still be the
-    // start-of-game save (empty board), never the dead full board.
+    // End the game (no moves), then save in the same tick — exactly what
+    // pagehide does when the tab is closed as the game ends. saveGame's
+    // guard (running must be true) refuses the dead board: the stored save
+    // must still be the start-of-game save (empty board), never the dead
+    // full board.
     const stored = await page.evaluate(() => {
       window.__gb.setCharges({});
       window.__gb.setBoard(Array(8).fill('########'));
@@ -161,7 +162,7 @@ await test('daily: close during revive offer writes no save', async () => {
     });
     ok(stored, 'start-of-game save still present');
     const filled = stored.board.flat().filter(Boolean).length;
-    eq(filled, 0, 'saveNow during awaitingRevive must not store the dead board');
+    eq(filled, 0, 'saveNow during game-over must not store the dead board');
     await waitFor(async () => page.evaluate(() => document.querySelector('#over').classList.contains('show')), 8000, 'game-over panel');
     eq(await ls(page, 'gb_save'), null, 'save cleared once the game finishes');
     eq(await ls(page, 'gb_daily_done'), key, 'daily marked done');

@@ -83,6 +83,22 @@ async function waitSaveDone(page) {
   await waitFor(async () => (await page.evaluate(() => window.__gb.state())).autoSaving === false, 5000, 'save attempt finished');
   await sleep(200);
 }
+// The game-over panel may wait behind the 1-in-3 game-end interstitial
+// (mock ad: Close when it appears; it enables after 2s). #ad-close is
+// enabled by default in the static markup, so only click it while the ad
+// overlay is actually showing.
+async function waitOverPanel(page, timeout = 15000) {
+  await waitFor(async () => {
+    if (await page.locator('#ad.show').isVisible() && await page.locator('#ad-close').isEnabled()) await page.click('#ad-close');
+    return page.locator('#over.show').isVisible();
+  }, timeout, 'game-over panel');
+}
+// The SAVED! banner shows for 1100 ms; wait for it to hide before
+// triggering the next timeout, or a stale banner satisfies the next
+// banner-visible wait and the test asserts before the save happens.
+async function waitBannerHidden(page) {
+  await waitFor(async () => !(await page.locator('#banner:not(.hidden)').isVisible()), 5000, 'banner hides');
+}
 const EMPTY = ['........', '........', '........', '........', '........', '........', '........', '........'];
 const ROW7 = ['........', '........', '........', '........', '........', '........', '........', '#######.'];
 const FULL = ['########', '########', '########', '########', '########', '########', '########', '########'];
@@ -129,17 +145,19 @@ await test('autosave: timeout spends one Time Star (+15s, SAVED!, game continues
   await page.close();
 });
 
-// (c) Timeout with no Time Star held: the game ends exactly as before.
-await test('autosave: timeout with no Time Star held ends the game (revive offered)', async () => {
+// (c) Timeout with no Time Star held: the game ends exactly as before
+// (revive is gone — the panel shows, with the reason line).
+await test('autosave: timeout with no Time Star held ends the game (game over, no revive)', async () => {
   const { page } = await newPage();
   await startClassic(page);
   await setupBoard(page, ROW7, [0, 0, 0]);
-  await page.evaluate(() => window.__gb.place(0, 7, 7)); // score > 0 so revive is offered
+  await page.evaluate(() => window.__gb.place(0, 7, 7)); // score > 0
   await page.evaluate(() => window.__gb.setCharges({}));
   await page.evaluate(() => window.__gb.setTimeLeft(0.3));
-  await waitFor(async () => page.locator('#revive.show').isVisible(), 6000, 'revive overlay');
+  await waitOverPanel(page);
   const st = await page.evaluate(() => window.__gb.state());
   eq(st.running, false, 'game ended on timeout with no Time Star');
+  eq(await page.locator('#ov-why').textContent(), "Time's up!", 'reason line on the panel');
   await page.close();
 });
 
@@ -149,15 +167,16 @@ await test('autosave: timeout with only Bomb/Sweep/Reshuffle held ends the game 
   const { page } = await newPage();
   await startClassic(page);
   await setupBoard(page, ROW7, [0, 0, 0]);
-  await page.evaluate(() => window.__gb.place(0, 7, 7)); // score > 0 so revive is offered
+  await page.evaluate(() => window.__gb.place(0, 7, 7)); // score > 0
   await page.evaluate(() => window.__gb.setCharges({ bomb: 1, sweep: 1, reshuffle: 1 }));
   await page.evaluate(() => window.__gb.setTimeLeft(0.3));
-  await waitFor(async () => page.locator('#revive.show').isVisible(), 6000, 'revive overlay');
+  await waitOverPanel(page);
   const st = await page.evaluate(() => window.__gb.state());
   eq(st.running, false, 'game ended on timeout');
   eq(st.charges.bomb, 1, 'bomb kept');
   eq(st.charges.sweep, 1, 'sweep kept');
   eq(st.charges.reshuffle, 1, 'reshuffle kept');
+  eq(await page.locator('#ov-why').textContent(), "Time's up!", 'reason line on the panel');
   await page.close();
 });
 
@@ -167,7 +186,7 @@ await test('autosave: repeated timeouts spend one Time Star each, then the game 
   const { page } = await newPage();
   await startClassic(page);
   await setupBoard(page, ROW7, [0, 0, 0]);
-  await page.evaluate(() => window.__gb.place(0, 7, 7)); // score > 0 so revive is offered
+  await page.evaluate(() => window.__gb.place(0, 7, 7)); // score > 0
   await page.evaluate(() => window.__gb.setCharges({ star: 2 }));
   // Timeout 1: star 2 -> 1.
   await page.evaluate(() => window.__gb.setTimeLeft(0.3));
@@ -176,7 +195,10 @@ await test('autosave: repeated timeouts spend one Time Star each, then the game 
   let st = await page.evaluate(() => window.__gb.state());
   eq(st.charges.star, 1, 'first timeout spent one star');
   eq(st.running, true, 'game continues after first timeout save');
-  // Timeout 2: star 1 -> 0.
+  // Timeout 2: star 1 -> 0. Wait for the first banner to hide first, or
+  // the stale banner satisfies the next visible-wait and the test asserts
+  // before the second save happens.
+  await waitBannerHidden(page);
   await page.evaluate(() => window.__gb.setTimeLeft(0.3));
   await waitFor(async () => page.locator('#banner:not(.hidden)').isVisible(), 6000, 'SAVED banner 2');
   await waitSaveDone(page);
@@ -185,9 +207,10 @@ await test('autosave: repeated timeouts spend one Time Star each, then the game 
   eq(st.running, true, 'game continues after second timeout save');
   // Timeout 3: no stars left — the game ends.
   await page.evaluate(() => window.__gb.setTimeLeft(0.3));
-  await waitFor(async () => page.locator('#revive.show').isVisible(), 6000, 'revive overlay');
+  await waitOverPanel(page);
   st = await page.evaluate(() => window.__gb.state());
   eq(st.running, false, 'game ended on the third timeout with no stars left');
+  eq(await page.locator('#ov-why').textContent(), "Time's up!", 'reason line on the panel');
   await page.close();
 });
 

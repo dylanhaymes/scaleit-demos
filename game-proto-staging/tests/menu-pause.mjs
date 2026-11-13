@@ -221,8 +221,9 @@ await test('menu: armed power-up survives open/close; auto-save mid-freeze stays
   st = await page.evaluate(() => window.__gb.state());
   eq(st.armed, 'bomb', 'still armed after menu close');
   // Auto-save edge: full board + a reshuffle charge, trigger the no-fit
-  // check, open the menu mid-freeze. Must end consistent: running with a
-  // fitting tray, or the revive overlay — never a crash or a stuck state.
+  // check, open the menu mid-freeze. Must end consistent: game over with
+  // the panel up (the reshuffle cannot save a full board; revive is gone)
+  // — never a crash or a stuck state.
   const FULL = ['########', '########', '########', '########', '########', '########', '########', '########'];
   await setupBoard(page, FULL, [0, 0, 0]);
   await page.evaluate(() => window.__gb.setCharges({ bomb: 0, sweep: 0, reshuffle: 1, star: 0 }));
@@ -235,8 +236,21 @@ await test('menu: armed power-up survives open/close; auto-save mid-freeze stays
     return !s.autoSaving;
   }, 5000, 'auto-save freeze ends');
   st = await page.evaluate(() => window.__gb.state());
-  const reviveShowing = await page.evaluate((id) => document.getElementById(id).classList.contains('show'), 'revive');
-  ok(st.running || reviveShowing, 'consistent end state after menu during auto-save (running or revive showing)');
+  // Revive is gone (Dylan, Nov 12, e11f4e2): the only consistent end state
+  // on a FULL board is game over — the reshuffle was spent, the fresh tray
+  // cannot fit a full board, and no bomb/sweep was held. The panel may wait
+  // behind the 1-in-3 game-end interstitial (mock ad: Close when it appears;
+  // it enables after 2s).
+  await waitFor(async () => {
+    // Only click when the mock ad is actually showing: #ad-close is enabled
+    // by default in the static markup, so enabled-but-hidden must not be
+    // clicked (Playwright waits forever on an invisible button).
+    if (await page.locator('#ad.show').isVisible() && await page.locator('#ad-close').isEnabled()) await page.click('#ad-close');
+    return page.locator('#over.show').isVisible();
+  }, 15000, 'game-over panel after auto-save');
+  st = await page.evaluate(() => window.__gb.state());
+  eq(st.running, false, 'game over after unresolvable no-fit');
+  eq(await page.locator('#ov-why').textContent(), 'No space left!', 'reason line on the panel');
   await page.close();
 });
 

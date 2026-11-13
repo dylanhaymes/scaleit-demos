@@ -1,5 +1,5 @@
 // Clearbloom Design Update 5 tests (timer 120/150, countdown, levels, XP, power-up rings, icons, fonts, reduced motion) (Playwright, headless Chromium).
-// Covers: timer start/bonus/cap/pause/timeout/revive-refill, power-up earn
+// Covers: timer start/bonus/cap/pause/timeout (no revive — game over is game over), power-up earn
 // and use + cancel, charges reset, save/restore incl. timer + charges,
 // music default-on + toggle, 0 console errors, basic FPS.
 // Run: node tests/design1.mjs   (serves this folder on localhost itself)
@@ -52,6 +52,22 @@ async function waitFor(fn, timeout = 8000, label = 'condition') {
     if (Date.now() - t0 > timeout) throw new Error('timeout waiting for ' + label);
     await sleep(120);
   }
+}
+// Wait for the game-over panel, dismissing the 1-in-3 game-end interstitial
+// (mock ad) if it shows first. #ad-close is enabled by default in the
+// static markup, so only click it while the ad overlay is actually showing
+// — clicking an enabled-but-hidden button makes Playwright wait forever.
+async function waitOverPanel(page, timeout = 15000) {
+  await waitFor(async () => {
+    if (await page.locator('#ad.show').isVisible() && await page.locator('#ad-close').isEnabled()) await page.click('#ad-close');
+    return page.locator('#over.show').isVisible();
+  }, timeout, 'game-over panel');
+}
+// The SAVED! banner shows for 1100 ms; wait for it to hide before
+// triggering the next timeout, or a stale banner satisfies the next
+// banner-visible wait and the test asserts before the save happens.
+async function waitBannerHidden(page) {
+  await waitFor(async () => !(await page.locator('#banner:not(.hidden)').isVisible()), 5000, 'banner hides');
 }
 
 const chromiumPath = process.env.CHROMIUM_PATH
@@ -466,22 +482,18 @@ await test('timer: pauses when app is backgrounded (document.hidden)', async () 
   await page.close();
 });
 
-await test('timer: timeout ends the game, revive refills to 60s', async () => {
+await test('timer: timeout ends the game, panel shows the reason (no revive)', async () => {
   const { page } = await newPage();
   await startClassic(page);
   await setupBoard(page, ROW7, [0, 0, 0]);
-  await page.evaluate(() => window.__gb.place(0, 7, 7)); // score > 0 so revive is offered
+  await page.evaluate(() => window.__gb.place(0, 7, 7)); // score > 0
+  await page.evaluate(() => window.__gb.setCharges({})); // no Time Star: the game must end
   await page.evaluate(() => window.__gb.setTimeLeft(0.4));
-  await waitFor(async () => page.locator('#revive.show').isVisible(), 6000, 'revive overlay');
-  eq(await page.locator('#rv-title').textContent(), "Time's up!", 'timeout heading');
-  await page.click('#btn-revive');
-  await waitFor(async () => page.locator('#ad.show').isVisible(), 5000, 'mock ad');
-  await sleep(5600); // mock rewarded countdown (5s)
-  await page.click('#ad-close');
-  await waitFor(async () => (await page.evaluate(() => window.__gb.state())).running, 5000, 'game running after revive');
+  await waitOverPanel(page);
+  eq(await page.locator('#ov-why').textContent(), "Time's up!", 'reason line');
+  eq(await page.evaluate(() => document.querySelector('#revive')), null, 'no revive overlay in the DOM');
   const st = await page.evaluate(() => window.__gb.state());
-  approx(st.timeLeft, 60, 2.5, 'timer refilled to 60 after revive');
-  eq(st.revived, true, 'revived flag set');
+  eq(st.running, false, 'game ended on timeout');
   await page.close();
 });
 
@@ -625,11 +637,12 @@ await test('power-ups: Reshuffle deals a new fitting tray; Time Star adds 15s', 
 await test('power-ups: charges reset between games', async () => {
   const { page } = await newPage();
   await startClassic(page);
-  await page.evaluate(() => window.__gb.setCharges({ bomb: 2, star: 1 }));
+  // No Time Star here: a held star would auto-save the timeout (+15s) and
+  // the game would never end, so there would be no game-over panel to
+  // come back from. The test's point is the charge reset, not the star.
+  await page.evaluate(() => window.__gb.setCharges({ bomb: 2 }));
   await page.evaluate(() => window.__gb.setTimeLeft(0.3));
-  await waitFor(async () => (await page.locator('#revive.show').isVisible()) || (await page.locator('#over.show').isVisible()), 6000, 'game over');
-  if (await page.locator('#revive.show').isVisible()) await page.click('#btn-norevive');
-  await waitFor(async () => page.locator('#over.show').isVisible(), 5000, 'game-over panel');
+  await waitOverPanel(page);
   await page.click('#btn-again');
   await waitFor(async () => (await page.evaluate(() => window.__gb.state())).running, 5000, 'new game running');
   const st = await page.evaluate(() => window.__gb.state());
@@ -962,6 +975,12 @@ await test('popups: a newer clear replaces the fading popup in the same lane', a
 await test('banner: on phone the banner sits above the popup lanes, never over them', async () => {
   const { page } = await newPage(); // 390x844 phone viewport
   await startClassic(page);
+  // Combo counts consecutive clearing MOVES, not lines in one move: the
+  // first clear (1 line) takes combo to 1, the CROSS clear then takes it
+  // to 2 — only then do the 'Nice!' banner + 'Combo x2' popup fire. A
+  // single CROSS clear leaves combo at 1 and neither appears.
+  await setupBoard(page, ROW7, [0, 0, 0]);
+  await page.evaluate(() => window.__gb.place(0, 7, 7)); // 1 line, combo 1
   await setupBoard(page, CROSS, [0, 0, 0]);
   await page.evaluate(() => window.__gb.place(0, 7, 7)); // row 7 + col 7 = 2 lines, combo 2, board empty
   await sleep(700); // banner (900ms) + popups mid-flight, bannerpop animation done
@@ -1107,9 +1126,7 @@ await test('game over: NEW BEST badge never covers the SCORE label', async () =>
   await setupBoard(page, ROW7, [0, 0, 0]);
   await page.evaluate(() => window.__gb.place(0, 7, 7)); // score > 0, new best
   await page.evaluate(() => window.__gb.setTimeLeft(0.3));
-  await waitFor(async () => page.locator('#revive.show').isVisible(), 6000, 'revive overlay');
-  await page.click('#btn-norevive');
-  await waitFor(async () => page.locator('#over.show').isVisible(), 5000, 'game-over panel');
+  await waitOverPanel(page);
   await sleep(300); // badge mid-pop (bestpop runs 0.6s, peaks ~0.33s)
   const r = await page.evaluate(() => {
     const b = document.querySelector('#ov-new').getBoundingClientRect();
@@ -1152,9 +1169,7 @@ await test('hero type: game-over score is gold numerals', async () => {
   await setupBoard(page, ROW7, [0, 0, 0]);
   await page.evaluate(() => window.__gb.place(0, 7, 7)); // score > 0
   await page.evaluate(() => window.__gb.setTimeLeft(0.3));
-  await waitFor(async () => page.locator('#revive.show').isVisible(), 6000, 'revive overlay');
-  await page.click('#btn-norevive');
-  await waitFor(async () => page.locator('#over.show').isVisible(), 5000, 'game-over panel');
+  await waitOverPanel(page);
   const st = await page.evaluate(() => window.__gb.state());
   const ov = await page.evaluate(() => {
     const imgs = [...document.querySelectorAll('#ov-score img')];
@@ -1196,9 +1211,7 @@ await test('levels: player XP persists + home bar shows it', async () => {
   await setupBoard(page, ROW7, [0, 0, 0]);
   await page.evaluate(() => window.__gb.place(0, 7, 7)); // 1 line, score > 0
   await page.evaluate(() => window.__gb.setTimeLeft(0.3));
-  await waitFor(async () => page.locator('#revive.show').isVisible(), 6000, 'revive overlay');
-  await page.click('#btn-norevive');
-  await waitFor(async () => page.locator('#over.show').isVisible(), 5000, 'game-over panel');
+  await waitOverPanel(page);
   // XP: 10/line + 5/max combo + 25/game = 40.
   eq(await page.evaluate(() => localStorage.getItem('gb_xp')), '40', 'XP awarded (40)');
   ok((await page.locator('#ov-xp').textContent()).includes('+40 XP'), 'game-over XP line');
@@ -1218,9 +1231,7 @@ await test('levels: game-over star rating reveals 3 stars for a new best', async
   await setupBoard(page, ROW7, [0, 0, 0]);
   await page.evaluate(() => window.__gb.place(0, 7, 7)); // score > 0, fresh profile => new best
   await page.evaluate(() => window.__gb.setTimeLeft(0.3));
-  await waitFor(async () => page.locator('#revive.show').isVisible(), 6000, 'revive overlay');
-  await page.click('#btn-norevive');
-  await waitFor(async () => page.locator('#over.show').isVisible(), 5000, 'game-over panel');
+  await waitOverPanel(page);
   await sleep(1500); // stars reveal one at a time (250ms + 350ms apart)
   const lit = await page.locator('#ov-stars span.lit').count();
   eq(lit, 3, '3 stars lit for new best');
@@ -1233,8 +1244,6 @@ await test('new best: glossy badge in banner + game-over panel', async () => {
   await setupBoard(page, ROW7, [0, 0, 0]);
   await page.evaluate(() => window.__gb.place(0, 7, 7)); // score > 0, fresh profile => new best
   await page.evaluate(() => window.__gb.setTimeLeft(0.3));
-  await waitFor(async () => page.locator('#revive.show').isVisible(), 6000, 'revive overlay');
-  await page.click('#btn-norevive');
   // A new best gets its own beat: the banner badge pops over the board
   // FIRST, then the panel opens with the same badge inside it. The two
   // must never be on screen together — that stacked two badges.
@@ -1248,7 +1257,7 @@ await test('new best: glossy badge in banner + game-over panel', async () => {
   eq(bb.text, 'NEW BEST', 'banner badge reads NEW BEST');
   ok(bb.imgData, 'banner badge star is a data-URL sprite');
   ok(bb.big, 'banner badge is the big size');
-  await waitFor(async () => page.locator('#over.show').isVisible(), 5000, 'game-over panel');
+  await waitOverPanel(page);
   // The banner badge has handed off to the panel badge by now.
   ok(!(await page.locator('#banner:not(.hidden)').isVisible()), 'banner badge gone once the panel is up');
   ok(await page.locator('#ov-new.best-badge:not(.hidden)').isVisible(), 'game-over panel badge visible');
@@ -1391,7 +1400,7 @@ await test('autosave: a charge earned early still saves a no-fit board late (per
   st = await page.evaluate(() => window.__gb.state());
   eq(st.charges.reshuffle, 0, 'reshuffle spent on the save');
   eq(st.running, true, 'game continues after save');
-  ok(await page.locator('#revive.show').isVisible() === false, 'no revive offered after a save');
+  eq(await page.evaluate(() => document.querySelector('#revive')), null, 'no revive overlay in the DOM');
   await page.close();
 });
 
@@ -1464,8 +1473,10 @@ await test('tray: random placements never lose an unplaced piece or re-deal earl
     const wasLastPiece = beforeIds.filter((id) => id !== null).length === 1;
     if (wasLastPiece) {
       // The tray was emptied by this placement: a fresh deal is the rule,
-      // not an early re-deal. The new pieces must all be fresh ids.
-      ok(afterIds.every((id) => id !== null && id !== beforeIds[slot]), `iter ${i}: empty tray re-dealt with fresh pieces (${JSON.stringify(beforeIds)} -> ${JSON.stringify(afterIds)})`);
+      // not an early re-deal. All three slots must be filled — but the ids
+      // are SHAPE ids, not instance ids, so a re-dealt tray may legitimately
+      // contain the same shape again (id 29 re-drawn is not a stale piece).
+      ok(afterIds.every((id) => id !== null), `iter ${i}: empty tray re-dealt full (${JSON.stringify(beforeIds)} -> ${JSON.stringify(afterIds)})`);
     } else {
       for (let k = 0; k < 3; k++) {
         if (k === slot) eq(afterIds[k], null, `iter ${i}: placed slot emptied`);
@@ -1497,22 +1508,20 @@ await test('timer: bar reads 100% at game start and stays full above 120s', asyn
 // ---------- Play Again (Dylan, Nov 12 ~3:16 PM): a fresh game must start ----------
 async function forceGameOver(page) {
   await page.evaluate(() => window.__gb.setTimeLeft(0.3));
-  await waitFor(async () => (await page.locator('#revive.show').isVisible()) || (await page.locator('#over.show').isVisible()), 6000, 'game over');
-  if (await page.locator('#revive.show').isVisible()) await page.click('#btn-norevive');
-  await waitFor(async () => page.locator('#over.show').isVisible(), 5000, 'game-over panel');
+  await waitOverPanel(page);
 }
 
-await test('play again: fresh game starts after the 3rd Play Again interstitial', async () => {
+await test('play again: fresh game starts after game over, and no ad fires on Play Again', async () => {
   const { page } = await newPage();
   await startClassic(page);
   for (let g = 1; g <= 3; g++) {
     await forceGameOver(page);
     await page.click('#btn-again');
-    if (g === 3) {
-      await waitFor(async () => page.locator('#ad.show').isVisible(), 5000, 'interstitial shows on 3rd Play Again');
-      await waitFor(async () => page.evaluate(() => { const c = document.getElementById('ad-close'); return c && !c.disabled; }), 8000, 'ad Close enables');
-      await page.click('#ad-close');
-    }
+    // No ad on Play Again any more (Dylan, Nov 12): the end-of-game
+    // interstitial already ran (or didn't) inside finishGame, before the
+    // panel opened. Play Again just starts the fresh game.
+    await sleep(500);
+    eq(await page.locator('#ad.show').isVisible(), false, 'no ad on Play Again ' + g);
     await waitFor(async () => (await page.evaluate(() => window.__gb.state())).running, 6000, 'fresh game running after Play Again ' + g);
     const st = await page.evaluate(() => window.__gb.state());
     eq(st.score, 0, 'game ' + (g + 1) + ': score reset');
@@ -1524,22 +1533,88 @@ await test('play again: fresh game starts after the 3rd Play Again interstitial'
   await page.close();
 });
 
-await test('play again: fresh game starts even when the interstitial never resolves', async () => {
+await test('game end: panel still appears when the interstitial never resolves (10s race)', async () => {
   const { page } = await newPage();
   await startClassic(page);
-  // Swap in a provider whose interstitial promise never settles, and arm
-  // the 3rd-game trigger so Play Again actually awaits it.
-  await page.evaluate(() => window.__gb.ads.setProvider({ name: 'hang', init() {}, isRewardedReady() { return true; }, showRewarded() { return Promise.resolve({ rewarded: false }); }, showInterstitial() { return new Promise(() => {}); } }));
-  await page.evaluate(() => { window.__gb.ads._gamesSince = 2; });
-  await forceGameOver(page);
-  const t0 = Date.now();
+  await forceGameOver(page); // game 1: no ad can fire (first game of the session)
   await page.click('#btn-again');
-  await waitFor(async () => (await page.evaluate(() => window.__gb.state())).running, 15000, 'fresh game running despite the hanging ad');
+  await waitFor(async () => (await page.evaluate(() => window.__gb.state())).running, 6000, 'game 2 running');
+  // Hang provider (no rewarded branch any more — the adapter only has
+  // showInterstitial) + forced roll hit, so game 2's end really awaits it.
+  await page.evaluate(() => {
+    window.__gb.ads.setProvider({ name: 'hang', init() {}, showInterstitial() { return new Promise(() => {}); } });
+    window.__gb.ads._lastInterstitial = 0; // clear the 2-min gap from game 1
+    window.__origRandom = Math.random; Math.random = () => 0.01; // roll hits (0.01 < 1/3)
+  });
+  const t0 = Date.now();
+  await page.evaluate(() => window.__gb.setTimeLeft(0.3));
+  await waitOverPanel(page, 20000);
   const took = Date.now() - t0;
-  ok(took >= 9000 && took < 15000, 'the 10 s ad timeout fired (took ' + took + ' ms), it did not wait forever');
+  ok(took >= 9000 && took < 20000, 'the 10 s ad timeout fired (took ' + took + ' ms), it did not wait forever');
   const st = await page.evaluate(() => window.__gb.state());
-  eq(st.score, 0, 'fresh game score reset');
-  ok(st.board.every((r) => r.every((v) => !v)), 'fresh game board empty');
+  eq(st.running, false, 'game ended despite the hanging ad');
+  eq(await page.locator('#ov-why').textContent(), "Time's up!", 'reason line');
+  await page.close();
+});
+
+// ---------- Game-end interstitial (Dylan, Nov 12): 1-in-3 roll at game end ----------
+await test('ads: game-end interstitial shows on a forced roll hit, never on a forced miss', async () => {
+  const { page } = await newPage();
+  await startClassic(page);
+  await forceGameOver(page); // game 1: no ad possible (first game of the session)
+  // Game 2, roll forced to hit: the mock ad must show before the panel.
+  await page.click('#btn-again');
+  await waitFor(async () => (await page.evaluate(() => window.__gb.state())).running, 6000, 'game 2 running');
+  await page.evaluate(() => { window.__gb.ads._lastInterstitial = 0; window.__origRandom = Math.random; Math.random = () => 0.01; });
+  await page.evaluate(() => window.__gb.setTimeLeft(0.3));
+  await waitFor(async () => page.locator('#ad.show').isVisible(), 8000, 'mock interstitial shows on a forced hit');
+  await waitOverPanel(page);
+  eq((await page.evaluate(() => window.__gb.state())).running, false, 'game 2 ended');
+  // Game 3, roll forced to miss: no ad, panel appears promptly.
+  await page.click('#btn-again');
+  await waitFor(async () => (await page.evaluate(() => window.__gb.state())).running, 6000, 'game 3 running');
+  await page.evaluate(() => { window.__gb.ads._lastInterstitial = 0; Math.random = () => 0.99; });
+  const t0 = Date.now();
+  await page.evaluate(() => window.__gb.setTimeLeft(0.3));
+  await waitOverPanel(page);
+  const took = Date.now() - t0;
+  ok(took < 5000, 'panel appears promptly with no ad (took ' + took + ' ms)');
+  eq(await page.locator('#ad.show').isVisible(), false, 'no ad on a forced miss');
+  await page.close();
+});
+
+await test('ads: game-end roll fires ~1/3 over 120 direct calls', async () => {
+  const { page } = await newPage();
+  await page.evaluate(() => window.__gb.ads.setProvider({ name: 'count', init() {}, showInterstitial() { return Promise.resolve({ shown: true }); } }));
+  const hits = await page.evaluate(async () => {
+    let hits = 0;
+    for (let i = 0; i < 120; i++) {
+      window.__gb.ads._lastInterstitial = 0; // keep the 2-min gap out of the rate check
+      if (await window.__gb.ads.maybeInterstitialAtGameEnd(2)) hits++;
+    }
+    return hits;
+  });
+  ok(hits >= 25 && hits <= 55, 'roll hits ' + hits + '/120, expected ~40 (band 25-55)');
+  await page.close();
+});
+
+await test('ads: never after game 1, 2-min gap blocks then expires', async () => {
+  const { page } = await newPage();
+  await page.evaluate(() => window.__gb.ads.setProvider({ name: 'count', init() {}, showInterstitial() { return Promise.resolve({ shown: true }); } }));
+  const res = await page.evaluate(async () => {
+    const ads = window.__gb.ads;
+    window.__origRandom = Math.random; Math.random = () => 0.01; // roll always hits
+    const first = await ads.maybeInterstitialAtGameEnd(1); // game 1 of the session
+    const second = await ads.maybeInterstitialAtGameEnd(2); // hits, sets the timestamp
+    const blocked = await ads.maybeInterstitialAtGameEnd(2); // within the gap
+    ads._lastInterstitial = Date.now() - 121000; // backdate past the gap
+    const afterGap = await ads.maybeInterstitialAtGameEnd(2);
+    return { first, second, blocked, afterGap };
+  });
+  eq(res.first, false, 'no ad after game 1 even with the roll forced');
+  eq(res.second, true, 'ad runs on game 2 with the roll forced');
+  eq(res.blocked, false, 'gap blocks a second ad within 2 minutes');
+  eq(res.afterGap, true, 'ad runs again once the gap expires');
   await page.close();
 });
 
@@ -1598,6 +1673,30 @@ await test('difficulty: same daily date rolls the same variant, and the toast di
   await page.close();
 });
 
+// ---------- Daily one-and-done (Dylan, Nov 12): no "Continue daily" after
+// finishing once; "Play again" replay stays (same seeded start, by design).
+await test('daily: finish + replay + quit -> no Continue daily (one-and-done)', async () => {
+  const { page } = await newPage();
+  const key = await page.evaluate(() => window.__gb.todayKey());
+  await page.evaluate((k) => window.__gb.startDaily(k), key);
+  await waitFor(async () => (await page.evaluate(() => window.__gb.state())).running, 5000, 'daily running');
+  const firstTray = await page.evaluate(() => window.__gb.state().tray.map((p) => (p ? p.id : null)));
+  await page.evaluate(() => { window.__gb.setCharges({}); window.__gb.setBoard(Array(8).fill('########')); window.__gb.checkGameOver(); });
+  await waitOverPanel(page);
+  eq(await page.evaluate(() => localStorage.getItem('gb_daily_done')), key, 'daily marked done after finish');
+  // Replay the same seeded daily, then quit to the menu mid-replay.
+  await page.evaluate((k) => window.__gb.startDaily(k), key);
+  await waitFor(async () => (await page.evaluate(() => window.__gb.state())).running, 5000, 'daily replay running');
+  eq(JSON.stringify(await page.evaluate(() => window.__gb.state().tray.map((p) => (p ? p.id : null)))), JSON.stringify(firstTray), 'replay first tray identical');
+  await page.click('#btn-menu');
+  await waitFor(async () => page.evaluate(() => document.querySelector('#menu').classList.contains('show')), 5000, 'pause menu');
+  await page.click('#btn-menu-home');
+  await waitFor(async () => (await page.evaluate(() => document.querySelector('#btn-play').textContent)) !== '', 5000, 'title play label');
+  eq(await page.evaluate(() => document.querySelector('#btn-play').textContent), 'Play', 'no Continue daily after quitting a replay of a finished daily');
+  eq(await page.evaluate(() => localStorage.getItem('gb_save')), null, 'replay save cleared by the gate');
+  await page.close();
+});
+
 await test('difficulty: RULES_TEXT discloses the mix and that charges never expire', async () => {
   const { page } = await newPage();
   const rules = await page.evaluate(async () => {
@@ -1625,7 +1724,7 @@ await test('autosave: Bomb saves a no-fit board (SAVED! banner, charge spent)', 
   eq(st.running, true, 'game continues after save');
   const empties = st.board.flat().filter((v) => !v).length;
   ok(empties >= 14, 'bomb cleared room (empties ' + empties + ', was 8)');
-  ok(await page.locator('#revive.show').isVisible() === false, 'no revive offered after a save');
+  eq(await page.evaluate(() => document.querySelector('#revive')), null, 'no revive overlay in the DOM');
   await page.close();
 });
 
@@ -1651,7 +1750,7 @@ await test('autosave: Reshuffle saves a no-fit board (fresh tray fits)', async (
   const st = await page.evaluate(() => window.__gb.state());
   eq(st.charges.reshuffle, 0, 'reshuffle spent on the save');
   eq(st.running, true, 'game continues after save');
-  ok(await page.locator('#revive.show').isVisible() === false, 'no revive offered after a save');
+  eq(await page.evaluate(() => document.querySelector('#revive')), null, 'no revive overlay in the DOM');
   await page.close();
 });
 
@@ -1668,28 +1767,86 @@ await test('autosave: Reshuffle is tried before Bomb', async () => {
   await page.close();
 });
 
-await test('autosave: no save when no charges held (revive offered)', async () => {
+await test('autosave: no save when no charges held (game over, no revive)', async () => {
   const { page } = await newPage();
   await startClassic(page);
   await setupBoard(page, EMPTY, [0, 0, 0]);
-  await page.evaluate(() => window.__gb.place(0, 0, 0)); // score 1, so a revive is offered
+  await page.evaluate(() => window.__gb.place(0, 0, 0)); // score 1
   await setupBoard(page, NOFIT, [11, 11, 11]);
   // Drive the no-moves check directly (the tray cannot fit the board).
   await page.evaluate(() => window.__gb.checkGameOver());
-  await waitFor(async () => page.locator('#revive.show').isVisible(), 6000, 'revive overlay');
+  await waitOverPanel(page);
+  const st = await page.evaluate(() => window.__gb.state());
+  eq(st.running, false, 'game ended with no charges to save it');
+  eq(await page.locator('#ov-why').textContent(), 'No space left!', 'reason line');
+  eq(await page.evaluate(() => document.querySelector('#revive')), null, 'no revive overlay in the DOM');
   await page.close();
 });
 
-await test('autosave: timeout never auto-uses a charge (star kept, revive offered)', async () => {
+await test('autosave: timeout spends one Time Star (+15s, game continues)', async () => {
   const { page } = await newPage();
   await startClassic(page);
   await setupBoard(page, ROW7, [0, 0, 0]);
-  await page.evaluate(() => window.__gb.place(0, 7, 7)); // score > 0 so revive is offered
+  await page.evaluate(() => window.__gb.place(0, 7, 7)); // score > 0
   await page.evaluate(() => window.__gb.setCharges({ star: 1 }));
   await page.evaluate(() => window.__gb.setTimeLeft(0.3));
-  await waitFor(async () => page.locator('#revive.show').isVisible(), 6000, 'revive overlay');
+  await waitFor(async () => page.locator('#banner:not(.hidden)').isVisible(), 6000, 'SAVED banner');
+  eq(await page.locator('#banner-text').textContent(), 'SAVED!', 'banner says SAVED!');
+  await waitSaveDone(page);
   const st = await page.evaluate(() => window.__gb.state());
-  eq(st.charges.star, 1, 'Time Star NOT spent on timeout');
+  eq(st.charges.star, 0, 'Time Star spent on the timeout save');
+  eq(st.running, true, 'game continues after timeout save');
+  ok(st.timeLeft > 10 && st.timeLeft <= 15, 'time refilled to ~15s, got ' + st.timeLeft);
+  eq(await page.evaluate(() => document.querySelector('#revive')), null, 'no revive overlay in the DOM');
+  await page.close();
+});
+
+await test('autosave: timeout with only Bomb/Sweep/Reshuffle held ends the game (charges kept)', async () => {
+  const { page } = await newPage();
+  await startClassic(page);
+  await setupBoard(page, ROW7, [0, 0, 0]);
+  await page.evaluate(() => window.__gb.place(0, 7, 7)); // score > 0
+  await page.evaluate(() => window.__gb.setCharges({ bomb: 1, sweep: 1, reshuffle: 1 }));
+  await page.evaluate(() => window.__gb.setTimeLeft(0.3));
+  await waitOverPanel(page);
+  const st = await page.evaluate(() => window.__gb.state());
+  eq(st.running, false, 'game ended on timeout');
+  eq(st.charges.bomb, 1, 'bomb kept');
+  eq(st.charges.sweep, 1, 'sweep kept');
+  eq(st.charges.reshuffle, 1, 'reshuffle kept');
+  eq(await page.locator('#ov-why').textContent(), "Time's up!", 'reason line');
+  await page.close();
+});
+
+await test('autosave: repeated timeouts spend one Time Star each, then the game ends', async () => {
+  const { page } = await newPage();
+  await startClassic(page);
+  await setupBoard(page, ROW7, [0, 0, 0]);
+  await page.evaluate(() => window.__gb.place(0, 7, 7)); // score > 0
+  await page.evaluate(() => window.__gb.setCharges({ star: 2 }));
+  // Timeout 1: star 2 -> 1.
+  await page.evaluate(() => window.__gb.setTimeLeft(0.3));
+  await waitFor(async () => page.locator('#banner:not(.hidden)').isVisible(), 6000, 'SAVED banner 1');
+  await waitSaveDone(page);
+  let st = await page.evaluate(() => window.__gb.state());
+  eq(st.charges.star, 1, 'first timeout spent one star');
+  eq(st.running, true, 'game continues after first timeout save');
+  // Timeout 2: star 1 -> 0. Wait for the first banner to hide first, or
+  // the stale banner satisfies the next visible-wait and the test asserts
+  // before the second save happens.
+  await waitBannerHidden(page);
+  await page.evaluate(() => window.__gb.setTimeLeft(0.3));
+  await waitFor(async () => page.locator('#banner:not(.hidden)').isVisible(), 6000, 'SAVED banner 2');
+  await waitSaveDone(page);
+  st = await page.evaluate(() => window.__gb.state());
+  eq(st.charges.star, 0, 'second timeout spent the last star');
+  eq(st.running, true, 'game continues after second timeout save');
+  // Timeout 3: no stars left — the game ends.
+  await page.evaluate(() => window.__gb.setTimeLeft(0.3));
+  await waitOverPanel(page);
+  st = await page.evaluate(() => window.__gb.state());
+  eq(st.running, false, 'game ended on the third timeout with no stars left');
+  eq(await page.locator('#ov-why').textContent(), "Time's up!", 'reason line');
   await page.close();
 });
 
@@ -1785,9 +1942,7 @@ await test('review fixes 2: daily game-over heading is "Daily challenge over"', 
   await page.evaluate(() => window.__gb.startDaily('2026-11-11'));
   await waitFor(async () => (await page.evaluate(() => window.__gb.state())).running, 5000, 'daily running');
   await page.evaluate(() => window.__gb.setTimeLeft(0.3));
-  await waitFor(async () => (await page.locator('#revive.show').isVisible()) || (await page.locator('#over.show').isVisible()), 6000, 'game over');
-  if (await page.locator('#revive.show').isVisible()) await page.click('#btn-norevive');
-  await waitFor(async () => page.locator('#over.show').isVisible(), 5000, 'game-over panel');
+  await waitOverPanel(page);
   const h = await page.locator('#over h2').textContent();
   eq(h, 'Daily challenge over', 'heading, got ' + h);
   ok(!h.includes('Nov 11') && !h.includes('2026-'), 'no date in the heading text');
@@ -1913,8 +2068,10 @@ await test('polish 1: drag starts at resting tray size and eases to board-cell s
   approx(atPickup.dragStartScale, 0.85, 0.02, 'drag starts at resting tray size, got ' + atPickup.dragStartScale);
   // The ease is per-frame (0.35/frame): under a transient frame stall the
   // fixed 600ms sleep is not enough frames. Wait for the ease to land —
-  // the assertion (it reaches full board-cell size) is unchanged.
-  await waitFor(async () => (await page.evaluate(() => window.__gb.state())).dragScale >= 0.98, 3000, 'held piece eases to full size');
+  // the assertion (it reaches full board-cell size) is unchanged. The wait
+  // threshold is 0.99, not 0.98: at 0.98 the float boundary (0.98 vs
+  // 1 ± 0.02) can fail on rounding even though the ease is still converging.
+  await waitFor(async () => (await page.evaluate(() => window.__gb.state())).dragScale >= 0.99, 3000, 'held piece eases to full size');
   const held = await page.evaluate(() => window.__gb.state());
   approx(held.dragScale, 1, 0.02, 'held piece eases to full board-cell size, got ' + held.dragScale);
   await page.mouse.up();
@@ -2795,9 +2952,7 @@ await test('challenges: challenge game never pollutes the classic best', async (
   const scored = (await page.evaluate(() => window.__gb.state())).score;
   ok(scored > 0, `scored ${scored}`);
   await page.evaluate(() => window.__gb.setTimeLeft(0.3));
-  await waitFor(async () => page.locator('#revive.show').isVisible(), 6000, 'revive overlay');
-  await page.click('#btn-norevive');
-  await waitFor(async () => page.locator('#over.show').isVisible(), 5000, 'game-over panel');
+  await waitOverPanel(page);
   eq(await page.locator('#over h2').textContent(), 'Challenge over', 'heading is Challenge over');
   ok((await page.locator('#ov-challenge').textContent()).includes('Waiting for Pal to play'), 'waiting line names the opponent');
   ok(await page.evaluate(() => document.querySelector('#ov-new').classList.contains('hidden')), 'no NEW BEST badge for a challenge game');
@@ -3118,11 +3273,9 @@ await test('cosmetics: game-over unlock line names a real pack (level 2)', async
   await page.waitForSelector('#btn-play');
   await startClassic(page);
   await setupBoard(page, EMPTY, [0, 0, 0]);
-  await page.evaluate(() => window.__gb.place(0, 7, 7)); // score > 0 so revive is offered (revive is score-gated by rule)
+  await page.evaluate(() => window.__gb.place(0, 7, 7)); // score > 0
   await page.evaluate(() => window.__gb.setTimeLeft(0.3));
-  await waitFor(async () => page.locator('#revive.show').isVisible(), 6000, 'revive overlay');
-  await page.click('#btn-norevive');
-  await waitFor(async () => page.locator('#over.show').isVisible(), 5000, 'game-over panel');
+  await waitOverPanel(page);
   const xpLine = await page.locator('#ov-xp').textContent();
   ok(xpLine.includes('+25 XP'), 'XP line shows +25');
   ok(xpLine.includes('Player Level 2'), 'XP line shows level 2');

@@ -212,8 +212,12 @@ async function playScenario(name, { equipAtStart, equipAfterMoves }) {
     for (let i = 0; i < 3; i++) {
       const p = after.tray[i];
       if (!p) continue;
-      const cx = lay.trayX + lay.slotW * (i + 0.5), cy = lay.trayY + lay.trayH / 2;
-      const n = await pxCount(page, cx - 8, cy - 8, 16, 16);
+      // Sample the WHOLE slot, not just its centre: L-shaped pieces (e.g.
+      // id 30, cells top row + left column only) have an empty centre cell,
+      // so a 16x16 centre sample reads 0 px even though the piece is fully
+      // painted (verified against the failure screenshot: all 3 pieces
+      // render). The slot rect on #cv holds only that piece's pixels.
+      const n = await pxCount(page, lay.trayX + lay.slotW * i, lay.trayY, lay.slotW, lay.trayH);
       if (n < 20) {
         fail('tray-piece-not-painted', { moves, slot: i, piece: p, px: n, running: after.running, autoSaving: after.autoSaving });
         await page.screenshot({ path: `tests/tray-repro-trayblank-${name}.png` });

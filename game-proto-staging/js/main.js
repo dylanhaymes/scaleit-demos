@@ -608,6 +608,11 @@ function setModeUI() {
   renderBest(modeBest());
 }
 function startGame(mode = 'classic', dateKey = localDateKey()) {
+  // A fresh game never starts under the game-over panel: hide it here, not
+  // in every caller. The Play-again button did; the __gb.startDaily hook
+  // didn't — a replay started from the panel left #over covering the live
+  // game. (function show() is hoisted, so this is safe here.)
+  show('over', false);
   S.mode = mode; S.dateKey = (mode === 'daily' || mode === 'challenge') ? dateKey : null;
   // Challenge games reuse the seeded deal: dateKey IS the challenge seed,
   // so both players get the same pieces in the same order.
