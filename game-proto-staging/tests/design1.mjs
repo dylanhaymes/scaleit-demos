@@ -1465,6 +1465,7 @@ await test('tray: random placements never lose an unplaced piece or re-deal earl
     if (!options.length) { await sleep(1200); continue; } // no moves: auto-save or game over resolves it
     const [slot, r, c] = options[Math.floor(Math.random() * options.length)];
     const beforeIds = st.tray.map((p) => (p ? p.id : null));
+    const beforeReshuffle = st.charges.reshuffle;
     await page.evaluate(({ slot, r, c }) => window.__gb.place(slot, r, c), { slot, r, c });
     await sleep(900);
     const after = await page.evaluate(() => window.__gb.state());
@@ -1478,9 +1479,23 @@ await test('tray: random placements never lose an unplaced piece or re-deal earl
       // contain the same shape again (id 29 re-drawn is not a stale piece).
       ok(afterIds.every((id) => id !== null), `iter ${i}: empty tray re-dealt full (${JSON.stringify(beforeIds)} -> ${JSON.stringify(afterIds)})`);
     } else {
-      for (let k = 0; k < 3; k++) {
-        if (k === slot) eq(afterIds[k], null, `iter ${i}: placed slot emptied`);
-        else if (beforeIds[k] !== null) eq(afterIds[k], beforeIds[k], `iter ${i}: unplaced slot ${k} kept its piece (${JSON.stringify(beforeIds)} -> ${JSON.stringify(afterIds)})`);
+      // A reshuffle auto-save may have intervened: if the placement left no
+      // fitting move, checkGameOver -> tryAutoSaveNoFit spends the armed
+      // reshuffle charge and re-deals the WHOLE tray (presentSave 600ms <
+      // this test's 900ms settle), so the placed slot legitimately holds a
+      // fresh piece. Proven by tests/tray-reshuffle-repro.mjs (iter 13:
+      // [15,null,21] -> [5,7,25], reshuffle 1 -> 0). Detect it two ways: the
+      // charge dropped, or an unplaced slot changed id (covers the case where
+      // the same placement also earned a charge, masking the drop).
+      const reshuffleSpent = beforeReshuffle - after.charges.reshuffle;
+      const unplacedChanged = [0, 1, 2].some((k) => k !== slot && beforeIds[k] !== null && afterIds[k] !== beforeIds[k]);
+      if (reshuffleSpent > 0 || unplacedChanged) {
+        ok(afterIds.every((id) => id !== null), `iter ${i}: reshuffle auto-save re-dealt full (${JSON.stringify(beforeIds)} -> ${JSON.stringify(afterIds)})`);
+      } else {
+        for (let k = 0; k < 3; k++) {
+          if (k === slot) eq(afterIds[k], null, `iter ${i}: placed slot emptied`);
+          else if (beforeIds[k] !== null) eq(afterIds[k], beforeIds[k], `iter ${i}: unplaced slot ${k} kept its piece (${JSON.stringify(beforeIds)} -> ${JSON.stringify(afterIds)})`);
+        }
       }
     }
     if (after.tray.some(Boolean)) eq(after.autoSaving, false, `iter ${i}: no auto-save in flight while a piece remains`);
