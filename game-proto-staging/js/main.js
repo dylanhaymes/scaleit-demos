@@ -1349,7 +1349,7 @@ $('btn-set-close').onclick = () => show('settings', false);
 $('btn-pu-first').onclick = () => show('pu-first', false);
 $('btn-tut-again').onclick = () => { show('settings', false); localStorage.removeItem('gb_tut_done'); if (S.running) Tutorial.start(); else { leaveTitle(); startGame('classic'); } };
 
-// ---- Account & sign-in (Update 3) ----
+// ---- Friends — account & sign-in (Update 3) ----
 // Guests play everything except social; sign-in is optional and never
 // required to play. Safe to call before Accounts.init() resolves.
 function refreshAccountUI() {
@@ -1389,6 +1389,7 @@ function acctMsg(text, isError) {
 function openAccount() {
   refreshAccountUI();
   acctMsg('');
+  renderFriendList($('acct-friend-list'));
   // A redirect sign-in (iOS) that failed on the way back says so here
   // instead of failing silently — the player lands back in this panel.
   const st = Accounts.debugState();
@@ -1496,11 +1497,13 @@ function boardNoteFor(res, sample) {
   if (res.empty === 'no-scores') return 'No scores yet — be the first!';
   return boardTab === 'daily' ? `Daily challenge — ${boardKey('daily')}` : `Weekly classic — ${boardKey('weekly')}`;
 }
-function renderFriendList() {
-  const el = $('friend-list');
-  if (!el) return;
+// Renders into the boards list by default; pass the Friends-panel list
+// to render there instead. Both lists show the same friends.
+function renderFriendList(el) {
+  const target = el || $('friend-list');
+  if (!target) return;
   const friends = Leaderboards.friends();
-  el.innerHTML = friends.length
+  target.innerHTML = friends.length
     ? friends.map((f) => `<div class="friend-row"><span class="board-name">${escapeHtml(f.displayName)}</span><span class="friend-code-sm">${escapeHtml(f.code)}</span><button class="btn ghost sm friend-challenge" data-uid="${escapeHtml(f.uid)}" data-name="${escapeHtml(f.displayName)}">Challenge</button><button class="friend-remove" data-uid="${escapeHtml(f.uid)}" aria-label="Remove ${escapeHtml(f.displayName)}">✕</button></div>`).join('')
     : '';
 }
@@ -1566,21 +1569,24 @@ $('btn-copy-invite').onclick = async () => {
     if (note) note.textContent = link;
   }
 };
-// Add friend by code: the input normalizes (trim + uppercase) inside
-// findByCode, which does the directory lookup and adds the friend. Every
-// failure is an inline message, never a crash; guests get the sign-in
-// toast instead. Enter in the input submits.
-async function submitFriendCode() {
-  const input = $('friend-code-input'), msg = $('friend-add-msg');
+// Add friend by code, from either entry point: the boards overlay
+// (default elements) or the Friends panel (its own controls). One shared
+// path — the input/msg/list are parameters, never hardcoded twice.
+// Every failure is an inline message, never a crash; guests get the
+// sign-in message inline and as a toast instead of the code flow.
+// Enter in the input submits.
+async function submitFriendCode(inputEl, msgEl, listEl) {
+  const input = inputEl || $('friend-code-input'), msg = msgEl || $('friend-add-msg');
   if (!input) return;
   const setMsg = (t) => { if (msg) msg.textContent = t; };
-  if (!Accounts.signedIn) { toast('Sign in to add friends by code'); return; }
+  if (!Accounts.signedIn) { setMsg('Sign in to add friends by code'); toast('Sign in to add friends by code'); return; }
   const res = await Leaderboards.findByCode(input.value);
   if (res.ok) {
     input.value = '';
     setMsg('');
     toast(`Added ${res.name}!`);
     renderFriendList();
+    if (listEl) renderFriendList(listEl);
     loadBoard();
     return;
   }
@@ -1593,9 +1599,12 @@ async function submitFriendCode() {
     : "Couldn't add that friend — try again."
   );
 }
-$('btn-add-friend').onclick = submitFriendCode;
+$('btn-add-friend').onclick = () => submitFriendCode();
 $('friend-code-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); submitFriendCode(); } });
-$('friend-list').onclick = async (e) => {
+// Friends panel entry point — same path, the panel's own controls.
+$('btn-acct-add-friend').onclick = () => submitFriendCode($('acct-friend-code-input'), $('acct-friend-add-msg'), $('acct-friend-list'));
+$('acct-friend-code-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); submitFriendCode($('acct-friend-code-input'), $('acct-friend-add-msg'), $('acct-friend-list')); } });
+async function onFriendListClick(e) {
   const chBtn = e.target.closest ? e.target.closest('.friend-challenge') : null;
   if (chBtn) {
     if (!Accounts.signedIn) { toast('Sign in to challenge friends'); return; }
@@ -1610,7 +1619,12 @@ $('friend-list').onclick = async (e) => {
   if (!btn) return;
   Leaderboards.removeFriend(btn.dataset.uid);
   renderFriendList();
-};
+  renderFriendList($('acct-friend-list'));
+}
+// Challenge + remove live on both friend lists (boards overlay and the
+// Friends panel) — one shared handler, attached to each.
+$('friend-list').onclick = onFriendListClick;
+$('acct-friend-list').onclick = onFriendListClick;
 
 // ---- Challenges (Update 3, batch 3) ----
 function challengeRowHTML(c, opp, myScore, dir) {

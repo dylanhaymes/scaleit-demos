@@ -68,7 +68,7 @@
         <span id="acct-name">Guest</span>
         <span id="acct-sub" class="small">Progress saved on this device only</span>
       </div>
-      <button id="btn-account" class="btn ghost sm">Account</button>
+      <button id="btn-account" class="btn ghost sm">Friends</button>
     </div>
     <button id="rank-chip" class="rank-chip" aria-label="Your rank — open leaderboards">
       <span class="rank-star"><img alt="" data-icon="star"></span>
@@ -189,11 +189,11 @@
   </div>
 </div>
 
-<!-- Account & sign-in (Update 3). Guests play everything except social;
+<!-- Friends — account & sign-in (Update 3). Guests play everything except social;
      sign-in is optional and never required to play. -->
 <div id="account" class="overlay">
   <div class="panel scroll">
-    <h2>Account</h2>
+    <h2>Friends</h2>
     <p id="acct-msg" class="small"></p>
     <label class="acct-label" for="acct-name-input">Display name</label>
     <div class="acct-name-row">
@@ -209,6 +209,14 @@
       <button id="btn-copy-code" class="btn ghost sm">Copy</button>
     </div>
     <p class="small">Share it and friends can find you — no Facebook needed.</p>
+    <span class="acct-label">Add a friend</span>
+    <p class="small">Enter a friend's code — they'll show up in your friends list.</p>
+    <div class="acct-name-row">
+      <input id="acct-friend-code-input" type="text" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Enter a friend code">
+      <button id="btn-acct-add-friend" class="btn ghost sm">Add friend</button>
+    </div>
+    <p id="acct-friend-add-msg" class="small"></p>
+    <div id="acct-friend-list" class="friend-list"></div>
     <label class="toggle"><span>Hide me from global leaderboards</span><input type="checkbox" id="set-hide-global"></label>
     <div id="acct-signin">
       <button id="btn-sign-google" class="btn ghost">Sign in with Google</button>
@@ -229,7 +237,7 @@
     <label class="toggle"><span>Vibration</span><input type="checkbox" id="set-haptics"></label>
     <label class="toggle"><span>Reduce motion</span><input type="checkbox" id="set-motion"></label>
     <button id="btn-tut-again" class="btn ghost">Show tutorial again</button>
-    <button id="btn-set-account" class="btn ghost">Account &amp; sign-in</button>
+    <button id="btn-set-account" class="btn ghost">Friends</button>
     <p class="privacy">Privacy: Clearbloom stores your display name, friend code, scores and progress so leaderboards and friends work. Nothing else is collected, nothing is sold, and no ads use your data. Signing out keeps everything on this device. Deleting your account wipes it from the game and the server.</p>
     <button id="btn-delete-account" class="btn danger">Delete account…</button>
     <button id="btn-set-close" class="btn big">Done</button>

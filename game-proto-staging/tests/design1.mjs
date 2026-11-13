@@ -2169,6 +2169,7 @@ await test('accounts: config module has exactly the six live keys', async () => 
   eq(JSON.stringify(cfg.keys), JSON.stringify(['apiKey', 'authDomain', 'projectId', 'storageBucket', 'messagingSenderId', 'appId']), 'exactly six keys');
   for (const k of cfg.keys) ok(typeof cfg.values[k] === 'string' && cfg.values[k].length > 0 && cfg.values[k] !== 'TODO', 'key ' + k + ' is a real value');
   eq(cfg.values.projectId, 'clearbloom-game', 'project is clearbloom-game');
+  eq(cfg.values.authDomain, 'clearbloom-game.web.app', 'authDomain is the Firebase Hosting domain');
   eq(cfg.configured, true, 'isFirebaseConfigured true');
   eq(cfg.fb, false, 'Facebook flag false');
   await ctx.close();
@@ -2303,13 +2304,14 @@ await test('accounts: title card + account panel show guest state, sign-in butto
   await ctx.close();
 });
 
-await test('accounts: Settings has privacy notice, Account button, and two-step delete', async () => {
+await test('accounts: Settings has privacy notice, Friends button, and two-step delete', async () => {
   const { ctx, page } = await newPage();
   await page.click('#btn-title-settings');
   const privacy = await page.locator('.privacy').textContent();
   ok(privacy.includes('leaderboards'), 'privacy notice mentions leaderboards');
   ok(privacy.includes('Deleting your account'), 'privacy notice mentions deletion');
-  ok(await page.locator('#btn-set-account').isVisible(), 'Account button in Settings');
+  ok(await page.locator('#btn-set-account').isVisible(), 'Friends button in Settings');
+  eq(await page.locator('#btn-set-account').textContent(), 'Friends', 'Settings button reads Friends, not Account');
   ok(await page.locator('#btn-delete-account').isVisible(), 'delete button in Settings');
   // Arm, then let it disarm by itself — a stray tap must not delete.
   await page.click('#btn-delete-account');
@@ -2665,6 +2667,62 @@ await test('accounts: signed-in profile with session not yet restored says "stil
   await page.fill('#friend-code-input', 'ABC123');
   await page.click('#btn-add-friend');
   await waitFor(async () => (await page.locator('#friend-add-msg').textContent()).includes('Still signing you in'), 5000, 'session-not-ready message');
+  await ctx.close();
+});
+
+await test('accounts: Friends panel is renamed and has its own add-by-code controls', async () => {
+  const { ctx, page } = await newPage();
+  await page.click('#btn-account');
+  eq(await page.locator('#account h2').textContent(), 'Friends', 'panel heading is Friends');
+  eq(await page.locator('#btn-account').textContent(), 'Friends', 'title button reads Friends');
+  eq(await page.locator('#btn-set-account').textContent(), 'Friends', 'Settings button reads Friends');
+  // The panel has its own controls — distinct IDs, no duplicates with
+  // the boards overlay's #friend-code-input / #btn-add-friend.
+  eq(await page.locator('#account #acct-friend-code-input').count(), 1, 'panel friend-code input exists');
+  eq(await page.locator('#account #btn-acct-add-friend').count(), 1, 'panel add-friend button exists');
+  eq(await page.locator('#account #acct-friend-add-msg').count(), 1, 'panel status message exists');
+  eq(await page.locator('#account #acct-friend-list').count(), 1, 'panel friend list exists');
+  eq(await page.locator('#friend-code-input').count(), 1, 'no duplicate friend-code input id');
+  eq(await page.locator('#btn-add-friend').count(), 1, 'no duplicate add-friend button id');
+  // Display-name input and sign-in controls are untouched by the rename.
+  eq(await page.locator('#account #acct-name-input').count(), 1, 'name input still in panel');
+  eq(await page.locator('#account #btn-sign-google').count(), 1, 'Google sign-in still in panel');
+  await ctx.close();
+});
+
+await test('accounts: guest adding a friend from the Friends panel sees the sign-in message', async () => {
+  const { ctx, page } = await newPage();
+  await page.click('#btn-account');
+  await page.fill('#acct-friend-code-input', 'ABC123');
+  await page.click('#btn-acct-add-friend');
+  await sleep(200);
+  eq(await page.locator('#toast').textContent(), 'Sign in to add friends by code', 'guest add-by-code prompts sign-in');
+  eq(await page.locator('#acct-friend-add-msg').textContent(), 'Sign in to add friends by code', 'panel shows the sign-in message inline');
+  await ctx.close();
+});
+
+await test('accounts: signed-in user adds a friend from the Friends panel', async () => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, userAgent: IPHONE_UA });
+  const page = await ctx.newPage();
+  await page.addInitScript(() => {
+    localStorage.setItem('gb_tut_done', '1');
+    localStorage.setItem('gb_auth_redirect', '1'); // as if returning from Google
+    window.__fakeRedirectMode = 'success';
+  });
+  await page.addInitScript(installFakeFirebaseRedirect);
+  await page.goto(`http://localhost:${PORT}/?test=1`);
+  await page.waitForSelector('#btn-play');
+  await waitFor(async () => (await page.evaluate(() => window.__gb.accounts())).signedIn === true, 8000, 'signed in');
+  await page.click('#btn-account');
+  await page.waitForSelector('#acct-friend-code-input');
+  const own = await page.evaluate(() => window.__gb.accounts().friendCode);
+  const code = own === 'ABC123' ? 'XYZ789' : 'ABC123';
+  await page.fill('#acct-friend-code-input', code);
+  await page.click('#btn-acct-add-friend');
+  await waitFor(async () => (await page.locator('#toast').textContent()).includes('Added Pal!'), 5000, 'Added Pal toast');
+  const friends = await page.evaluate(() => JSON.parse(localStorage.getItem('gb_friends') || '[]'));
+  ok(friends.some((f) => f.uid === 'friend-uid-1'), 'friend in list: ' + JSON.stringify(friends));
+  ok((await page.locator('#acct-friend-list').textContent()).includes('Pal'), 'panel list shows the added friend');
   await ctx.close();
 });
 

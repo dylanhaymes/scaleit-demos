@@ -11,7 +11,7 @@
 // sign-in button stays disabled until the provider exists.
 export const FIREBASE_CONFIG = {
   apiKey: 'AIzaSyB63ANMDcrI9vscAkdBwk5kQzwCeVgRrJU',
-  authDomain: 'clearbloom-game.firebaseapp.com',
+  authDomain: 'clearbloom-game.web.app',
   projectId: 'clearbloom-game',
   storageBucket: 'clearbloom-game.firebasestorage.app',
   messagingSenderId: '22723297343',

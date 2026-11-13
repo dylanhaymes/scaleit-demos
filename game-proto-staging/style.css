@@ -369,9 +369,9 @@ body.reduced-motion #countdown.pop #cd-nums,body.reduced-motion #countdown.urgen
 .acct-name-row{display:flex;gap:8px;align-items:center}
 #acct-name-input{flex:1;min-width:0;font-family:var(--display);font-size:18px;font-weight:700;color:var(--ink);background:#fff;border:2px solid #f5c86b;border-radius:14px;padding:10px 12px;outline:none}
 #acct-name-input:focus{border-color:#2f8cff;box-shadow:0 0 0 3px rgba(47,140,255,.25)}
-#friend-code-input{flex:1;min-width:0;font-family:var(--display);font-size:18px;font-weight:700;color:var(--ink);background:#fff;border:2px solid #f5c86b;border-radius:14px;padding:10px 12px;outline:none;text-transform:uppercase;letter-spacing:.12em}
-#friend-code-input:focus{border-color:#2f8cff;box-shadow:0 0 0 3px rgba(47,140,255,.25)}
-#friend-add-msg{min-height:16px;margin:4px 0 0}
+#friend-code-input,#acct-friend-code-input{flex:1;min-width:0;font-family:var(--display);font-size:18px;font-weight:700;color:var(--ink);background:#fff;border:2px solid #f5c86b;border-radius:14px;padding:10px 12px;outline:none;text-transform:uppercase;letter-spacing:.12em}
+#friend-code-input:focus,#acct-friend-code-input:focus{border-color:#2f8cff;box-shadow:0 0 0 3px rgba(47,140,255,.25)}
+#friend-add-msg,#acct-friend-add-msg{min-height:16px;margin:4px 0 0}
 .acct-row{display:flex;align-items:center;gap:10px}
 .friend-code{font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:.18em;color:#7a3c00}
 #acct-signin .btn{margin-top:10px}
