@@ -1,0 +1,10 @@
+{
+  "hosting": {
+    "public": "game-proto-staging",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ]
+  }
+}
