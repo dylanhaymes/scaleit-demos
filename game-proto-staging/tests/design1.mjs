@@ -832,48 +832,65 @@ await test('hero type: text wordmark with smooth blended gradient on home, gold 
   await waitFor(async () => (await page.evaluate(() => window.__gb.state().heroTypeReady)), 5000, 'hero type ready');
   const logo = await page.evaluate(() => {
     const el = document.querySelector('.logo');
+    const text = el.querySelector('text');
+    const grad = document.getElementById('logoGrad');
+    const stops = [...grad.querySelectorAll('stop')].map((s) => ({ c: s.getAttribute('stop-color'), p: parseFloat(s.getAttribute('offset')) }));
     const cs = getComputedStyle(el);
-    const spanCs = getComputedStyle(el.querySelector('span'));
     return {
+      tag: el.tagName.toLowerCase(),
       text: el.textContent.trim(),
       hasImg: !!el.querySelector('img'),
-      bg: cs.backgroundImage,
-      fill: cs.webkitTextFillColor,
+      stops,
       filter: cs.filter,
-      spanBg: spanCs.backgroundImage,
+      fill: text ? text.getAttribute('fill') : null,
     };
   });
+  // fix13: the wordmark is inline SVG text now. The DOM gradient text
+  // (background-clip:text + transparent fill + filter) showed thin white
+  // horizontal lines through every letter on Dylan's iPhone Safari, and
+  // the same lines cut through "Nice!" — which has no white element — so
+  // the technique itself is the suspect, not any one shadow or stroke.
+  eq(logo.tag, 'svg', 'wordmark is inline SVG text (fix13)');
   eq(logo.text, 'Clearbloom', 'wordmark reads Clearbloom as live text');
   ok(!logo.hasImg, 'no sprite img in the wordmark (Dylan Nov 12: text look is back)');
-  ok(logo.bg.includes('linear-gradient'), 'wordmark has a gradient');
-  // Smooth blend, not hard lines: many colour stops, and no two adjacent
-  // stops at the same position (a shared position is what a hard seam is).
-  const stops = [...logo.bg.matchAll(/(#[0-9a-f]{6}|rgba?\([^)]*\))\s*([\d.]+)%/gi)].map((m) => ({ c: m[1], p: parseFloat(m[2]) }));
-  ok(stops.length >= 6, `gradient has ${stops.length} stops (want >= 6, smooth blend)`);
-  ok(stops.every((s, i) => i === 0 || s.p > stops[i - 1].p), 'gradient stops strictly increase (no hard-stop seam)');
-  ok(logo.spanBg === 'none', 'span carries no own gradient (single blend across the word)');
-  eq(logo.fill === 'transparent' || logo.fill === 'rgba(0, 0, 0, 0)', true, 'text fill is transparent so the gradient shows');
-  // Dylan, Nov 12 ~4:50 PM (iPhone shot): hard lines STILL in the wordmark
-  // on Safari. The 0-blur white drop-shadow (the "lift") is a hard-edged
-  // white copy of each glyph; on WebKit it paints through
-  // background-clip:text as horizontal lines, while Chromium stays clean.
-  // Only blurred shadows may sit on gradient-clipped text.
+  eq(logo.fill, 'url(#logoGrad)', 'wordmark text is filled by the gradient');
+  // Smooth blend, not hard lines: 8 stops, same -7% set, strictly
+  // increasing offsets (a shared position is what a hard seam is).
+  eq(logo.stops.length, 8, `gradient has ${logo.stops.length} stops (want 8, same -7% set)`);
+  eq(logo.stops.map((s) => s.c).join(','), '#3a8df8,#5e7ff7,#8961f7,#ad55f7,#cc56db,#ea5e9a,#f965a2,#e2488c', 'gradient stops are the -7% set, hues unchanged');
+  ok(logo.stops.every((s, i) => i === 0 || s.p > logo.stops[i - 1].p), 'gradient stops strictly increase (no hard-stop seam)');
+  // Only blurred shadows may sit on the wordmark svg.
   ok(!/drop-shadow\(\s*0(?:px)?\s+[\d.]+px\s+0(?:px)?\s/.test(logo.filter), 'wordmark filter has no 0-blur drop-shadow');
-  const clipFilters = await page.evaluate(() => {
-    const out = {};
+  // The old technique must be gone from the stylesheet entirely: no rule
+  // for .logo, #banner-text or #banner-svg may use background-clip:text,
+  // a transparent text fill, or a text-stroke.
+  const badClip = await page.evaluate(() => {
+    const bad = [];
     for (const sheet of document.styleSheets) {
       let rules;
       try { rules = sheet.cssRules; } catch { continue; }
       for (const r of rules) {
-        if (r.selectorText === '.logo' || r.selectorText === '#banner-text') out[r.selectorText] = r.style.filter || '';
+        if (!r.selectorText || !r.style) continue;
+        if (r.selectorText === '.logo' || r.selectorText === '#banner-text' || r.selectorText === '#banner-svg') {
+          const t = r.style.cssText;
+          if (/background-clip\s*:\s*text/.test(t) || /-webkit-text-fill-color\s*:\s*transparent/.test(t) || /-webkit-text-stroke/.test(t)) bad.push(r.selectorText);
+        }
       }
     }
-    return out;
+    return bad;
   });
-  eq(Object.keys(clipFilters).length, 2, 'found .logo + #banner-text rules in the stylesheet');
-  for (const [sel, f] of Object.entries(clipFilters)) {
-    ok(!/drop-shadow\(\s*0(?:px)?\s+[\d.]+px\s+0(?:px)?\s/.test(f), `${sel}: no 0-blur drop-shadow on gradient-clipped text`);
-  }
+  eq(badClip.length, 0, 'no background-clip:text / transparent fill / text-stroke on .logo, #banner-text or #banner-svg: ' + badClip.join(', '));
+  // The banner is SVG text too, same switch: gradient fill, brown stroke kept.
+  const banner = await page.evaluate(() => {
+    const t = document.getElementById('banner-text');
+    const grad = document.getElementById('bannerGrad');
+    const stops = [...grad.querySelectorAll('stop')].map((s) => ({ c: s.getAttribute('stop-color'), p: parseFloat(s.getAttribute('offset')) }));
+    return { tag: t.tagName.toLowerCase(), fill: t.getAttribute('fill'), stroke: t.getAttribute('stroke'), strokeW: t.getAttribute('stroke-width'), stops };
+  });
+  eq(banner.tag, 'text', 'banner text is an SVG <text> (fix13)');
+  eq(banner.fill, 'url(#bannerGrad)', 'banner text is filled by the gradient');
+  eq(banner.stroke, '#7a3c00', 'banner keeps the brown stroke (separate variable, untouched)');
+  eq(banner.stops.map((s) => s.c).join(','), '#ffffff,#ffe98a,#ffd21f,#ffab2e,#ff8a1e', 'banner gradient stops unchanged');
   const score = await page.evaluate(() => {
     const imgs = [...document.querySelectorAll('#score img')];
     return { n: imgs.length, allData: imgs.every((i) => i.src.startsWith('data:image/png')) };
@@ -932,6 +949,54 @@ await test('popups: a newer clear replaces the fading popup in the same lane', a
   eq(combos[0].text, 'Combo x3', 'the live Combo popup is the latest one');
   const clears = pops.filter((p) => p.text.startsWith('Board clear'));
   eq(clears.length, 1, 'one Board-clear popup live after three quick clears');
+  await page.close();
+});
+
+
+// fix13: on phones the DOM banner sat at 34% and printed directly over the
+// canvas "Combo x2" popup (fix12 phone shot: "Nice!" over "Combo x2"),
+// while desktop stacked cleanly. On narrow screens the banner moves to
+// the free band at the top of the board (top:22%) and the canvas lanes
+// shift down a tenth of a board (0.40/0.60/0.80), so the banner clears
+// every lane's full 50px rise.
+await test('banner: on phone the banner sits above the popup lanes, never over them', async () => {
+  const { page } = await newPage(); // 390x844 phone viewport
+  await startClassic(page);
+  await setupBoard(page, CROSS, [0, 0, 0]);
+  await page.evaluate(() => window.__gb.place(0, 7, 7)); // row 7 + col 7 = 2 lines, combo 2, board empty
+  await sleep(700); // banner (900ms) + popups mid-flight, bannerpop animation done
+  const m = await page.evaluate(() => {
+    const b = document.getElementById('banner');
+    const r = b.getBoundingClientRect();
+    const t = document.getElementById('banner-text');
+    const L = window.__gb.layout();
+    const pops = window.__gb.popups();
+    const stageTop = document.getElementById('stage').getBoundingClientRect().y;
+    const byText = (s) => pops.find((p) => p.text.includes(s));
+    return {
+      visible: !b.classList.contains('hidden'),
+      text: t.textContent,
+      bannerTag: t.tagName.toLowerCase(),
+      bannerCenterPct: (r.y + r.height / 2) / window.innerHeight * 100,
+      bannerBottom: r.y + r.height,
+      stageTop,
+      dblY: byText('Double!').y,
+      comboY: byText('Combo x2').y,
+      clearY: byText('Board clear +300').y,
+      by: L.by, size: L.size,
+    };
+  });
+  ok(m.visible, 'banner is showing at the combo moment');
+  eq(m.text, 'Nice!', 'banner says Nice! at combo 2');
+  eq(m.bannerTag, 'text', 'banner text is an SVG <text>');
+  ok(Math.abs(m.bannerCenterPct - 22) < 3, `banner centred at 22% on phone (got ${m.bannerCenterPct.toFixed(1)}%)`);
+  // Lanes shifted down on narrow: 0.40/0.60/0.80 of the board (stage coords).
+  ok(Math.abs(m.dblY - (m.by + m.size * 0.40)) < 2, `Double! lane at 0.40 on phone (got ${m.dblY}, want ${m.by + m.size * 0.40})`);
+  ok(Math.abs(m.comboY - (m.by + m.size * 0.60)) < 2, `Combo lane at 0.60 on phone (got ${m.comboY}, want ${m.by + m.size * 0.60})`);
+  ok(Math.abs(m.clearY - (m.by + m.size * 0.80)) < 2, `Board-clear lane at 0.80 on phone (got ${m.clearY}, want ${m.by + m.size * 0.80})`);
+  // The banner's bottom edge clears the highest popup's top edge at full
+  // rise: Double! rises 50px from its lane (viewport = stage top + lane y).
+  ok(m.bannerBottom < m.stageTop + m.dblY - 50, `banner bottom (${Math.round(m.bannerBottom)}) clears the risen Double! top (${Math.round(m.stageTop + m.dblY - 50)})`);
   await page.close();
 });
 
@@ -2249,6 +2314,185 @@ await test('accounts: a failed redirect sign-in explains itself in the account p
   await page.click('#btn-account');
   ok((await page.locator('#acct-msg').textContent()).includes('isn\u2019t set up for this site yet'), 'panel explains the failed sign-in in plain language');
   eq(localErrors.length, 0, 'no page errors on the redirect-return page: ' + localErrors.slice(0, 3).join(' | '));
+  await ctx.close();
+});
+
+// Redirect-return success/loss (Dylan, Nov 12, 8:38 PM — Google sign-in
+// did nothing after selecting + signing into the account; friend codes
+// then answered "sign in"). The shipped Firebase SDK stores redirect
+// state in sessionStorage (tab-scoped), so a lost round-trip comes back
+// with NO user and NO error — and the old code discarded the
+// getRedirectResult() result and never surfaced the loss anywhere.
+// Parameterized stub: mode read from window.__fakeRedirectMode at call
+// time. 'success' = result user + currentUser set + listener fires;
+// 'success-no-current' = result user, but currentUser stays null and the
+// listener never fires (the discarded-result hole); 'lost' = {user:null},
+// no error; 'already-in-use' = throws with a credential.
+function installFakeFirebaseRedirect() {
+  const calls = [];
+  window.__fakeAuthCalls = calls;
+  const fakeUser = { uid: 'google-uid-1', displayName: 'Dylan', email: 'dylan@example.com', isAnonymous: false, providerData: [{ providerId: 'google.com' }] };
+  window.__fakeUser = fakeUser;
+  const fakeQuery = {
+    where() { return fakeQuery; },
+    orderBy() { return fakeQuery; },
+    limit() { return fakeQuery; },
+    get: async () => ({ empty: true, forEach() {}, docs: [] }),
+  };
+  const fakeDb = {
+    collection(name) {
+      return {
+        doc() {
+          return {
+            get: async () => {
+              if (name === 'friendCodes') return { exists: true, data: () => ({ uid: 'friend-uid-1', displayName: 'Pal' }) };
+              return { exists: false, data: () => ({}) };
+            },
+            set: async () => ({}),
+            delete: async () => ({}),
+          };
+        },
+        where() { return fakeQuery; },
+      };
+    },
+    batch() { return { delete() {}, commit: async () => ({}) }; },
+  };
+  const fakeAuth = {
+    currentUser: null,
+    onAuthStateChanged(cb) { window.__fakeAuthCb = cb; return () => {}; },
+    getRedirectResult: async () => {
+      const mode = window.__fakeRedirectMode || 'lost';
+      if (mode === 'already-in-use') throw { code: 'auth/credential-already-in-use', credential: { token: 'x' } };
+      if (mode === 'success' || mode === 'success-no-current') {
+        if (mode === 'success') {
+          fakeAuth.currentUser = fakeUser;
+          if (window.__fakeAuthCb) setTimeout(() => window.__fakeAuthCb(fakeUser), 0);
+        }
+        return { user: fakeUser, credential: null };
+      }
+      return { user: null };
+    },
+    signInWithRedirect: async () => { calls.push('redirect'); },
+    signInWithPopup: async () => { calls.push('popup'); },
+    linkWithRedirect: async () => { calls.push('link-redirect'); },
+    linkWithPopup: async () => { calls.push('link-popup'); },
+    signInAnonymously: async () => { calls.push('anon'); },
+    signOut: async () => { fakeAuth.currentUser = null; },
+    signInWithCredential: async () => {
+      calls.push('credential');
+      fakeAuth.currentUser = fakeUser;
+      if (window.__fakeAuthCb) setTimeout(() => window.__fakeAuthCb(fakeUser), 0);
+      return { user: fakeUser };
+    },
+  };
+  function authFn() { return fakeAuth; }
+  authFn.GoogleAuthProvider = class {};
+  authFn.FacebookAuthProvider = class {};
+  window.firebase = { apps: [{}], initializeApp() {}, auth: authFn, firestore: () => fakeDb };
+  window.__fakeAuth = fakeAuth;
+}
+const IPHONE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1';
+
+await test('accounts: redirect success adopts the user even when currentUser/listener lag', async () => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, userAgent: IPHONE_UA });
+  const page = await ctx.newPage();
+  const localErrors = [];
+  page.on('pageerror', (e) => localErrors.push('pageerror: ' + e.message));
+  await page.addInitScript(() => {
+    localStorage.setItem('gb_tut_done', '1');
+    localStorage.setItem('gb_auth_redirect', '1'); // as if returning from Google
+    window.__fakeRedirectMode = 'success-no-current';
+  });
+  await page.addInitScript(installFakeFirebaseRedirect);
+  await page.goto(`http://localhost:${PORT}/?test=1`);
+  await page.waitForSelector('#btn-play');
+  await waitFor(async () => (await page.evaluate(() => window.__gb.accounts())).signedIn === true, 8000, 'signed in after redirect');
+  eq((await page.evaluate(() => window.__gb.accounts())).provider, 'google', 'provider is google');
+  await page.click('#btn-account');
+  ok((await page.locator('#acct-sub').textContent()).includes('Signed in with Google'), 'panel shows signed in with Google');
+  eq(localErrors.length, 0, 'no page errors: ' + localErrors.slice(0, 3).join(' | '));
+  await ctx.close();
+});
+
+await test('accounts: a lost redirect (no user, no error) says so on the title + panel', async () => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, userAgent: IPHONE_UA });
+  const page = await ctx.newPage();
+  await page.addInitScript(() => {
+    localStorage.setItem('gb_tut_done', '1');
+    localStorage.setItem('gb_auth_redirect', '1'); // as if returning from Google
+    window.__fakeRedirectMode = 'lost';
+  });
+  await page.addInitScript(installFakeFirebaseRedirect);
+  await page.goto(`http://localhost:${PORT}/?test=1`);
+  await page.waitForSelector('#btn-play');
+  await waitFor(async () => (await page.evaluate(() => window.__gb.accounts())).redirectError === 'redirect-lost', 8000, 'redirect-lost recorded');
+  eq(await page.evaluate(() => localStorage.getItem('gb_auth_redirect')), null, 'pending flag cleared after handling');
+  ok((await page.locator('#toast').textContent()).includes('didn\u2019t finish'), 'title toast says the sign-in didn\u2019t finish');
+  await page.click('#btn-account');
+  ok((await page.locator('#acct-msg').textContent()).includes('didn\u2019t finish'), 'panel explains the lost sign-in in plain language');
+  await ctx.close();
+});
+
+await test('accounts: already-in-use redirect falls back to credential sign-in', async () => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, userAgent: IPHONE_UA });
+  const page = await ctx.newPage();
+  await page.addInitScript(() => {
+    localStorage.setItem('gb_tut_done', '1');
+    localStorage.setItem('gb_auth_redirect', '1'); // as if returning from Google
+    window.__fakeRedirectMode = 'already-in-use';
+  });
+  await page.addInitScript(installFakeFirebaseRedirect);
+  await page.goto(`http://localhost:${PORT}/?test=1`);
+  await page.waitForSelector('#btn-play');
+  await waitFor(async () => (await page.evaluate(() => window.__gb.accounts())).signedIn === true, 8000, 'signed in via credential fallback');
+  ok((await page.evaluate(() => window.__fakeAuthCalls)).includes('credential'), 'signInWithCredential was called');
+  eq((await page.evaluate(() => window.__gb.accounts())).redirectError, null, 'no stale redirect error after fallback sign-in');
+  await ctx.close();
+});
+
+await test('accounts: a signed-in user can add a friend by code (no sign-in toast)', async () => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, userAgent: IPHONE_UA });
+  const page = await ctx.newPage();
+  await page.addInitScript(() => {
+    localStorage.setItem('gb_tut_done', '1');
+    localStorage.setItem('gb_auth_redirect', '1'); // as if returning from Google
+    window.__fakeRedirectMode = 'success';
+  });
+  await page.addInitScript(installFakeFirebaseRedirect);
+  await page.goto(`http://localhost:${PORT}/?test=1`);
+  await page.waitForSelector('#btn-play');
+  await waitFor(async () => (await page.evaluate(() => window.__gb.accounts())).signedIn === true, 8000, 'signed in');
+  await page.click('#btn-boards');
+  await page.waitForSelector('#friend-code-input');
+  const own = await page.evaluate(() => window.__gb.accounts().friendCode);
+  const code = own === 'ABC123' ? 'XYZ789' : 'ABC123';
+  await page.fill('#friend-code-input', code);
+  await page.click('#btn-add-friend');
+  await waitFor(async () => (await page.locator('#toast').textContent()).includes('Added Pal!'), 5000, 'Added Pal toast');
+  const friends = await page.evaluate(() => JSON.parse(localStorage.getItem('gb_friends') || '[]'));
+  ok(friends.some((f) => f.uid === 'friend-uid-1'), 'friend in list: ' + JSON.stringify(friends));
+  await ctx.close();
+});
+
+await test('accounts: signed-in profile with session not yet restored says "still signing in"', async () => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, userAgent: IPHONE_UA });
+  const page = await ctx.newPage();
+  await page.addInitScript(() => {
+    localStorage.setItem('gb_tut_done', '1');
+    window.__fakeRedirectMode = 'lost';
+    // A profile that says signed in, but the SDK session hasn't restored
+    // (reload before the listener fires): fb.user stays null.
+    localStorage.setItem('gb_profile', JSON.stringify({ guestUid: 'guest-x', cloudUid: 'cloud-uid-1', provider: 'google', displayName: 'Dylan', friendCode: 'ABCDEF', hideFromGlobal: false, createdAt: Date.now() }));
+  });
+  await page.addInitScript(installFakeFirebaseRedirect);
+  await page.goto(`http://localhost:${PORT}/?test=1`);
+  await page.waitForSelector('#btn-play');
+  ok((await page.evaluate(() => window.__gb.accounts())).signedIn, 'profile reads signed-in');
+  await page.click('#btn-boards');
+  await page.waitForSelector('#friend-code-input');
+  await page.fill('#friend-code-input', 'ABC123');
+  await page.click('#btn-add-friend');
+  await waitFor(async () => (await page.locator('#friend-add-msg').textContent()).includes('Still signing you in'), 5000, 'session-not-ready message');
   await ctx.close();
 });
 

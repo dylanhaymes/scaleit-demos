@@ -30,6 +30,11 @@ const store = {
   get dailyBests() { try { return JSON.parse(localStorage.getItem('gb_daily_best') || '{}'); } catch { return {}; } },
   dailyBest(k) { return this.dailyBests[k] || 0; },
   setDailyBest(k, v) { const m = this.dailyBests; m[k] = v; const keys = Object.keys(m).sort().slice(-60); localStorage.setItem('gb_daily_best', JSON.stringify(Object.fromEntries(keys.map((x) => [x, m[x]])))); },
+  // Daily one-and-done (Dylan, Nov 12): the dateKey of the last daily the
+  // player FINISHED. '' when no daily has ever been finished. A finished
+  // daily can never be offered as "Continue daily" again that day.
+  get dailyDone() { return localStorage.getItem('gb_daily_done') || ''; },
+  markDailyDone(k) { localStorage.setItem('gb_daily_done', k); },
   // Lifetime player XP (cosmetics only — never affects difficulty).
   get xp() { return +localStorage.getItem('gb_xp') || 0; },
   set xp(v) { localStorage.setItem('gb_xp', String(v)); },
@@ -289,10 +294,38 @@ function renderTimerBar() {
   $('timerbar').classList.toggle('low', S.timeLeft <= TIMER.lowSeconds && S.running);
   if (secs !== lastTimerShown) { lastTimerShown = secs; $('timer-text').textContent = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`; }
 }
-function onTimeout() {
+// Timeout auto-save (Dylan, Nov 12): if a Time Star charge is held when the
+// timer hits 0, the game spends ONE Time Star (+15 s, "SAVED!" banner) and
+// play continues instead of ending. Only the Time Star can save a timeout —
+// Bomb, Sweep and Reshuffle do not add time, so they never fire here. No
+// Time charge held → the game ends exactly as before. At most one charge
+// per timeout; each fresh timeout may spend another, until none remain.
+// The ~0.6 s save freeze pauses the timer (timerPaused() is true while
+// S.autoSaving), so a timeout cannot re-trigger mid-freeze. The try/finally
+// guarantees the freeze always lifts — a presentation failure must never
+// leave the timer frozen (soft-lock).
+async function onTimeout() {
   if (!S.running) return;
   if (Music.setUrgency) Music.setUrgency(false);
-  // Timeout never auto-uses a charge: it ends the game like no-moves-left.
+  if (S.charges.star > 0) {
+    Analytics.log('autosave_attempt', { cause: 'timeout', charges: { ...S.charges } });
+    S.autoSaving = true;
+    spendCharge('star');
+    try {
+      await presentSave('clock', 'star', $('timerbar'), () => {
+        S.timeLeft = Math.min(TIMER.cap, S.timeLeft + POWERUPS.timeStarSeconds);
+        renderTimerBar();
+      });
+    } catch (e) {
+      Analytics.log('autosave_failed', { cause: 'timeout', error: String((e && e.message) || e) });
+    } finally {
+      S.autoSaving = false;
+    }
+    Analytics.log('autosave_saved', { type: 'star', cause: 'timeout', timeLeft: Math.round(S.timeLeft) });
+    saveGame();
+    return;
+  }
+  // No Time Star held: the game ends like no-moves-left.
   S.running = false; S.awaitingRevive = true;
   Analytics.log('time_out', { score: S.score, placed: S.placed, lines: S.lines });
   setTimeout(() => onNoMoves('timeout'), 450);
@@ -473,17 +506,21 @@ function popup(text, x, y, color = '#fff', size = 28, delay = 0) {
   fx.popups.push({ text, x, y, color, size, t: 0, delay });
 }
 function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 1800); }
-// Big-moment banner (DOM, chunky display type). Visual juice only.
+// Big-moment banner (DOM svg, chunky display type). Visual juice only.
+// The text is an SVG <text> (fix13) — the pop animation lives on the
+// <svg> element, not the text: an SVG <text> has no offsetWidth, so the
+// restart-reflow trick would not work on it.
 let bannerTimer = null;
 function showBanner(text, ms = 1100) {
   const b = $('banner');
   $('banner-badge').classList.add('hidden');
+  const svg = $('banner-svg');
   const span = $('banner-text');
   span.classList.remove('hidden');
   span.textContent = text;
   b.classList.remove('hidden');
   S.bannerUntil = Date.now() + ms; // charge clocks pause while a banner shows
-  span.style.animation = 'none'; void span.offsetWidth; span.style.animation = '';
+  svg.style.animation = 'none'; void svg.offsetWidth; svg.style.animation = '';
   clearTimeout(bannerTimer);
   bannerTimer = setTimeout(() => b.classList.add('hidden'), ms);
 }
@@ -612,6 +649,11 @@ function startGame(mode = 'classic', dateKey = localDateKey()) {
 function saveGame() {
   if (Tutorial.active) return; // never persist a scripted tutorial board
   if (!S.running && !S.awaitingRevive) return;
+  // A game with no moves left is OVER — the revive offer is a terminal
+  // state, not a game in progress. Persisting it would offer "Continue"
+  // for a dead board (notably "Continue daily" after closing the tab on
+  // the revive overlay). The revive itself re-saves fresh if taken.
+  if (S.awaitingRevive) return;
   const data = {
     v: SAVE_V, mode: S.mode, dateKey: S.dateKey, rngState: S.rng.getState ? S.rng.getState() : null,
     challengeId: S.challengeId, challengeToBeat: S.challengeToBeat, challengeOpponent: S.challengeOpponent, challengeOpponentScore: S.challengeOpponentScore,
@@ -631,6 +673,17 @@ function readSave() {
     if (!d || (d.v !== SAVE_V && d.v !== 1) || !Array.isArray(d.board) || d.board.length !== N || !Array.isArray(d.tray)) return null;
     return d;
   } catch { return null; }
+}
+// A save is resumable only if it is a game still in progress. A daily save
+// is resumable only when it is TODAY's daily and today has NOT already been
+// finished (one-and-done, Dylan Nov 12). A finished daily's save — or a
+// stale save from another day — is cleared on sight, never offered as
+// "Continue daily". Classic/challenge saves are unaffected.
+function resumableSave() {
+  const sv = readSave();
+  if (!sv) return null;
+  if (sv.mode === 'daily' && (sv.dateKey !== localDateKey() || store.dailyDone === localDateKey())) { clearSave(); return null; }
+  return sv;
 }
 function restoreGame(d) {
   S.mode = d.mode === 'daily' ? 'daily' : d.mode === 'challenge' ? 'challenge' : 'classic'; S.dateKey = d.dateKey || null;
@@ -713,12 +766,19 @@ function place(slot, r, c) {
     const cx = L.bx + (c + sh.w / 2) * L.cell, cy = L.by + (r + sh.h / 2) * L.cell;
     if (!boardCleared) popup(`+${pts}`, cx, cy, '#ffffff', 30 + lines * 4);
     popup(`+${bonus}s`, L.w / 2, L.by - 4, '#7cf0c9', 22);
-    if (lines >= 2) popup(['', '', 'Double!', 'Triple!', 'Mega!', 'Bloom!'][Math.min(5, lines)], L.w / 2, L.by + L.size * 0.30, '#7cf0c9', 40, 0.12);
+    // Narrow screens (fix13): the DOM banner moves to the free band at the
+    // top of the board (#banner top:22% in the stylesheet), so the canvas
+    // popup lanes shift down a tenth of a board — the banner then clears
+    // every lane's full 50px rise, and the lanes keep their 0.20 spacing
+    // so they still never pile on each other. Desktop keeps 0.30/0.50/0.70.
+    const narrow = window.innerWidth <= 600;
+    const lane = (f) => L.by + L.size * (narrow ? f + 0.10 : f);
+    if (lines >= 2) popup(['', '', 'Double!', 'Triple!', 'Mega!', 'Bloom!'][Math.min(5, lines)], L.w / 2, lane(0.30), '#7cf0c9', 40, 0.12);
     // Combo banner: escalating words with rising pitch (visual juice only).
     if (S.combo >= 2) {
       const words = ['', '', 'Nice!', 'Great!', 'AMAZING!', 'INCREDIBLE!'];
       showBanner(words[Math.min(5, S.combo)], 900);
-      popup(`Combo x${S.combo}`, L.w / 2, L.by + L.size * 0.50, '#ff7ab6', 34, 0.28);
+      popup(`Combo x${S.combo}`, L.w / 2, lane(0.50), '#ff7ab6', 34, 0.28);
       Sfx.combo(S.combo); Analytics.log('combo', { combo: S.combo });
     }
     // 4-line clear: jackpot-style burst (visual celebration, no reward).
@@ -726,7 +786,7 @@ function place(slot, r, c) {
     Sfx.clear(lines, S.combo); Haptics.medium();
     fx.shake = 4 + lines * 3;
     Analytics.log('lines_cleared', { lines, combo: S.combo, pts });
-    if (boardCleared) { gained += BOARD_CLEAR_BONUS; popup('Board clear +300', L.w / 2, L.by + L.size * 0.70, '#ffd166', 32, 0.44); Sfx.boardClear(); Analytics.log('board_clear', {}); }
+    if (boardCleared) { gained += BOARD_CLEAR_BONUS; popup('Board clear +300', L.w / 2, lane(0.70), '#ffd166', 32, 0.44); Sfx.boardClear(); Analytics.log('board_clear', {}); }
   } else {
     Sfx.place(); Haptics.light();
     S.sinceClear++;
@@ -914,13 +974,15 @@ function applyStar() {
   saveGame();
 }
 
-// ---------- Auto-save (use-it-or-lose-it power-ups) ----------
+// ---------- Auto-save ----------
 // When no tray piece fits and a charge is held, the game auto-uses one to
 // save you BEFORE the revive offer — Reshuffle first, then the Bomb on the
 // 3x3 that makes the most room for a tray piece, then the Sweep on the
 // fullest row or column. First choice that lets a piece fit wins. The choice
 // is deterministic (fixed priority + fixed tie-breaks) and the same for
-// everyone — never ads, spend or segment. Timeout never auto-uses a charge.
+// everyone — never ads, spend or segment. Timeout auto-saves only with a
+// Time Star (one charge, +15 s, "SAVED!" banner) — Bomb, Sweep and
+// Reshuffle do not add time and never fire on timeout.
 function trayFitsOn(board) { return S.tray.some((p) => p && fitsAnywhere(board, p.shape)); }
 function countFitsOn(board) {
   let n = 0;
@@ -1077,6 +1139,10 @@ function finishGame() {
   cancelArmed();
   if (Music.setUrgency) Music.setUrgency(false);
   const daily = S.mode === 'daily';
+  // One-and-done (Dylan, Nov 12): finishing the daily marks today done, so
+  // the title can never offer "Continue daily" again today — not for this
+  // game, and not for a replay of it that is later quit mid-game.
+  if (daily) store.markDailyDone(S.dateKey);
   const challenge = S.mode === 'challenge';
   const prevBest = modeBest(), isBest = S.score > prevBest;
   // Challenge games never touch the local bests: the deal is shared with
@@ -1197,14 +1263,19 @@ cv.addEventListener('pointercancel', endDrag);
 // ---------- UI wiring ----------
 function show(id, on) { $(id).classList.toggle('show', on); }
 document.title = APP_NAME;
-$('title').querySelector('.logo').innerHTML = APP_NAME.replace(/bloom$/i, '<span>$&</span>');
+// Wordmark is inline SVG text (fix13): set the <text> content from the
+// brand name — the old code wrote Clear<span>bloom</span> into the .logo
+// div, which would destroy the svg. The text stays centred (middle anchor).
+const logoEl = $('title').querySelector('.logo');
+const logoText = logoEl && logoEl.querySelector('text');
+if (logoText) { logoText.textContent = APP_NAME; logoEl.setAttribute('aria-label', APP_NAME); }
 // Friendly daily date for the player ("Nov 11", never the 2026-11-11 key).
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 function friendlyDate(key) { const [, m, d] = key.split('-'); return `${MONTHS[+m - 1]} ${+d}`; }
 function refreshTitle() {
   $('title-best').textContent = store.best; $('title-daily-best').textContent = store.dailyBest(localDateKey());
   $('daily-date').textContent = friendlyDate(localDateKey());
-  const sv = readSave();
+  const sv = resumableSave();
   $('btn-play').textContent = sv ? (sv.mode === 'daily' ? '▶ Continue daily' : '▶ Continue') : 'Play';
   $('btn-new').classList.toggle('hidden', !sv);
   renderPlayerCard();
@@ -1267,7 +1338,7 @@ function initIcons() {
 refreshTitle(); renderBest(store.best);
 let sessionLogged = false;
 function leaveTitle() { Sfx.unlock(); show('title', false); if (!sessionLogged) { sessionLogged = true; Analytics.log('session_start', { ua_mobile: /Mobi/.test(navigator.userAgent) }); } }
-$('btn-play').onclick = () => { leaveTitle(); const sv = readSave(); if (sv) restoreGame(sv); else startGame('classic'); };
+$('btn-play').onclick = () => { leaveTitle(); const sv = resumableSave(); if (sv) restoreGame(sv); else startGame('classic'); };
 $('btn-new').onclick = () => { const sv = readSave(); if (sv) Analytics.log('game_abandon', { score: sv.score, mode: sv.mode }); clearSave(); leaveTitle(); startGame('classic'); };
 $('btn-daily').onclick = () => { const sv = readSave(); if (sv) Analytics.log('game_abandon', { score: sv.score, mode: sv.mode }); clearSave(); leaveTitle(); startGame('daily', localDateKey()); };
 // Settings
@@ -1529,6 +1600,7 @@ async function submitFriendCode() {
     : res.reason === 'own-code' ? "That's your own code."
     : res.reason === 'not-found' ? 'No player with that code — check the code or ask them to share their invite link.'
     : res.reason === 'lookup-unavailable' ? "Friend-code lookup isn't live yet — ask them to share their invite link instead."
+    : res.reason === 'session-not-ready' ? 'Still signing you in — try again in a moment.'
     : "Couldn't add that friend — try again."
   );
 }
@@ -2022,10 +2094,9 @@ Sprites.init(packBySlug(selectedPack()) || packBySlug('classic-candy'));
 // Score / BEST / combo / game-over score / countdown are <img> sprites once
 // the hero type is ready; before that they show plain text (same value). The
 // rolling score counter reuses a small <img> pool so it never rebuilds the
-// DOM while animating. The wordmark itself is live CSS gradient text
-// (.logo in style.css, one continuous blend across the whole word — Dylan,
-// Nov 12: the pre-rendered wordmark sprite is out, the old text look is
-// back, gradients blended, no hard seam).
+// DOM while animating. The wordmark itself is inline SVG text (.logo in
+// index.html, gradient fill — fix13; the old CSS gradient text showed
+// white lines on Safari, so the technique was replaced, not the look).
 const scoreImgs = [], bestImgs = [], ovScoreImgs = [], cdImgs = [];
 function renderDigitRow(pool, el, digits, pal) {
   if (el.dataset.mode !== 'img') { el.innerHTML = ''; el.dataset.mode = 'img'; }
@@ -2086,7 +2157,15 @@ syncSoundBtn(); // after initIcons: it would overwrite the mute icon with the de
 applyMotionClass();
 // Accounts (Update 3): guest profile is created locally; guests never
 // load the SDK — it loads only on sign-in or for a returning session.
-Accounts.init().then(() => { refreshAccountUI(); checkInviteLink(); checkChallengeLink(); }).catch(() => refreshAccountUI());
+Accounts.init().then(() => {
+  refreshAccountUI(); checkInviteLink(); checkChallengeLink();
+  // A redirect sign-in that died on the way back (lost state, or an
+  // error) must say so on the title screen — the player lands here,
+  // not in the account panel, and silence reads as "nothing happened"
+  // (Dylan, Nov 12: Google sign-in did nothing after signing in).
+  const st = Accounts.debugState();
+  if (st.redirectError) toast(authErrorMessage(st.redirectError));
+}).catch(() => refreshAccountUI());
 layout();
 Ads.init();
 requestAnimationFrame(frame);

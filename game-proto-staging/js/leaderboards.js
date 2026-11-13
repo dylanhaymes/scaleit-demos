@@ -191,7 +191,10 @@ export const Leaderboards = {
     if (!/^[A-Z0-9]{6}$/.test(code)) return { ok: false, reason: 'bad-code' };
     if (code === Accounts.friendCode) return { ok: false, reason: 'own-code' };
     const fb = await Accounts.ensureFirebase();
-    if (!fb || !fb.user) return { ok: false, reason: 'guest' };
+    // The profile says signed in but the SDK has no session yet (still
+    // restoring after a reload): that is not "not signed in" — say so,
+    // so the UI doesn't tell a signed-in player to sign in.
+    if (!fb || !fb.user) return { ok: false, reason: Accounts.signedIn ? 'session-not-ready' : 'guest' };
     try {
       const snap = await fb.db.collection(COLLECTIONS.friendCodes).doc(code).get();
       if (!snap.exists) return { ok: false, reason: 'not-found' };

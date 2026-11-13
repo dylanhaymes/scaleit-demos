@@ -92,6 +92,12 @@ export function authErrorMessage(code) {
     case 'auth/email-already-in-use': return 'That Google account is already linked a different way — try the other sign-in option.';
     case 'auth/user-cancelled': return 'Sign-in was cancelled — tap again to retry.';
     case 'auth/invalid-credential': return 'That sign-in didn\u2019t work — try again.';
+    // The redirect started (flag was set) but came back with no user and
+    // no error: the redirect state lives in sessionStorage (tab-scoped,
+    // per the Firebase SDK) and didn't survive the round-trip to Google
+    // and back — iOS Safari is where this bites. Not a code failure in
+    // the sign-in itself; the player just needs to tap again.
+    case 'redirect-lost': return 'Google sign-in didn\u2019t finish — it may have opened in a new tab. Tap Google sign-in again to retry.';
     case 'facebook-not-configured': return 'Facebook sign-in isn\u2019t set up yet.';
     case 'not-configured': return 'Sign-in isn\u2019t set up yet — the game is still being set up. Keep playing as a guest.';
     default: return 'Couldn\u2019t sign in — try again.';
@@ -234,6 +240,19 @@ export const Accounts = {
     try {
       const res = await auth.getRedirectResult();
       this._redirectError = null;
+      // Adopt the returned user directly. getRedirectResult() itself
+      // does NOT set auth.currentUser (the SDK's _persistUserIfCurrent
+      // is a no-op unless the user is already current), and the
+      // auth-state listener may not deliver on the return load — the
+      // old code discarded res and relied on both, which left Dylan a
+      // guest after a successful Google sign-in (Nov 12). _onAuth is
+      // idempotent, so adopting here as well as via the listener /
+      // currentUser check is harmless.
+      if (res && res.user) await this._onAuth(res.user);
+      // The redirect started (flag was set) but came back with no user
+      // and no error: the redirect state didn't survive the round-trip.
+      // Say so instead of staying a silent guest.
+      else this._redirectError = 'redirect-lost';
       return res;
     } catch (e) {
       const code = (e && e.code) || 'sign-in-failed';
@@ -268,6 +287,9 @@ export const Accounts = {
     const providerId = user.providerData && user.providerData.length ? user.providerData[0].providerId : null;
     const provider = user.isAnonymous ? 'anonymous' : providerId === 'google.com' ? 'google' : providerId === 'facebook.com' ? 'facebook' : 'google';
     if (this.fb) this.fb.user = user;
+    // A sign-in that lands clears any earlier redirect failure — a stale
+    // error must not keep showing after the player is actually in.
+    this._redirectError = null;
     if (this.profile) {
       this.profile.cloudUid = user.uid;
       this.profile.provider = provider;
