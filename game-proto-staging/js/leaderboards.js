@@ -239,6 +239,12 @@ export const Leaderboards = {
   // ownRank is 1-based when the player is on the fetched page, else null.
   async fetchBoard({ board = 'daily', scope = 'global', key = boardKey(board) } = {}) {
     if (!Accounts.signedIn) return { ok: false, reason: 'guest' };
+    // A preview identity has no live session: a live fetch can never
+    // succeed, and reaching ensureFirebase here would load the Firebase
+    // SDK for nothing (the rank chip calls this on every sign-in UI
+    // refresh — that load is what made a bad-code submit look like it
+    // touched Firebase). Return before any Firebase call.
+    if (Accounts.isPreview) return { ok: false, reason: 'guest' };
     const fb = await Accounts.ensureFirebase();
     if (!fb || !fb.user) return { ok: false, reason: 'guest' };
     const coll = collectionFor(board);

@@ -135,6 +135,11 @@ export const Accounts = {
   // 'guest' | 'anonymous' | 'google' | 'facebook'
   get status() { return this.profile ? this.profile.provider : 'guest'; },
   get signedIn() { return !!this.profile?.cloudUid; },
+  // A preview identity (setAccountPreview test hook, cloudUid 'preview-*')
+  // is UI-only: no live session, so it must never trigger a Firebase load
+  // (fetchBoard/submitScore would load the SDK for a fetch that cannot
+  // succeed). Real sign-in flows do not use this path.
+  get isPreview() { return !!this.profile?.cloudUid && String(this.profile.cloudUid).startsWith('preview-'); },
   get uid() { return this.profile?.cloudUid || this.profile?.guestUid || null; },
   get displayName() { return this.profile?.displayName || defaultGuestName(); },
   get friendCode() { return this.profile?.friendCode || ''; },

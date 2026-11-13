@@ -141,6 +141,16 @@ function layout() {
   glow.style.width = (boardSize + 28) + 'px'; glow.style.height = (boardSize + 28) + 'px';
 }
 window.addEventListener('resize', layout);
+// Re-layout whenever the stage itself changes size. iOS Safari's URL bar
+// showing/hiding (and any flex-sibling height change) can resize #stage
+// without firing window 'resize' — the board/tray are drawn from the
+// layout values, so a stale layout crops the tray at the canvas edge
+// (Dylan, Nov 12, 6:10 PM iPhone shot: tray sliced mid-game). A
+// ResizeObserver catches every stage resize regardless of cause.
+// layout() never changes #stage's own size, so this cannot loop.
+if (typeof ResizeObserver !== 'undefined') {
+  new ResizeObserver(() => layout()).observe($('stage'));
+}
 
 // ---------- Drawing helpers ----------
 // Blocks are pre-rendered glossy 3D sprites (js/sprites.js) — blitted, never
@@ -323,22 +333,26 @@ function draw(t) {
       block(bx + c * s, by + r * s, s, drag.piece.color, inLine ? 0.9 : 0.42);
     }
   }
-  // Clearing animation: staggered glossy pop — each block swells with a
-  // bounce ease, flashes white-gold at the peak, then shrinks away with a
-  // sparkle burst (burst() is fired per cell when the clear is dealt).
-  // Staggered starts (t < 0) draw the block normally until its turn.
+  // Clearing animation: staggered glossy pop — each block swells gently
+  // (no overshoot, no white flash) then shrinks away with a sparkle burst
+  // (burst() is fired per cell when the clear is dealt). Staggered starts
+  // (t < 0) draw the block normally until its turn. The old version
+  // flashed white and swelled to 1.31x with an easeOutBack overshoot, so
+  // clearing blocks read as shattered white tiles with fragments spilling
+  // outside their cells (Dylan, Nov 12, 6:10 PM iPhone shot, col 4).
+  // A block is drawn at 88% of a cell, so the 1.12x peak (0.88 x 1.12 =
+  // 0.99) stays inside its own cell — one clean block + one centred star.
   for (const k of fx.clearing) {
     if (k.t < 0) { block(bx + k.c * s, by + k.r * s, s, k.color, 1, 1); continue; }
     const p = Math.min(1, k.t / 0.45);
-    let scale, alpha, color;
-    if (reducedMotion()) { scale = 1 - p * 0.8; alpha = 1 - p; color = k.color; }
-    else if (p < 0.35) {
-      scale = 1 + 0.28 * easeOutBack(p / 0.35); alpha = 1; color = p < 0.15 ? '#ffffff' : k.color;
-    } else {
+    let scale, alpha;
+    if (reducedMotion()) { scale = 1 - p * 0.8; alpha = 1 - p; }
+    else if (p < 0.35) { scale = 1 + 0.12 * easeOut(p / 0.35); alpha = 1; }
+    else {
       const q = (p - 0.35) / 0.65;
-      scale = 1.28 * (1 - q * q); alpha = 1 - q; color = k.color;
+      scale = 1.12 * (1 - q * q); alpha = 1 - q;
     }
-    block(bx + k.c * s, by + k.r * s, s, color, alpha, scale);
+    block(bx + k.c * s, by + k.r * s, s, k.color, alpha, scale);
   }
   // tray — idle bob (off when reduced motion or while dragging that slot)
   for (let i = 0; i < 3; i++) {
@@ -346,9 +360,17 @@ function draw(t) {
     const sh = p.shape, ts = trayCellFor(sh);
     const bob = reducedMotion() ? 0 : Math.sin(t * 2 + i * 1.7) * 3;
     const flip = fx.trayFlip > 0 ? Math.abs(Math.cos(fx.trayFlip * Math.PI)) : 1;
-    const cx = L.trayX + L.slotW * (i + 0.5), cy = L.trayY + L.trayH / 2 + bob + (1 - easeOut(fx.trayIn)) * 80;
+    // Deal-in is a fade, never a drop: the old slide dropped fresh pieces
+    // 80px below their resting spot, but the tray zone has only ~4px of
+    // spare room above the stage bottom, so every re-deal sliced the
+    // pieces off at the canvas edge for the first 0.25s (Dylan, Nov 12,
+    // 6:10 PM iPhone shot, mid-game — the tray only breaks after play
+    // starts, when the tray first re-deals). The flip below still animates
+    // the deal; the fade keeps pieces exactly at rest the whole time.
+    const cx = L.trayX + L.slotW * (i + 0.5), cy = L.trayY + L.trayH / 2 + bob;
     const canFit = fitsAnywhere(S.board, sh);
-    pieceAt(p, cx - (sh.w * ts) / 2, cy - (sh.h * ts) / 2, ts * flip, canFit ? 1 : 0.35);
+    const fade = 0.35 + 0.65 * easeOut(fx.trayIn);
+    pieceAt(p, cx - (sh.w * ts) / 2, cy - (sh.h * ts) / 2, ts * flip, (canFit ? 1 : 0.35) * fade);
     if (p.helper && Sprites.ready) {
       // Helper star as a corner badge on the piece (no room above it now
       // that tray tiles are large — a star above would cover board cells).
@@ -415,14 +437,17 @@ function draw(t) {
   g.restore();
 }
 const easeOut = (x) => 1 - Math.pow(1 - x, 3);
-const easeOutBack = (x) => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); };
 
-function burst(x, y, color, n = 10) {
+// Per-cell clear bursts are stars only (starsOnly): the angular confetti
+// shards read as the piece itself shattering — red/yellow fragments
+// spilling outside the tile (Dylan, Nov 12, 6:10 PM iPhone shot). The
+// bomb's single centre burst keeps confetti (an explosion, not a piece).
+function burst(x, y, color, n = 10, starsOnly = false) {
   if (reducedMotion()) n = Math.min(n, 4);
   for (let i = 0; i < n; i++) {
     const a = Math.random() * Math.PI * 2, sp = 120 + Math.random() * 380;
     fx.particles.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 260, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 12,
-      life: 0.6 + Math.random() * 0.6, size: 3 + Math.random() * 6, color: Math.random() < 0.3 ? '#ffd21f' : color, confetti: Math.random() < 0.35 });
+      life: 0.6 + Math.random() * 0.6, size: 3 + Math.random() * 6, color: Math.random() < 0.3 ? '#ffd21f' : color, confetti: !starsOnly && Math.random() < 0.35 });
   }
 }
 // Jackpot-style burst: star + confetti shower across the board (visual
@@ -665,7 +690,7 @@ function place(slot, r, c) {
     for (const id of cells) {
       const rr = Math.floor(id / N), cc = id % N, col = S.board[rr][cc];
       fx.clearing.push({ r: rr, c: cc, color: col, t: -k * 0.012 });
-      burst(L.bx + (cc + 0.5) * L.cell, L.by + (rr + 0.5) * L.cell, col, 7);
+      burst(L.bx + (cc + 0.5) * L.cell, L.by + (rr + 0.5) * L.cell, col, 7, true);
       S.board[rr][cc] = null; k++;
     }
     const pts = clearPoints(lines, cells.size, S.combo);
@@ -820,7 +845,7 @@ function clearCellsWithFx(cells) {
     if (!S.board[r] || !S.board[r][c]) continue;
     const col = S.board[r][c];
     fx.clearing.push({ r, c, color: col, t: -n * 0.012 });
-    burst(L.bx + (c + 0.5) * L.cell, L.by + (r + 0.5) * L.cell, col, 5);
+    burst(L.bx + (c + 0.5) * L.cell, L.by + (r + 0.5) * L.cell, col, 5, true);
     S.board[r][c] = null; n++;
   }
   if (n) {
@@ -1039,7 +1064,7 @@ async function takeRevive() {
   const order = [...Array(N).keys()].sort((a, b) => S.board[b].filter(Boolean).length - S.board[a].filter(Boolean).length).slice(0, 3);
   for (const rr of order) for (let cc = 0; cc < N; cc++) if (S.board[rr][cc]) {
     fx.clearing.push({ r: rr, c: cc, color: S.board[rr][cc], t: 0 });
-    burst(L.bx + (cc + 0.5) * L.cell, L.by + (rr + 0.5) * L.cell, S.board[rr][cc], 4);
+    burst(L.bx + (cc + 0.5) * L.cell, L.by + (rr + 0.5) * L.cell, S.board[rr][cc], 4, true);
     S.board[rr][cc] = null;
   }
   S.awaitingRevive = false;

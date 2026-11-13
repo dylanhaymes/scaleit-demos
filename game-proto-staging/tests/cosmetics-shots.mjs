@@ -123,12 +123,18 @@ for (const [name, vp] of [['phone', { width: 390, height: 844, dsf: 2 }], ['desk
   page2.on('pageerror', (e) => errors.push(name + '-unlock: pageerror: ' + e.message));
   await page2.addInitScript(() => {
     localStorage.setItem('gb_tut_done', '1');
-    localStorage.setItem('gb_xp', '290');
+    // 75 XP + one game (25 XP, no line) = 100 -> Player Level 2.
+    // (290 XP was already level 2 — level 2 starts at 100 XP — so no
+    // unlock could ever show; and revive is score-gated, so a piece
+    // must be placed first or #revive never appears.)
+    localStorage.setItem('gb_xp', '75');
   });
   await page2.goto(`http://localhost:${PORT}/?test=1`);
   await page2.waitForSelector('#btn-play');
   await page2.click('#btn-play');
   await page2.waitForFunction(() => window.__gb.state().running, null, { timeout: 5000 });
+  await page2.evaluate(() => { window.__gb.setTray([0, 0, 0]); window.__gb.place(0, 7, 7); }); // score > 0 so revive is offered
+  await sleep(300);
   await page2.evaluate(() => window.__gb.setTimeLeft(0.3));
   await page2.waitForSelector('#revive.show', { timeout: 6000 });
   await page2.click('#btn-norevive');

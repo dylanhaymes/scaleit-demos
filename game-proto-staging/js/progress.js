@@ -40,7 +40,11 @@ export function playerProgress(xp) {
   return { level, xpIntoLevel: xp - prev, xpForNext: next - prev };
 }
 export function nextReward(level) {
-  return MILESTONES.find((m) => m.level >= level) || null;
+  // Strictly greater: the reward AT this level is already unlocked (its
+  // line was shown when the level was reached), so the NEXT reward is
+  // the first milestone above the current level. Past level 20 there is
+  // none — null, not the level-20 pack again.
+  return MILESTONES.find((m) => m.level > level) || null;
 }
 export function rewardsForLevel(level) {
   return MILESTONES.filter((m) => m.level <= level).map((m) => m.reward);
