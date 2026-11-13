@@ -717,7 +717,10 @@ function buildBlockSprites(colors, material) {
 }
 function buildParticleSprites(colors) {
   const p = new Map(), s = new Map(), f = new Map();
-  for (const col of [...colors, '#ffffff', '#ffd21f']) {
+  // Also pre-render the hardcoded burst colours (bomb orange + the
+  // jackpot set): burst()/jackpotBurst() emit these regardless of the
+  // equipped pack, so they must resolve in every pack's particle maps.
+  for (const col of [...colors, '#ffffff', '#ffd21f', '#ff8a1e', '#ff5da2', '#2f8cff', '#2fd65a']) {
     p.set(col, renderPetalSprite(col));
     s.set(col, renderStarSprite(col));
     f.set(col, renderConfettiSprite(col));
@@ -783,9 +786,14 @@ export const Sprites = {
     return cv.toDataURL('image/png');
   },
   white() { return whiteBlock; },
-  petal(color) { return petals.get(color) || petals.get(PALETTE[0]); },
+  // Fallback is gold, never PALETTE[0]: gold is always a map key (added
+  // above), while PALETTE[0] ('#ff4d4d') is absent from 8 of 10 packs —
+  // the old fallback returned undefined there, and drawImage(undefined)
+  // in the particle loop threw and killed the frame loop forever
+  // (Dylan, Nov 12, 9:06 PM: Crayon Box freeze).
+  petal(color) { return petals.get(color) || petals.get('#ffd21f'); },
   star(color) { return stars.get(color) || stars.get('#ffd21f'); },
-  confetti(color) { return confetti.get(color) || confetti.get(PALETTE[0]); },
+  confetti(color) { return confetti.get(color) || confetti.get('#ffd21f'); },
   // Board + background are size-dependent; regenerated only when size changes.
   board(size, cell) {
     const key = `${size}x${cell}`;

@@ -48,7 +48,7 @@ const SAVE_KEY = 'gb_save', SAVE_V = 2;
 // ---------- State ----------
 const S = {
   board: [], tray: [null, null, null], score: 0, shownScore: 0, combo: 0, sinceClear: 0, maxCombo: 0,
-  lines: 0, placed: 0, revived: false, helperAvailable: false, running: false, gamesThisSession: 0,
+  lines: 0, placed: 0, helperAvailable: false, running: false, gamesThisSession: 0,
   startBest: 0, startedAt: 0, mode: 'classic', dateKey: null, rng: Math.random, variant: 'relaxed',
   // Challenge game (Update 3, batch 3): the challenge doc id, the score to
   // beat (the opponent's best so far, 0 if they haven't played), their name,
@@ -237,7 +237,7 @@ function update(dt) {
 }
 
 // ---------- Timer ----------
-// Pauses during the tutorial, pause/menu, settings, game-over/revive/ad
+// Pauses during the tutorial, pause/menu, settings, game-over/ad
 // overlays, and when the app is backgrounded (rAF also stops when hidden, and
 // dt is clamped, so no time jump on return). 'title' is in the list because
 // Main Menu quits to the title mid-game: the run stays live (S.running is
@@ -247,7 +247,7 @@ function timerPaused() {
   if (Tutorial.active) return true;
   if (document.hidden) return true;
   if (S.autoSaving) return true; // ~0.6s save freeze
-  for (const id of ['menu', 'settings', 'over', 'revive', 'ad', 'title']) if ($(id).classList.contains('show')) return true;
+  for (const id of ['menu', 'settings', 'over', 'ad', 'title']) if ($(id).classList.contains('show')) return true;
   return false;
 }
 let lastTickSecond = -1;
@@ -326,9 +326,9 @@ async function onTimeout() {
     return;
   }
   // No Time Star held: the game ends like no-moves-left.
-  S.running = false; S.awaitingRevive = true;
+  S.running = false;
   Analytics.log('time_out', { score: S.score, placed: S.placed, lines: S.lines });
-  setTimeout(() => onNoMoves('timeout'), 450);
+  setTimeout(onNoMoves, 450);
 }
 function setBoardGlow(kind) {
   const el = $('board-glow');
@@ -427,6 +427,11 @@ function draw(t) {
     g.save(); g.translate(p.x, p.y); g.rotate(p.rot); g.globalAlpha = Math.min(1, p.life * 2);
     if (Sprites.ready) {
       const sp = p.confetti ? Sprites.confetti(p.color) : Sprites.star(p.color);
+      // A missing sprite must never kill the frame loop: drawImage of
+      // undefined throws, frame() never re-schedules rAF, and the game
+      // freezes forever with the last frame on screen (Dylan, Nov 12,
+      // 9:06 PM: Crayon Box freeze). Skip the particle instead.
+      if (!sp) { g.restore(); continue; }
       const d = p.size * 3.4;
       g.drawImage(sp, -d / 2, -d / 2, d, d);
     } else {
@@ -618,7 +623,7 @@ function startGame(mode = 'classic', dateKey = localDateKey()) {
   // must never ride along into a classic/daily game).
   if (mode !== 'challenge') { S.challengeId = null; S.challengeToBeat = 0; S.challengeOpponent = ''; S.challengeOpponentScore = null; }
   S.board = emptyBoard(); S.score = 0; S.shownScore = 0; S.combo = 0; S.sinceClear = 0; S.maxCombo = 0; S.lines = 0; S.placed = 0;
-  S.revived = false; S.running = true; S.startBest = modeBest(); S.startedAt = Date.now();
+  S.running = true; S.startBest = modeBest(); S.startedAt = Date.now();
   // Timer: full bar every game. It starts now unless the first-game tutorial
   // is about to run — then it starts when the tutorial finishes.
   S.timeLeft = TIMER.start; S.lowTonePlayed = false; lastTickSecond = -1;
@@ -648,19 +653,19 @@ function startGame(mode = 'classic', dateKey = localDateKey()) {
 // ---------- Save / restore a game in progress ----------
 function saveGame() {
   if (Tutorial.active) return; // never persist a scripted tutorial board
-  if (!S.running && !S.awaitingRevive) return;
-  // A game with no moves left is OVER — the revive offer is a terminal
-  // state, not a game in progress. Persisting it would offer "Continue"
-  // for a dead board (notably "Continue daily" after closing the tab on
-  // the revive overlay). The revive itself re-saves fresh if taken.
-  if (S.awaitingRevive) return;
+  // A game that has ended (no moves left / timed out) is OVER, never a
+  // resumable save: S.running is false from endNoMoves/onTimeout until
+  // finishGame clears the save, and persisting the dead board would offer
+  // "Continue" for it (notably "Continue daily" after closing the tab as
+  // the game ends). The save is cleared in finishGame.
+  if (!S.running) return;
   const data = {
     v: SAVE_V, mode: S.mode, dateKey: S.dateKey, rngState: S.rng.getState ? S.rng.getState() : null,
     challengeId: S.challengeId, challengeToBeat: S.challengeToBeat, challengeOpponent: S.challengeOpponent, challengeOpponentScore: S.challengeOpponentScore,
     pack: selectedPack(), // which skin the board colours belong to, so a resume under a different pack can recolor by slot
     board: S.board, tray: S.tray.map((p) => p && { id: p.shape.id, color: p.color, helper: !!p.helper }),
     score: S.score, combo: S.combo, sinceClear: S.sinceClear, maxCombo: S.maxCombo, lines: S.lines, placed: S.placed,
-    revived: S.revived, helperAvailable: S.helperAvailable, startBest: S.startBest, elapsed: Date.now() - S.startedAt, savedAt: Date.now(),
+    helperAvailable: S.helperAvailable, startBest: S.startBest, elapsed: Date.now() - S.startedAt, savedAt: Date.now(),
     timeLeft: S.timeLeft, charges: { ...S.charges }, earnIdx: S.earnIdx, variant: S.variant,
   };
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch {}
@@ -706,7 +711,7 @@ function restoreGame(d) {
     }
   }
   Object.assign(S, { score: d.score, shownScore: d.score, combo: d.combo, sinceClear: d.sinceClear, maxCombo: d.maxCombo, lines: d.lines, placed: d.placed,
-    revived: !!d.revived, helperAvailable: !!d.helperAvailable, startBest: d.startBest, startedAt: Date.now() - (d.elapsed || 0), running: true });
+    helperAvailable: !!d.helperAvailable, startBest: d.startBest, startedAt: Date.now() - (d.elapsed || 0), running: true });
   S.timeLeft = typeof d.timeLeft === 'number' ? d.timeLeft : TIMER.start;
   S.charges = { ...emptyCharges(), ...(d.charges || {}) };
   if (S.charges.petal) { S.charges.star = (S.charges.star || 0) + S.charges.petal; delete S.charges.petal; } // pre-Update-5 saves used "petal"
@@ -976,7 +981,7 @@ function applyStar() {
 
 // ---------- Auto-save ----------
 // When no tray piece fits and a charge is held, the game auto-uses one to
-// save you BEFORE the revive offer — Reshuffle first, then the Bomb on the
+// save you BEFORE the game ends — Reshuffle first, then the Bomb on the
 // 3x3 that makes the most room for a tray piece, then the Sweep on the
 // fullest row or column. First choice that lets a piece fit wins. The choice
 // is deterministic (fixed priority + fixed tie-breaks) and the same for
@@ -1076,7 +1081,7 @@ function checkGameOver() {
   if (!S.running || S.autoSaving) return;
   const alive = S.tray.filter(Boolean);
   if (alive.some((p) => fitsAnywhere(S.board, p.shape))) return;
-  // Last-chance save BEFORE the revive offer.
+  // Last-chance save BEFORE the game ends.
   if (totalCharges() > 0) {
     S.autoSaving = true;
     tryAutoSaveNoFit().then((saved) => {
@@ -1088,54 +1093,21 @@ function checkGameOver() {
   endNoMoves();
 }
 function endNoMoves() {
-  S.running = false; S.awaitingRevive = true;
+  S.running = false;
   setTimeout(onNoMoves, 450);
 }
 
-let reviveTimer = null;
-function onNoMoves(reason = 'no_moves') {
+function onNoMoves() {
   Sfx.over();
   if (Music.setUrgency) Music.setUrgency(false);
-  $('rv-title').textContent = reason === 'timeout' ? "Time's up!" : 'No space left!';
-  $('rv-why').textContent = reason === 'timeout'
-    ? 'The timer ran out. Watch a short ad to clear your 3 fullest rows, get a fresh tray, and refill the timer to 60 seconds.'
-    : 'Watch a short ad to clear your 3 fullest rows, get a fresh tray, and refill the timer to 60 seconds.';
-  if (!S.revived && S.score > 0 && Ads.isRewardedReady()) {
-    // Opt-in only. Offered at the same moment for every player; nothing about the
-    // board or pieces was changed to get here.
-    Analytics.log('revive_offered', { score: S.score, placed: S.placed });
-    $('rv-score').textContent = S.score;
-    let left = 6; $('rv-count').textContent = left;
-    $('revive').classList.add('show');
-    reviveTimer = setInterval(() => { left--; $('rv-count').textContent = left; if (left <= 0) declineRevive('timeout'); }, 1000);
-  } else finishGame();
-}
-function declineRevive(reason = 'declined') {
-  clearInterval(reviveTimer); $('revive').classList.remove('show');
-  Analytics.log('revive_declined', { reason });
+  // No revive any more (Dylan, Nov 12): game over is game over. The
+  // end-of-game interstitial (1 in 3) runs inside finishGame, before the
+  // game-over panel. (The "Time's up!" / "No space left!" line lived in the
+  // removed revive overlay, so the reason is no longer shown.)
   finishGame();
 }
-async function takeRevive() {
-  clearInterval(reviveTimer); $('revive').classList.remove('show');
-  const r = await Ads.showRewarded('revive');
-  if (!r.rewarded) { Analytics.log('revive_declined', { reason: 'ad_closed_early' }); return finishGame(); }
-  Analytics.log('revive_taken', { score: S.score });
-  S.revived = true;
-  // Revive effect (fixed, documented): clear the 3 fullest rows, deal a fresh
-  // tray, and refill the timer to 60 seconds. No points awarded.
-  const order = [...Array(N).keys()].sort((a, b) => S.board[b].filter(Boolean).length - S.board[a].filter(Boolean).length).slice(0, 3);
-  for (const rr of order) for (let cc = 0; cc < N; cc++) if (S.board[rr][cc]) {
-    fx.clearing.push({ r: rr, c: cc, color: S.board[rr][cc], t: 0 });
-    burst(L.bx + (cc + 0.5) * L.cell, L.by + (rr + 0.5) * L.cell, S.board[rr][cc], 4, true);
-    S.board[rr][cc] = null;
-  }
-  S.awaitingRevive = false;
-  S.timeLeft = TIMER.reviveRefill; S.timerStarted = true; S.lowTonePlayed = false;
-  renderTimerBar();
-  Sfx.revive(); S.running = true; deal(); saveGame(); checkGameOver();
-}
-function finishGame() {
-  S.awaitingRevive = false; clearSave();
+async function finishGame() {
+  clearSave();
   cancelArmed();
   if (Music.setUrgency) Music.setUrgency(false);
   const daily = S.mode === 'daily';
@@ -1157,7 +1129,7 @@ function finishGame() {
   store.games = store.games + 1;
   const lvlAfter = playerLevelFor(store.xp);
   const newRewards = rewardsForLevel(lvlAfter).filter((r) => !rewardsForLevel(lvlBefore).includes(r));
-  Analytics.log('game_over', { mode: S.mode, score: S.score, lines: S.lines, max_combo: S.maxCombo, placed: S.placed, revived: S.revived, secs: Math.round((Date.now() - S.startedAt) / 1000), xp_gained: gained, player_level: lvlAfter });
+  Analytics.log('game_over', { mode: S.mode, score: S.score, lines: S.lines, max_combo: S.maxCombo, placed: S.placed, secs: Math.round((Date.now() - S.startedAt) / 1000), xp_gained: gained, player_level: lvlAfter });
   renderOvScore(S.score); $('ov-best').textContent = modeBest(); $('ov-lines').textContent = S.lines; $('ov-combo').textContent = S.maxCombo;
   $('ov-new').classList.toggle('hidden', !isBest || challenge);
   // Challenge result line (the NEW BEST badge stays hidden for challenges —
@@ -1189,15 +1161,9 @@ function finishGame() {
     });
     $('over').classList.add('show');
   };
-  // A new best gets its own beat: the badge pops over the board first (the
-  // same medallion as the panel badge), then the panel opens with the badge
-  // inside it. Showing both at once stacks two badges on top of each other
-  // — that was the doubled-badge look in the game-over screenshot.
-  // Challenges skip the badge beat (no NEW BEST for a challenge game).
-  if (isBest && !challenge) { jackpotBurst(); showBestBadge(1500); setTimeout(showPanel, 1500); }
-  else showPanel();
-  if (lvlAfter > lvlBefore) showBanner(`PLAYER LEVEL ${lvlAfter}!`, 1600);
-  renderPlayerCard();
+  // Cloud submits run BEFORE the ad (same as the old Play-again flow,
+  // where finishGame completed before any ad could appear): a player who
+  // force-quits during the interstitial must not lose the submit.
   // Accounts (Update 3): merge this game's progress into the cloud player
   // doc when signed in. Guests: no-op — nothing leaves the device.
   Accounts.recordGame().catch(() => {});
@@ -1211,6 +1177,21 @@ function finishGame() {
   }
   // Challenges (Update 3, batch 3): best-only submit to the challenge doc.
   if (challenge && S.challengeId) Challenges.submitChallengeScore(S.challengeId, S.score).catch(() => {});
+  // End-of-game interstitial (Dylan, Nov 12): 1 in 3 games, picked by a
+  // random roll — never tied to score, performance or any player state.
+  // Never after the first game of a session, at least 2 minutes since the
+  // last one. Timeout-guarded (10 s) so a hung ad can never trap the
+  // player: the game-over panel always appears.
+  await Promise.race([Ads.maybeInterstitialAtGameEnd(S.gamesThisSession), sleepMs(10000)]);
+  // A new best gets its own beat: the badge pops over the board first (the
+  // same medallion as the panel badge), then the panel opens with the badge
+  // inside it. Showing both at once stacks two badges on top of each other
+  // — that was the doubled-badge look in the game-over screenshot.
+  // Challenges skip the badge beat (no NEW BEST for a challenge game).
+  if (isBest && !challenge) { jackpotBurst(); showBestBadge(1500); setTimeout(showPanel, 1500); }
+  else showPanel();
+  if (lvlAfter > lvlBefore) showBanner(`PLAYER LEVEL ${lvlAfter}!`, 1600);
+  renderPlayerCard();
 }
 
 // ---------- Input ----------
@@ -1855,21 +1836,17 @@ $('btn-log').onclick = () => { const el = $('log'); el.classList.toggle('hidden'
 // Hidden debug path only: the analytics log stays out of the player UI
 // unless the page is opened with ?debug=1.
 if (new URLSearchParams(location.search).has('debug')) $('btn-log').classList.remove('hidden');
-$('btn-revive').onclick = takeRevive;
-$('btn-norevive').onclick = () => declineRevive('declined');
 // Power-up buttons (under the board) + targeting controls.
 document.querySelectorAll('#powerups .pu').forEach((b) => { b.onclick = () => armPowerup(b.dataset.pu); });
 $('pu-cancel').onclick = cancelArmed;
 $('pu-mode-row-btn').onclick = () => { S.sweepMode = 'row'; renderPowerups(); };
 $('pu-mode-col-btn').onclick = () => { S.sweepMode = 'col'; renderPowerups(); };
 renderPowerups(); renderTimerBar();
-$('btn-again').onclick = async () => {
+$('btn-again').onclick = () => {
   show('over', false);
-  // Play Again must never hang on an ad: the interstitial is a break-time
-  // extra, not a gate. If it does not resolve in 10 s (a stuck provider, a
-  // throttled timer), start the fresh game anyway — the ad, if it is still
-  // showing, stays closable on top, and the timer is paused while it shows.
-  await Promise.race([Ads.maybeInterstitialAtBreak(S.gamesThisSession), sleepMs(10000)]);
+  // No ad here any more (Dylan, Nov 12): the end-of-game interstitial
+  // already ran (or didn't) inside finishGame, before the panel opened.
+  // Play Again just starts the fresh game.
   startGame(S.mode === 'daily' ? 'daily' : S.mode === 'challenge' ? 'challenge' : 'classic', S.mode === 'classic' ? localDateKey() : S.dateKey);
 };
 $('btn-over-boards').onclick = () => { show('over', false); openBoards(); };
@@ -2079,7 +2056,6 @@ window.__gbBack = () => {
   if (S.armed) { cancelArmed(); return true; }
   if (Tutorial.active) { Tutorial.finish('skipped'); return true; }
   if ($('ad').classList.contains('show')) return true; // never dismiss an ad via back here; the ad has its own close
-  if ($('revive').classList.contains('show')) { declineRevive('back'); return true; }
   if ($('over').classList.contains('show')) { show('over', false); refreshTitle(); show('title', true); return true; }
   if (S.running) { saveGame(); show('menu', true); return true; } // pause: menu doubles as the pause screen
   return false; // on the title screen: let the app exit
@@ -2176,7 +2152,7 @@ else if ('serviceWorker' in navigator && location.protocol === 'https:') navigat
 // ---------- Test hooks (read-only layout + state; mutation only with ?test=1) ----------
 window.__gb = {
   layout: () => ({ ...L }),
-  state: () => ({ board: S.board.map((r) => r.map(Boolean)), tray: S.tray.map((p) => p && { id: p.shape.id, cells: p.shape.cells, w: p.shape.w, h: p.shape.h, helper: p.helper }), score: S.score, combo: S.combo, lines: S.lines, running: S.running, placed: S.placed, revived: S.revived, mode: S.mode, dateKey: S.dateKey, helperAvailable: S.helperAvailable, tutorialStep: Tutorial.step, timeLeft: Math.round(S.timeLeft * 10) / 10, timerStarted: S.timerStarted, charges: { ...S.charges }, variant: S.variant, autoSaving: S.autoSaving, armed: S.armed, sweepMode: S.sweepMode, musicOn: Music.on, musicBpm: Music.bpm, musicLoopSeconds: Music.loopSeconds, musicLoopEvents: Music.loopEvents, musicUrgency: Music.urgency, audioState: Music.ctxState, audioTime: Music.ctxTime, musicScheduled: Music.scheduled, musicScheduler: Music.schedulerOn, musicGain: Music.busGain, musicBaseGain: Music.baseGain, sfxMuted: Sfx.muted, spritesReady: Sprites.ready, timerPaused: timerPaused(), level: S.level, xp: store.xp, playerLevel: playerLevelFor(store.xp), pack: selectedPack(), packMaterial: Sprites.packMaterial, reducedMotion: reducedMotion(), countdownVisible: $('countdown').classList.contains('on'), countdownText: $('countdown').dataset.secs || '', heroTypeReady: Sprites.heroReady,
+  state: () => ({ board: S.board.map((r) => r.map(Boolean)), tray: S.tray.map((p) => p && { id: p.shape.id, cells: p.shape.cells, w: p.shape.w, h: p.shape.h, helper: p.helper }), score: S.score, combo: S.combo, lines: S.lines, running: S.running, placed: S.placed, mode: S.mode, dateKey: S.dateKey, helperAvailable: S.helperAvailable, tutorialStep: Tutorial.step, timeLeft: Math.round(S.timeLeft * 10) / 10, timerStarted: S.timerStarted, charges: { ...S.charges }, variant: S.variant, autoSaving: S.autoSaving, armed: S.armed, sweepMode: S.sweepMode, musicOn: Music.on, musicBpm: Music.bpm, musicLoopSeconds: Music.loopSeconds, musicLoopEvents: Music.loopEvents, musicUrgency: Music.urgency, audioState: Music.ctxState, audioTime: Music.ctxTime, musicScheduled: Music.scheduled, musicScheduler: Music.schedulerOn, musicGain: Music.busGain, musicBaseGain: Music.baseGain, sfxMuted: Sfx.muted, spritesReady: Sprites.ready, timerPaused: timerPaused(), level: S.level, xp: store.xp, playerLevel: playerLevelFor(store.xp), pack: selectedPack(), packMaterial: Sprites.packMaterial, reducedMotion: reducedMotion(), countdownVisible: $('countdown').classList.contains('on'), countdownText: $('countdown').dataset.secs || '', heroTypeReady: Sprites.heroReady,
     layout: { size: L.size, cell: Math.round(L.cell * 10) / 10, bx: Math.round(L.bx * 10) / 10, by: Math.round(L.by * 10) / 10, trayX: Math.round(L.trayX * 10) / 10, trayY: Math.round(L.trayY * 10) / 10, trayH: Math.round(L.trayH * 10) / 10, slotW: Math.round(L.slotW * 10) / 10, trayCellMax: Math.round(L.trayCell * 10) / 10, stageW: L.w, stageH: L.h },
     dragScale: drag ? Math.round(drag.scale * 100) / 100 : null, dragStartScale: drag ? Math.round(drag.startScale * 100) / 100 : null }),
   // Accounts (Update 3, batch 1): read-only state for tests.

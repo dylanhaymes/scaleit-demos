@@ -7,7 +7,7 @@ A fair, ad-funded 8×8 block puzzle with a premium classroom theme. It runs as s
 - `js/difficulty.js`: documented difficulty rules (shown in the game under "How difficulty works") — including the timer numbers (`TIMER`) and power-up rules (`POWERUPS`). It never imports `ads.js`.
 - `js/progress.js`: lifetime player XP + level thresholds + cosmetic milestone rewards (cosmetics only, never difficulty).
 - `js/scoring.js`: the scoring table (the only source of points). Power-up clears score 10 points per cell, no combo multiplier.
-- `js/ads.js`: ad adapter with `showRewarded()` and `showInterstitial()`. It uses a mock overlay today; sketches for AdMob and AdSense H5 are in comments.
+- `js/ads.js`: ad adapter with `showInterstitial()` (1-in-3 at game end). It uses a mock overlay today; sketches for AdMob and AdSense H5 are in comments.
 - `js/analytics.js`: event log in `localStorage.gb_events`.
 - `js/audio.js`: WebAudio-synthesized sounds + an original synthesized
   upbeat music track (120 BPM marimba loop, 96 s, clean seam; on by default,
@@ -25,7 +25,7 @@ A fair, ad-funded 8×8 block puzzle with a premium classroom theme. It runs as s
 
 ## Timer
 
-Every game starts with 120 seconds on the glossy bar above the board. Each cleared line adds 6 s, plus 2 s per extra line on a multi-line clear (2 lines = +14 s, 3 lines = +22 s), capped at 150 s. From 20 s a big countdown shows with a gentle tick each second. Time out ends the game like no-moves-left; the opt-in rewarded revive refills the timer to 60 s. The timer pauses during the tutorial, pause/menu, settings, ads, and when the app is backgrounded. Same numbers for everyone — see `TIMER` in `js/difficulty.js`. (The "add 15 s back by clearing lines" wording is covered by +6 s/line plus the Time Star's +15 s; there is no separate +15 s per clear.)
+Every game starts with 120 seconds on the glossy bar above the board. Each cleared line adds 6 s, plus 2 s per extra line on a multi-line clear (2 lines = +14 s, 3 lines = +22 s), capped at 150 s. From 20 s a big countdown shows with a gentle tick each second. Time out ends the game like no-moves-left. The timer pauses during the tutorial, pause/menu, settings, ads, and when the app is backgrounded. Same numbers for everyone — see `TIMER` in `js/difficulty.js`. (The "add 15 s back by clearing lines" wording is covered by +6 s/line plus the Time Star's +15 s; there is no separate +15 s per clear.)
 
 ## Power-ups (earned only through play)
 
@@ -33,7 +33,7 @@ One charge per 3-line combo and per 10 lines cleared (at most 3 held, fixed earn
 
 ## Use-it-or-lose-it + auto-save
 
-Each charge lasts 30 seconds of play time, oldest first — the ring on a filled slot drains as its oldest charge runs down (seconds left shown, pulsing under 5 s), and an expired charge fades away with a soft poof and no points. The clock pauses whenever the game timer pauses (pause/menu, settings, ads, tutorial, background) and while a banner is showing. If no tray piece fits while a charge is held, the game auto-uses one to save you before offering a revive — Reshuffle first, then the Bomb on the 3x3 that makes the most room for a tray piece, then the Sweep on the fullest row or column — with a ~0.6 s freeze, a "SAVED!" banner, the icon flying to its target, and a chime. The choice is deterministic and the same for everyone. Timeout auto-saves only with a Time Star (one charge, +15 s, "SAVED!" banner) — Bomb, Sweep and Reshuffle never fire on timeout; with no Time Star held it ends the game like no-moves-left, with the normal opt-in revive offer.
+Each charge lasts 30 seconds of play time, oldest first — the ring on a filled slot drains as its oldest charge runs down (seconds left shown, pulsing under 5 s), and an expired charge fades away with a soft poof and no points. The clock pauses whenever the game timer pauses (pause/menu, settings, ads, tutorial, background) and while a banner is showing. If no tray piece fits while a charge is held, the game auto-uses one to save you — Reshuffle first, then the Bomb on the 3x3 that makes the most room for a tray piece, then the Sweep on the fullest row or column — with a ~0.6 s freeze, a "SAVED!" banner, the icon flying to its target, and a chime. The choice is deterministic and the same for everyone. Timeout auto-saves only with a Time Star (one charge, +15 s, "SAVED!" banner) — Bomb, Sweep and Reshuffle never fire on timeout; with no Time Star held it ends the game like no-moves-left.
 
 ## Levels
 

@@ -98,7 +98,6 @@ export const Sfx = {
   combo(c) { Music.duck(); tone(PENTA[Math.min(9, c + 2)], 0.3, { type: 'sawtooth', vol: 0.08, delay: 0.2 }); },
   boardClear() { [0, 4, 7, 12].forEach((s, i) => tone(523.25 * Math.pow(2, s / 12), 0.5, { type: 'triangle', vol: 0.2, delay: i * 0.08 })); },
   over() { [392, 349.2, 311.1, 261.6].forEach((f, i) => tone(f, 0.35, { type: 'triangle', vol: 0.2, delay: i * 0.16 })); },
-  revive() { [261.6, 392, 523.25, 784].forEach((f, i) => tone(f, 0.25, { type: 'sine', vol: 0.25, delay: i * 0.07 })); },
   best() { [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f, i) => tone(f, 0.3, { type: 'triangle', vol: 0.18, delay: i * 0.09 })); },
   // Gentle countdown tick: pitch rises a little in the last 5 s.
   tick(secsLeft) {

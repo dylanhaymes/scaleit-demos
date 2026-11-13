@@ -39,7 +39,7 @@ for (const cand of [process.env.PLAYWRIGHT_MODULE, 'playwright', '/home/hatch/.c
 }
 if (!chromium) throw new Error('Playwright not found: set PLAYWRIGHT_MODULE or install playwright');
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'game-proto');
 const PORT = 8917;
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json' };
 
