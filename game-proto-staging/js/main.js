@@ -328,7 +328,7 @@ async function onTimeout() {
   // No Time Star held: the game ends like no-moves-left.
   S.running = false;
   Analytics.log('time_out', { score: S.score, placed: S.placed, lines: S.lines });
-  setTimeout(onNoMoves, 450);
+  setTimeout(() => onNoMoves('timeout'), 450);
 }
 function setBoardGlow(kind) {
   const el = $('board-glow');
@@ -1094,19 +1094,18 @@ function checkGameOver() {
 }
 function endNoMoves() {
   S.running = false;
-  setTimeout(onNoMoves, 450);
+  setTimeout(() => onNoMoves('no-moves'), 450);
 }
 
-function onNoMoves() {
+function onNoMoves(reason) {
   Sfx.over();
   if (Music.setUrgency) Music.setUrgency(false);
   // No revive any more (Dylan, Nov 12): game over is game over. The
   // end-of-game interstitial (1 in 3) runs inside finishGame, before the
-  // game-over panel. (The "Time's up!" / "No space left!" line lived in the
-  // removed revive overlay, so the reason is no longer shown.)
-  finishGame();
+  // game-over panel; the reason line is set on the panel there.
+  finishGame(reason);
 }
-async function finishGame() {
+async function finishGame(reason) {
   clearSave();
   cancelArmed();
   if (Music.setUrgency) Music.setUrgency(false);
@@ -1148,6 +1147,10 @@ async function finishGame() {
   $('ov-xp').textContent = `+${gained} XP  ·  Player Level ${lvlAfter}${newRewards.length ? ` — unlocked: ${newRewards.join(', ')}!` : ''}`;
   renderBest(modeBest());
   $('over').querySelector('h2').textContent = daily ? 'Daily challenge over' : challenge ? 'Challenge over' : 'Game over';
+  // Why the game ended (Dylan, Nov 12): the line used to live in the revive
+  // overlay; it now sits on the game-over panel itself.
+  const ovWhy = $('ov-why');
+  if (ovWhy) ovWhy.textContent = reason === 'timeout' ? "Time's up!" : 'No space left!';
   // The date never goes in the heading — it sits in smaller text underneath.
   const ovDate = $('ov-date');
   if (daily) { ovDate.textContent = friendlyDate(S.dateKey); ovDate.classList.remove('hidden'); }
