@@ -58,13 +58,17 @@ const FRIEND_CODE_LEN = 6;
 // handled at boot. Lets init() know the SDK must load to complete it.
 export const REDIRECT_FLAG = 'gb_auth_redirect';
 
-// iOS Safari and standalone web apps (Add to Home Screen) cannot do
-// pop-up sign-in: a standalone app has no window to host the Firebase
-// pop-up, and mobile Safari blocks pop-ups by default — signInWithPopup
-// fails there with auth/popup-blocked (Dylan, Nov 12: Google sign-in
-// dead on his iPhone home-screen app). Those environments use the
-// redirect flow instead (signInWithRedirect + getRedirectResult);
-// desktop browsers keep the pop-up. `env` is injectable for tests.
+// Pop-up sign-in works in a regular browser tab — including iOS Safari
+// tabs: Safari's pop-up blocker only blocks programmatic pop-ups, not
+// ones opened from a tap, and Firebase's pop-up flow is postMessage-based
+// so it is NOT affected by ITP. The redirect flow is only needed where
+// there is no window to host a pop-up: a standalone home-screen web app
+// (Add to Home Screen). The redirect stores its state in sessionStorage
+// (tab-scoped); on iOS Safari the round-trip to Google opens a new
+// tab/context and the state is lost, so a Safari TAB must never use
+// redirect — that was the 'redirect-lost' failure on Dylan's phone
+// (Nov 14: redirect was chosen for every iOS UA, tab included).
+// `env` is injectable for tests.
 export function useRedirectAuth(env) {
   const nav = (env && env.navigator) || (typeof navigator !== 'undefined' ? navigator : {});
   const standalone = (env && 'standalone' in env) ? env.standalone === true : nav.standalone === true;
@@ -73,8 +77,7 @@ export function useRedirectAuth(env) {
     displayStandalone = (env && 'displayMode' in env) ? env.displayMode === 'standalone'
       : (typeof matchMedia !== 'undefined' && matchMedia('(display-mode: standalone)').matches);
   } catch {}
-  const ua = (env && 'userAgent' in env) ? env.userAgent : (nav.userAgent || '');
-  return standalone === true || displayStandalone || /iPad|iPhone|iPod/.test(ua);
+  return standalone === true || displayStandalone;
 }
 
 // Plain-language sign-in errors for the UI. Never show raw Firebase
@@ -356,11 +359,13 @@ export const Accounts = {
     if (!fb) return { ok: false, reason: 'not-configured' };
     try {
       const provider = makeProvider();
-      // iOS Safari / standalone web apps can't do pop-ups (Dylan, Nov 12:
-      // Google sign-in dead on his iPhone home-screen app) — use the
-      // redirect flow there. The page reloads; _handleRedirectResult at
-      // boot completes it. Returns redirect-started (the page navigates
-      // away, so the caller shows "opening" instead of "signed in").
+      // Standalone home-screen apps have no window to host the Firebase
+      // pop-up, so they use the redirect flow there. The page reloads;
+      // _handleRedirectResult at boot completes it. Returns
+      // redirect-started (the page navigates away, so the caller shows
+      // "opening" instead of "signed in"). Everywhere else — including
+      // iOS Safari tabs, whose tap-triggered pop-ups Safari allows and
+      // whose postMessage flow ITP does not break — uses the pop-up.
       if (useRedirectAuth()) {
         try { localStorage.setItem(REDIRECT_FLAG, '1'); } catch {}
         if (fb.auth.currentUser && fb.auth.currentUser.isAnonymous) {

@@ -2358,27 +2358,35 @@ await test('accounts: no Firebase SDK loads for guests (no vendor SDK requests a
   await ctx.close();
 });
 
-await test('accounts: redirect detection (iOS/standalone) + plain-language error messages', async () => {
+await test('accounts: redirect detection (standalone only) + plain-language error messages', async () => {
   const { ctx, page } = await newPage();
   const r = await page.evaluate(async () => {
     const m = await import('/js/accounts.js');
     return {
+      // iPhone / iPad Safari TABS use the pop-up now (Nov 15: the old
+      // iOS-UA rule sent every iPhone tab down the redirect, whose
+      // sessionStorage state is lost on the round-trip to Google).
       ios: m.useRedirectAuth({ userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1' }),
       ipad: m.useRedirectAuth({ userAgent: 'Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15' }),
       desktop: m.useRedirectAuth({ userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36' }),
       standalone: m.useRedirectAuth({ userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)', standalone: true }),
       displayMode: m.useRedirectAuth({ userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)', displayMode: 'standalone' }),
+      // Standalone is the only iOS redirect case — same UA, standalone on.
+      iosStandalone: m.useRedirectAuth({ userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1', standalone: true }),
+      iosDisplayMode: m.useRedirectAuth({ userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1', displayMode: 'standalone' }),
       popupBlocked: m.authErrorMessage('auth/popup-blocked'),
       unauthDomain: m.authErrorMessage('auth/unauthorized-domain'),
       network: m.authErrorMessage('auth/network-request-failed'),
       unknown: m.authErrorMessage('auth/something-new'),
     };
   });
-  eq(r.ios, true, 'iPhone uses redirect sign-in');
-  eq(r.ipad, true, 'iPad uses redirect sign-in');
+  eq(r.ios, false, 'iPhone Safari tab uses pop-up sign-in');
+  eq(r.ipad, false, 'iPad Safari tab uses pop-up sign-in');
   eq(r.desktop, false, 'desktop keeps pop-up sign-in');
   eq(r.standalone, true, 'standalone web app uses redirect sign-in');
   eq(r.displayMode, true, 'display-mode standalone uses redirect sign-in');
+  eq(r.iosStandalone, true, 'iPhone home-screen app (navigator.standalone) uses redirect sign-in');
+  eq(r.iosDisplayMode, true, 'iPhone home-screen app (display-mode standalone) uses redirect sign-in');
   ok(r.popupBlocked.includes('pop-up') && !r.popupBlocked.includes('auth/'), 'popup-blocked is plain language');
   ok(r.unauthDomain.includes('Firebase console') && !r.unauthDomain.includes('auth/'), 'unauthorized-domain names the console fix');
   ok(r.network.includes('online'), 'network error says to check the connection');
@@ -2439,8 +2447,10 @@ function installFakeFirebase() {
   window.__fakeAuth = fakeAuth;
 }
 
-await test('accounts: iOS uses redirect sign-in, desktop uses pop-up (stubbed Firebase)', async () => {
-  // iPhone UA → redirect.
+await test('accounts: iOS Safari tab uses pop-up, standalone uses redirect, desktop uses pop-up (stubbed Firebase)', async () => {
+  // iPhone Safari TAB → pop-up (Nov 15: the old iOS-UA rule sent every
+  // iPhone tab down the redirect, whose sessionStorage state is lost on
+  // the round-trip to Google — the 'redirect-lost' failure).
   const ctxIos = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1' });
   const pIos = await ctxIos.newPage();
   await pIos.addInitScript(() => { localStorage.setItem('gb_tut_done', '1'); });
@@ -2449,11 +2459,26 @@ await test('accounts: iOS uses redirect sign-in, desktop uses pop-up (stubbed Fi
   await pIos.waitForSelector('#btn-play');
   await pIos.click('#btn-account');
   await pIos.click('#btn-sign-google');
-  await waitFor(async () => (await pIos.evaluate(() => window.__fakeAuthCalls.length)) > 0, 5000, 'redirect call recorded');
-  eq((await pIos.evaluate(() => window.__fakeAuthCalls)).join(','), 'redirect', 'iPhone calls signInWithRedirect');
-  eq(await pIos.evaluate(() => localStorage.getItem('gb_auth_redirect')), '1', 'redirect flag set for boot completion');
-  ok((await pIos.locator('#acct-msg').textContent()).includes('Opening Google sign-in'), 'panel says Google sign-in is opening');
+  await waitFor(async () => (await pIos.evaluate(() => window.__fakeAuthCalls.length)) > 0, 5000, 'popup call recorded');
+  eq((await pIos.evaluate(() => window.__fakeAuthCalls)).join(','), 'popup', 'iPhone Safari tab calls signInWithPopup');
+  eq(await pIos.evaluate(() => localStorage.getItem('gb_auth_redirect')), null, 'no redirect flag on iPhone Safari tab');
+  ok(!(await pIos.locator('#acct-msg').textContent()).includes('Opening Google sign-in'), 'no redirect "opening" message on iPhone Safari tab');
   await ctxIos.close();
+  // iPhone home-screen app (navigator.standalone) → redirect, flag set.
+  const ctxSa = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1' });
+  const pSa = await ctxSa.newPage();
+  await pSa.addInitScript(() => { localStorage.setItem('gb_tut_done', '1'); });
+  await pSa.addInitScript(() => { Object.defineProperty(window.navigator, 'standalone', { value: true, configurable: true }); });
+  await pSa.addInitScript(installFakeFirebase);
+  await pSa.goto(`http://localhost:${PORT}/?test=1`);
+  await pSa.waitForSelector('#btn-play');
+  await pSa.click('#btn-account');
+  await pSa.click('#btn-sign-google');
+  await waitFor(async () => (await pSa.evaluate(() => window.__fakeAuthCalls.length)) > 0, 5000, 'redirect call recorded');
+  eq((await pSa.evaluate(() => window.__fakeAuthCalls)).join(','), 'redirect', 'standalone home-screen app calls signInWithRedirect');
+  eq(await pSa.evaluate(() => localStorage.getItem('gb_auth_redirect')), '1', 'redirect flag set for boot completion');
+  ok((await pSa.locator('#acct-msg').textContent()).includes('Opening Google sign-in'), 'panel says Google sign-in is opening');
+  await ctxSa.close();
   // Desktop UA → pop-up, no flag.
   const ctxDesk = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
   const pDesk = await ctxDesk.newPage();
@@ -2467,6 +2492,19 @@ await test('accounts: iOS uses redirect sign-in, desktop uses pop-up (stubbed Fi
   eq((await pDesk.evaluate(() => window.__fakeAuthCalls)).join(','), 'popup', 'desktop calls signInWithPopup');
   eq(await pDesk.evaluate(() => localStorage.getItem('gb_auth_redirect')), null, 'no redirect flag on desktop');
   await ctxDesk.close();
+});
+
+await test('sw: /__/auth/ and /__/firebase/ requests bypass the service worker cache', async () => {
+  const { ctx, page } = await newPage();
+  const src = await page.evaluate(async () => (await fetch('/sw.js')).text());
+  // Source-level assertion: the fetch handler must name both Firebase
+  // handler prefixes and return before respondWith, so those requests
+  // go straight to the network — never served from cache, never cached.
+  ok(src.includes('/__/auth/') && src.includes('/__/firebase/'), 'sw.js names the auth handler paths');
+  ok(src.includes("startsWith('/__/auth/')"), 'sw.js bypasses /__/auth/ requests');
+  ok(src.includes("startsWith('/__/firebase/')"), 'sw.js bypasses /__/firebase/ requests');
+  ok(src.indexOf("startsWith('/__/auth/')") < src.indexOf('respondWith'), 'auth bypass runs before any cache handling');
+  await ctx.close();
 });
 
 await test('accounts: a failed redirect sign-in explains itself in the account panel', async () => {
