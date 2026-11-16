@@ -68,6 +68,8 @@
         <span id="acct-name">Guest</span>
         <span id="acct-sub" class="small">Progress saved on this device only</span>
       </div>
+      <span id="acct-chip" class="acct-chip hidden"><span id="acct-chip-initial" class="acct-chip-initial">?</span><span id="acct-chip-name"></span></span>
+      <button id="btn-title-signin" class="btn ghost sm hidden">Sign in</button>
       <button id="btn-account" class="btn ghost sm">Friends</button>
     </div>
     <button id="rank-chip" class="rank-chip" aria-label="Your rank — open leaderboards">
@@ -142,12 +144,14 @@
     </div>
     <div id="board-friends">
       <span class="acct-label">Your friends</span>
-      <p class="small">Enter a friend's code to add them — or share your invite link.</p>
+      <p class="small">Enter a friend's code — you'll see who it is, then send a request. Or share your invite link.</p>
       <div class="acct-name-row">
         <input id="friend-code-input" type="text" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Friend code">
         <button id="btn-add-friend" class="btn ghost sm">Add friend</button>
       </div>
       <p id="friend-add-msg" class="small"></p>
+      <div id="friend-preview" class="friend-preview hidden"></div>
+      <div id="friend-requests" class="friend-list"></div>
       <div class="acct-name-row">
         <button id="btn-copy-invite" class="btn ghost sm">Copy my invite link</button>
       </div>
@@ -210,12 +214,14 @@
     </div>
     <p class="small">Share it and friends can find you — no Facebook needed.</p>
     <span class="acct-label">Add a friend</span>
-    <p class="small">Enter a friend's code — they'll show up in your friends list.</p>
+    <p class="small">Enter a friend's code — you'll see who it is, then send a friend request.</p>
     <div class="acct-name-row">
       <input id="acct-friend-code-input" type="text" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Friend code">
       <button id="btn-acct-add-friend" class="btn ghost sm">Add friend</button>
     </div>
     <p id="acct-friend-add-msg" class="small"></p>
+    <div id="acct-friend-preview" class="friend-preview hidden"></div>
+    <div id="acct-friend-requests" class="friend-list"></div>
     <div id="acct-friend-list" class="friend-list"></div>
     <label class="toggle"><span>Hide me from global leaderboards</span><input type="checkbox" id="set-hide-global"></label>
     <div id="acct-signin">

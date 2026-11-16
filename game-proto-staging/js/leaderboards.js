@@ -17,11 +17,14 @@
 //   typed in the boards panel. Code entry looks the code up in the public
 //   friendCodes/{code} directory (findByCode) — one doc get by code, so
 //   there is still NO query over player docs, which the rules deliberately
-//   forbid. The directory only answers once firestore.rules deploys; until
-//   then findByCode returns 'lookup-unavailable' and the UI says so
-//   honestly. Friends live in localStorage (`gb_friends`); the friends
-//   board filters the same public score docs to those uids (+ yourself).
-//   No cloud function, no extra permissions.
+//   forbid — and shows the found player FIRST (preview-before-send); a
+//   friend REQUEST (js/friendRequests.js) is what makes two people
+//   friends, after the other player accepts. The directory only answers
+//   once firestore.rules deploys; until then findByCode returns
+//   'lookup-unavailable' and the UI says so honestly. Friends live in
+//   localStorage (`gb_friends`); the friends board filters the same
+//   public score docs to those uids (+ yourself). No cloud function,
+//   no extra permissions.
 // - SAMPLE BOARDS ARE NEVER PRESENTED AS REAL. Guests (and anyone with
 //   `?sample=1`) see a clearly-labelled "Sample leaderboard" built from
 //   deterministic mock data, so the UI is demonstrable without faking
@@ -178,14 +181,18 @@ export const Leaderboards = {
   },
   parseInviteLink,
   // --- Add friend by code (public friendCodes directory) ---
-  // Returns { ok, name } or { ok: false, reason } — 'bad-code' (not 6
-  // letters/numbers), 'own-code', 'guest', 'not-found', or
-  // 'lookup-unavailable' (any fetch failure, including permission-denied
-  // while the friendCodes rules haven't deployed yet — the UI says the
-  // lookup isn't live yet instead of blaming the code). Validation runs
-  // before any Firebase call, so a bad/own code never touches the
-  // network. No live-Firestore test in the suite: the suite has no prod
-  // access, and the directory only answers once firestore.rules deploys.
+  // Lookup ONLY — finding a player never adds them. The UI shows the
+  // found player's name first (preview-before-send) and a friend
+  // REQUEST is what makes two people friends, after the other player
+  // accepts (js/friendRequests.js). Returns { ok, uid, code, name } or
+  // { ok: false, reason } — 'bad-code' (not 6 letters/numbers),
+  // 'own-code', 'guest', 'not-found', or 'lookup-unavailable' (any fetch
+  // failure, including permission-denied while the friendCodes rules
+  // haven't deployed yet — the UI says the lookup isn't live yet instead
+  // of blaming the code). Validation runs before any Firebase call, so a
+  // bad/own code never touches the network. No live-Firestore test in
+  // the suite: the suite has no prod access, and the directory only
+  // answers once firestore.rules deploys.
   async findByCode(rawCode) {
     const code = normalizeFriendCode(rawCode);
     if (!/^[A-Z0-9]{6}$/.test(code)) return { ok: false, reason: 'bad-code' };
@@ -200,9 +207,7 @@ export const Leaderboards = {
       if (!snap.exists) return { ok: false, reason: 'not-found' };
       const data = snap.data() || {};
       if (!data.uid || typeof data.uid !== 'string') return { ok: false, reason: 'not-found' };
-      const added = this.addFriend({ uid: data.uid, code, displayName: data.displayName || 'Friend' });
-      if (!added.ok) return { ok: false, reason: 'bad-invite' };
-      return { ok: true, name: added.name };
+      return { ok: true, uid: data.uid, code, name: cleanDisplayName(data.displayName || '') || 'Friend' };
     } catch (e) {
       return { ok: false, reason: 'lookup-unavailable' };
     }

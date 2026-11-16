@@ -35,6 +35,9 @@
 //                              updatedAt } — public directory, one doc get
 //                              per lookup; written right after the player
 //                              doc sync below, deleted with the account.
+//   friendRequests/{id}        (friend requests) { fromUid, fromName,
+//                              toUid, toName, code, status, createdAt,
+//                              expiresAt } — see js/friendRequests.js.
 import { FIREBASE_CONFIG, isFirebaseConfigured, FACEBOOK_PROVIDER_ENABLED, FIREBASE_SDK_URLS } from './firebase-config.js';
 import { cleanDisplayName, nameIsClean, nameRejectMessage, defaultGuestName } from './names.js';
 import { Analytics } from './analytics.js';
@@ -46,6 +49,7 @@ export const COLLECTIONS = {
   scoresWeekly: 'scores_weekly',
   challenges: 'challenges',
   friendCodes: 'friendCodes',
+  friendRequests: 'friendRequests',
 };
 // Local keys wiped by account deletion (identity + progress, not settings:
 // music/sfx/haptics/motion + the tutorial flag are device preferences).
@@ -408,8 +412,19 @@ export const Accounts = {
   async signOut() {
     try {
       const fb = await this.ensureFirebase();
-      if (fb && fb.auth.currentUser) await fb.auth.signOut();
+      // ALWAYS sign out of Firebase, even when currentUser looks null:
+      // the session may not have restored yet (reload before the
+      // listener fires), and skipping the call leaves the persisted
+      // credential in place — the listener then fires with the restored
+      // user and the player is silently signed back in. signOut() clears
+      // the stored credential state regardless of currentUser, so the
+      // player stays out. (Firebase's own doc: sign out AND clear the
+      // credential state; on web the compat signOut does both.)
+      if (fb && fb.auth) await fb.auth.signOut();
     } catch {}
+    // A redirect sign-in started before this sign-out must not complete
+    // afterwards and re-adopt the account.
+    try { localStorage.removeItem(REDIRECT_FLAG); } catch {}
     if (this.profile) { this.profile.cloudUid = null; this.profile.provider = 'guest'; this.saveProfile(); }
     if (this.fb) this.fb.user = null;
     Analytics.log('account_signed_out', {});

@@ -398,10 +398,24 @@ body.reduced-motion #countdown.pop #cd-nums,body.reduced-motion #countdown.urgen
 .board-empty{text-align:center;color:var(--muted);font-weight:700;padding:18px 0}
 #board-rank{text-align:center;font-weight:700;color:#7a3c00;min-height:16px}
 .friend-list{margin-top:8px}
-.friend-row{display:flex;align-items:center;gap:10px;background:#fff;border:2px solid #f5c86b;border-radius:14px;padding:8px 12px;margin-bottom:6px}
-.friend-row .board-name{flex:1}
+.friend-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fff;border:2px solid #f5c86b;border-radius:14px;padding:8px 12px;margin-bottom:6px}
+.friend-row .board-name{flex:1 1 72px;min-width:72px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.friend-avatar{display:flex;align-items:center;justify-content:center;width:28px;height:28px;flex:none;border-radius:50%;background:#ffd21f;color:#7a3c00;font-family:var(--display);font-weight:800;font-size:15px}
+.friend-h2h{font-family:var(--display);font-weight:800;font-size:13px;color:#b97e0e;white-space:nowrap}
 .friend-code-sm{font-family:var(--display);font-weight:800;font-size:14px;letter-spacing:.12em;color:#7a3c00}
 .friend-remove{background:none;border:none;font-size:18px;font-weight:800;color:#c22;cursor:pointer;padding:2px 6px;line-height:1}
+/* Friend-request preview card: who the code found, before anything is
+   sent — name + code + Send request / Cancel, never an auto-add. */
+.friend-preview{background:#fff;border:2px solid #2f8cff;border-radius:14px;padding:10px 12px;margin:8px 0}
+.friend-preview-inner{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.friend-preview-name{font-family:var(--display);font-weight:800;font-size:16px;color:#7a3c00;flex:1 1 64px;min-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.friend-preview .btn{margin-top:0;flex:none}
+/* Title-screen sign-in chip: avatar initial + first name when signed
+   in; an explicit Sign in button when signed out. A greyed-out button
+   alone is never the only sign-in state. */
+.acct-chip{display:flex;align-items:center;gap:6px;flex:none}
+.acct-chip-initial{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:#2f8cff;color:#fff;font-family:var(--display);font-weight:800;font-size:15px}
+#acct-chip-name{font-family:var(--display);font-weight:800;font-size:14px;color:#7a3c00;max-width:88px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* ---- Store (Update 3, batch 4) ---- */
 #store .panel{text-align:left}

@@ -2548,6 +2548,15 @@ function installFakeFirebaseRedirect() {
   window.__fakeAuthCalls = calls;
   const fakeUser = { uid: 'google-uid-1', displayName: 'Dylan', email: 'dylan@example.com', isAnonymous: false, providerData: [{ providerId: 'google.com' }] };
   window.__fakeUser = fakeUser;
+  // In-memory friendRequests store for the request tests. A test seeds it
+  // with window.__fakeSeedRequests (set in an earlier init script) before
+  // this installer runs; the store is also visible as window.__fakeDbStore
+  // so a test can inspect what a send/accept wrote.
+  const reqStore = window.__fakeDbStore = window.__fakeDbStore || { friendRequests: {}, reqSeq: 0 };
+  if (Array.isArray(window.__fakeSeedRequests)) {
+    for (const s of window.__fakeSeedRequests) reqStore.friendRequests[s.id] = { ...s };
+    window.__fakeSeedRequests = [];
+  }
   const fakeQuery = {
     where() { return fakeQuery; },
     orderBy() { return fakeQuery; },
@@ -2556,6 +2565,41 @@ function installFakeFirebaseRedirect() {
   };
   const fakeDb = {
     collection(name) {
+      if (name === 'friendRequests') {
+        return {
+          doc(id) {
+            return {
+              get: async () => {
+                const d = reqStore.friendRequests[id];
+                return d ? { exists: true, data: () => ({ ...d }) } : { exists: false, data: () => ({}) };
+              },
+              set: async (data, opts) => { reqStore.friendRequests[id] = opts && opts.merge ? { ...(reqStore.friendRequests[id] || {}), ...data } : { ...data }; },
+              update: async (data) => { reqStore.friendRequests[id] = { ...(reqStore.friendRequests[id] || {}), ...data }; },
+              delete: async () => { delete reqStore.friendRequests[id]; },
+            };
+          },
+          add: async (doc) => {
+            const id = 'req-' + (++reqStore.reqSeq);
+            reqStore.friendRequests[id] = { ...doc };
+            return { id };
+          },
+          where(field, op, value) {
+            const filters = [{ field, op, value }];
+            const q = {
+              where(f, o, v) { filters.push({ field: f, op: o, value: v }); return q; },
+              orderBy() { return q; },
+              limit() { return q; },
+              get: async () => {
+                const docs = Object.entries(reqStore.friendRequests)
+                  .filter(([, d]) => filters.every(({ field, op, value }) => (op === '==' ? d[field] === value : true)))
+                  .map(([id, d]) => ({ id, exists: true, data: () => ({ ...d }) }));
+                return { empty: docs.length === 0, docs, forEach(fn) { docs.forEach(fn); } };
+              },
+            };
+            return q;
+          },
+        };
+      }
       return {
         doc() {
           return {
@@ -2592,7 +2636,13 @@ function installFakeFirebaseRedirect() {
     linkWithRedirect: async () => { calls.push('link-redirect'); },
     linkWithPopup: async () => { calls.push('link-popup'); },
     signInAnonymously: async () => { calls.push('anon'); },
-    signOut: async () => { fakeAuth.currentUser = null; },
+    signOut: async () => {
+      calls.push('signout');
+      // Models the SDK contract: signOut clears the stored credential,
+      // so no later session restore can deliver the user afterwards.
+      fakeAuth._signedOut = true;
+      fakeAuth.currentUser = null;
+    },
     signInWithCredential: async () => {
       calls.push('credential');
       fakeAuth.currentUser = fakeUser;
@@ -2605,6 +2655,16 @@ function installFakeFirebaseRedirect() {
   authFn.FacebookAuthProvider = class {};
   window.firebase = { apps: [{}], initializeApp() {}, auth: authFn, firestore: () => fakeDb };
   window.__fakeAuth = fakeAuth;
+  // Test helper: a session restore arriving AFTER sign-out (the race the
+  // sign-out fix closes). In the real SDK this never fires once signOut
+  // has cleared persistence — the fake models that by refusing to
+  // deliver the user once _signedOut is set. If the app never called
+  // signOut, the restore delivers the user normally.
+  window.__fakeLateRestore = () => {
+    if (fakeAuth._signedOut) return;
+    fakeAuth.currentUser = fakeUser;
+    if (window.__fakeAuthCb) window.__fakeAuthCb(fakeUser);
+  };
 }
 const IPHONE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1';
 
@@ -2671,7 +2731,7 @@ await test('accounts: already-in-use redirect falls back to credential sign-in',
   await ctx.close();
 });
 
-await test('accounts: a signed-in user can add a friend by code (no sign-in toast)', async () => {
+await test('friends: entering a code previews the player before anything is sent', async () => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, userAgent: IPHONE_UA });
   const page = await ctx.newPage();
   await page.addInitScript(() => {
@@ -2689,9 +2749,24 @@ await test('accounts: a signed-in user can add a friend by code (no sign-in toas
   const code = own === 'ABC123' ? 'XYZ789' : 'ABC123';
   await page.fill('#friend-code-input', code);
   await page.click('#btn-add-friend');
-  await waitFor(async () => (await page.locator('#toast').textContent()).includes('Added Pal!'), 5000, 'Added Pal toast');
-  const friends = await page.evaluate(() => JSON.parse(localStorage.getItem('gb_friends') || '[]'));
-  ok(friends.some((f) => f.uid === 'friend-uid-1'), 'friend in list: ' + JSON.stringify(friends));
+  // Preview first: the found player's name + a Send request button — and
+  // nobody is a friend yet. A code alone must never auto-friend.
+  await waitFor(async () => (await page.locator('#friend-preview').textContent()).includes('Pal'), 5000, 'preview shows the found player');
+  ok(await page.locator('#friend-preview [data-preview-send]').isVisible(), 'preview offers Send request');
+  const previewNameW = await page.evaluate(() => document.querySelector('#friend-preview .friend-preview-name').getBoundingClientRect().width);
+  ok(previewNameW >= 40, 'preview name is readable at 390px (width ' + previewNameW + ')');
+  let friends = await page.evaluate(() => JSON.parse(localStorage.getItem('gb_friends') || '[]'));
+  ok(!friends.some((f) => f.uid === 'friend-uid-1'), 'preview alone does not add the friend');
+  // Send the request: pending, not friends.
+  await page.click('#friend-preview [data-preview-send]');
+  await waitFor(async () => (await page.locator('#toast').textContent()).includes('Request sent to Pal'), 5000, 'Request sent toast');
+  friends = await page.evaluate(() => JSON.parse(localStorage.getItem('gb_friends') || '[]'));
+  ok(!friends.some((f) => f.uid === 'friend-uid-1'), 'a sent request still does not add the friend');
+  const reqs = await page.evaluate(() => window.__gb.fetchFriendRequests());
+  eq(reqs.ok, true, 'requests fetch ok');
+  eq(reqs.outgoing.length, 1, 'one outgoing request');
+  eq(reqs.outgoing[0].toUid, 'friend-uid-1', 'request is to the found player');
+  eq(reqs.outgoing[0].status, 'pending', 'request is pending');
   await ctx.close();
 });
 
@@ -2740,15 +2815,17 @@ await test('accounts: Friends panel is renamed and has its own add-by-code contr
 await test('accounts: guest adding a friend from the Friends panel sees the sign-in message', async () => {
   const { ctx, page } = await newPage();
   await page.click('#btn-account');
+  // The panel says up front why adding friends needs sign-in.
+  ok((await page.locator('#acct-friend-add-msg').textContent()).includes('Sign in with Google to add friends'), 'panel explains the sign-in dependency');
   await page.fill('#acct-friend-code-input', 'ABC123');
   await page.click('#btn-acct-add-friend');
   await sleep(200);
   eq(await page.locator('#toast').textContent(), 'Sign in to add friends by code', 'guest add-by-code prompts sign-in');
-  eq(await page.locator('#acct-friend-add-msg').textContent(), 'Sign in to add friends by code', 'panel shows the sign-in message inline');
+  eq(await page.locator('#acct-friend-add-msg').textContent(), 'Sign in with Google to add friends — friends are saved to your account.', 'panel shows the sign-in explanation inline');
   await ctx.close();
 });
 
-await test('accounts: signed-in user adds a friend from the Friends panel', async () => {
+await test('friends: sending a request from the Friends panel shows a pending row', async () => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, userAgent: IPHONE_UA });
   const page = await ctx.newPage();
   await page.addInitScript(() => {
@@ -2766,10 +2843,196 @@ await test('accounts: signed-in user adds a friend from the Friends panel', asyn
   const code = own === 'ABC123' ? 'XYZ789' : 'ABC123';
   await page.fill('#acct-friend-code-input', code);
   await page.click('#btn-acct-add-friend');
-  await waitFor(async () => (await page.locator('#toast').textContent()).includes('Added Pal!'), 5000, 'Added Pal toast');
+  await waitFor(async () => (await page.locator('#acct-friend-preview').textContent()).includes('Pal'), 5000, 'panel preview shows the found player');
+  const panelPreviewNameW = await page.evaluate(() => document.querySelector('#acct-friend-preview .friend-preview-name').getBoundingClientRect().width);
+  ok(panelPreviewNameW >= 40, 'panel preview name is readable at 390px (width ' + panelPreviewNameW + ')');
+  const friendsBefore = await page.evaluate(() => JSON.parse(localStorage.getItem('gb_friends') || '[]'));
+  ok(!friendsBefore.some((f) => f.uid === 'friend-uid-1'), 'preview alone does not add the friend');
+  await page.click('#acct-friend-preview [data-preview-send]');
+  await waitFor(async () => (await page.locator('#toast').textContent()).includes('Request sent to Pal'), 5000, 'Request sent toast');
+  await waitFor(async () => (await page.locator('#acct-friend-requests').textContent()).includes('Pal'), 5000, 'pending outgoing row shows in the panel');
+  ok((await page.locator('#acct-friend-requests').textContent()).includes('request sent'), 'outgoing row says request sent');
   const friends = await page.evaluate(() => JSON.parse(localStorage.getItem('gb_friends') || '[]'));
-  ok(friends.some((f) => f.uid === 'friend-uid-1'), 'friend in list: ' + JSON.stringify(friends));
-  ok((await page.locator('#acct-friend-list').textContent()).includes('Pal'), 'panel list shows the added friend');
+  ok(!friends.some((f) => f.uid === 'friend-uid-1'), 'friend list is unchanged until the request is accepted');
+  await ctx.close();
+});
+
+await test('friends: accepting an incoming request adds both sides', async () => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, userAgent: IPHONE_UA });
+  const page = await ctx.newPage();
+  await page.addInitScript(() => {
+    localStorage.setItem('gb_tut_done', '1');
+    localStorage.setItem('gb_auth_redirect', '1'); // as if returning from Google
+    window.__fakeRedirectMode = 'success';
+    // An incoming request from Pal, waiting for an answer.
+    window.__fakeSeedRequests = [{ id: 'req-seed-1', fromUid: 'friend-uid-1', fromName: 'Pal', toUid: 'google-uid-1', toName: 'Dylan', code: 'ABC123', status: 'pending', createdAt: Date.now() - 1000, expiresAt: Date.now() + 7 * 86400000 }];
+  });
+  await page.addInitScript(installFakeFirebaseRedirect);
+  await page.goto(`http://localhost:${PORT}/?test=1`);
+  await page.waitForSelector('#btn-play');
+  await waitFor(async () => (await page.evaluate(() => window.__gb.accounts())).signedIn === true, 8000, 'signed in');
+  await page.click('#btn-account');
+  await waitFor(async () => (await page.locator('#acct-friend-requests').textContent()).includes('wants to be friends'), 5000, 'incoming request row shows');
+  const reqNameW = await page.evaluate(() => document.querySelector('#acct-friend-requests .board-name').getBoundingClientRect().width);
+  ok(reqNameW >= 40, 'incoming request name is readable at 390px (width ' + reqNameW + ')');
+  ok((await page.locator('#acct-friend-requests').textContent()).includes('Pal'), 'incoming row names the sender');
+  await page.click('#acct-friend-requests [data-req-accept]');
+  await waitFor(async () => (await page.locator('#toast').textContent()).includes("You're friends with Pal now!"), 5000, 'accepted toast');
+  const friends = await page.evaluate(() => JSON.parse(localStorage.getItem('gb_friends') || '[]'));
+  ok(friends.some((f) => f.uid === 'friend-uid-1'), 'sender is in the friend list after accept: ' + JSON.stringify(friends));
+  ok((await page.locator('#acct-friend-list').textContent()).includes('Pal'), 'panel list shows the new friend');
+  const friendNameW = await page.evaluate(() => document.querySelector('#acct-friend-list .friend-row .board-name').getBoundingClientRect().width);
+  ok(friendNameW >= 40, 'friend-row name is readable at 390px (width ' + friendNameW + ')');
+  eq(await page.locator('#acct-friend-list [data-h2h]').count(), 1, 'friend row carries a head-to-head slot');
+  const reqs = await page.evaluate(() => window.__gb.fetchFriendRequests());
+  eq(reqs.incoming.filter((r) => r.status === 'pending').length, 0, 'no pending incoming request left');
+  await ctx.close();
+});
+
+await test('friends: an expired request cannot be accepted and disappears', async () => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, userAgent: IPHONE_UA });
+  const page = await ctx.newPage();
+  await page.addInitScript(() => {
+    localStorage.setItem('gb_tut_done', '1');
+    localStorage.setItem('gb_auth_redirect', '1');
+    window.__fakeRedirectMode = 'success';
+    // Expired yesterday (sent 8 days ago, 7-day window).
+    window.__fakeSeedRequests = [{ id: 'req-seed-1', fromUid: 'friend-uid-1', fromName: 'Pal', toUid: 'google-uid-1', toName: 'Dylan', code: 'ABC123', status: 'pending', createdAt: Date.now() - 8 * 86400000, expiresAt: Date.now() - 86400000 }];
+  });
+  await page.addInitScript(installFakeFirebaseRedirect);
+  await page.goto(`http://localhost:${PORT}/?test=1`);
+  await page.waitForSelector('#btn-play');
+  await waitFor(async () => (await page.evaluate(() => window.__gb.accounts())).signedIn === true, 8000, 'signed in');
+  await page.click('#btn-account');
+  await sleep(500);
+  ok(!(await page.locator('#acct-friend-requests').textContent()).includes('Pal'), 'expired request is hidden from the pending list');
+  const res = await page.evaluate(() => window.__gb.acceptFriendRequest('req-seed-1'));
+  eq(res.ok, false, 'accept refused');
+  eq(res.reason, 'expired', 'refusal reason is expired');
+  const reqs = await page.evaluate(() => window.__gb.fetchFriendRequests());
+  eq(reqs.incoming[0].status, 'expired', 'stored request reads expired');
+  await ctx.close();
+});
+
+await test('friends: cancelling an outgoing request removes it', async () => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, userAgent: IPHONE_UA });
+  const page = await ctx.newPage();
+  await page.addInitScript(() => {
+    localStorage.setItem('gb_tut_done', '1');
+    localStorage.setItem('gb_auth_redirect', '1');
+    window.__fakeRedirectMode = 'success';
+  });
+  await page.addInitScript(installFakeFirebaseRedirect);
+  await page.goto(`http://localhost:${PORT}/?test=1`);
+  await page.waitForSelector('#btn-play');
+  await waitFor(async () => (await page.evaluate(() => window.__gb.accounts())).signedIn === true, 8000, 'signed in');
+  await page.click('#btn-boards');
+  await page.waitForSelector('#friend-code-input');
+  const own = await page.evaluate(() => window.__gb.accounts().friendCode);
+  await page.fill('#friend-code-input', own === 'ABC123' ? 'XYZ789' : 'ABC123');
+  await page.click('#btn-add-friend');
+  await waitFor(async () => (await page.locator('#friend-preview').textContent()).includes('Pal'), 5000, 'preview shows');
+  await page.click('#friend-preview [data-preview-send]');
+  await waitFor(async () => (await page.locator('#friend-requests').textContent()).includes('request sent'), 5000, 'outgoing row shows');
+  await page.click('#friend-requests [data-req-cancel]');
+  await waitFor(async () => (await page.locator('#toast').textContent()).includes('cancelled'), 5000, 'cancelled toast');
+  await sleep(300);
+  ok(!(await page.locator('#friend-requests').textContent()).includes('Pal'), 'cancelled request row is gone');
+  const reqs = await page.evaluate(() => window.__gb.fetchFriendRequests());
+  eq(reqs.outgoing.length, 0, 'no outgoing requests left');
+  await ctx.close();
+});
+
+await test('friends: head-to-head record counts only finished challenges', async () => {
+  const { ctx, page } = await newPage();
+  const out = await page.evaluate(async () => {
+    const m = await import('/js/challenges.js');
+    const chs = [
+      { fromUid: 'me', toUid: 'pal', scores: { me: { score: 100 }, pal: { score: 80 } } },
+      { fromUid: 'pal', toUid: 'me', scores: { me: { score: 50 }, pal: { score: 50 } } },
+      { fromUid: 'me', toUid: 'pal', scores: { me: { score: 10 } } }, // open — only one side scored, doesn't count
+      { fromUid: 'me', toUid: 'other', scores: { me: { score: 1 }, other: { score: 2 } } }, // a different friend
+      { fromUid: 'a', toUid: 'b', scores: { a: { score: 9 }, b: { score: 8 } } }, // not mine at all
+    ];
+    return { vsPal: m.headToHead(chs, 'me', 'pal'), vsOther: m.headToHead(chs, 'me', 'other'), none: m.headToHead(chs, 'me', 'nobody') };
+  });
+  eq(JSON.stringify(out.vsPal), JSON.stringify({ wins: 1, losses: 0, ties: 1, played: 2 }), 'Pal: 1 win, 1 tie, open challenge not counted');
+  eq(JSON.stringify(out.vsOther), JSON.stringify({ wins: 0, losses: 1, ties: 0, played: 1 }), 'Other: 1 loss');
+  eq(JSON.stringify(out.none), JSON.stringify({ wins: 0, losses: 0, ties: 0, played: 0 }), 'nobody: no games');
+  await ctx.close();
+});
+
+await test('accounts: title chip shows the signed-in name, Sign in button shows when signed out', async () => {
+  const { ctx, page } = await newPage();
+  // Guest: no chip, explicit Sign in button.
+  ok(await page.locator('#acct-chip.hidden').count() === 1, 'chip hidden for guests');
+  ok(await page.locator('#btn-title-signin:not(.hidden)').isVisible(), 'Sign in button visible for guests');
+  // Signed-in preview: chip with the name + initial, no Sign in button.
+  await page.evaluate(() => { window.__gb.setAccountName('Dylan'); window.__gb.setAccountPreview('google'); });
+  ok(await page.locator('#acct-chip:not(.hidden)').isVisible(), 'chip visible when signed in');
+  eq(await page.locator('#acct-chip-name').textContent(), 'Dylan', 'chip names the player');
+  eq(await page.locator('#acct-chip-initial').textContent(), 'D', 'chip shows the initial');
+  ok(await page.locator('#btn-title-signin.hidden').count() === 1, 'Sign in button hidden when signed in');
+  await ctx.close();
+});
+
+await test('accounts: title Sign in button starts Google sign-in', async () => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, userAgent: IPHONE_UA });
+  const page = await ctx.newPage();
+  await page.addInitScript(() => { localStorage.setItem('gb_tut_done', '1'); });
+  await page.addInitScript(installFakeFirebaseRedirect);
+  await page.goto(`http://localhost:${PORT}/?test=1`);
+  await page.waitForSelector('#btn-play');
+  await page.click('#btn-title-signin');
+  await waitFor(async () => (await page.evaluate(() => window.__fakeAuthCalls)).includes('popup'), 5000, 'Google pop-up started from the title button');
+  await ctx.close();
+});
+
+await test('accounts: sign-out clears the session and a late restore does not sign you back in', async () => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, userAgent: IPHONE_UA });
+  const page = await ctx.newPage();
+  await page.addInitScript(() => {
+    localStorage.setItem('gb_tut_done', '1');
+    localStorage.setItem('gb_auth_redirect', '1');
+    window.__fakeRedirectMode = 'success';
+  });
+  await page.addInitScript(installFakeFirebaseRedirect);
+  await page.goto(`http://localhost:${PORT}/?test=1`);
+  await page.waitForSelector('#btn-play');
+  await waitFor(async () => (await page.evaluate(() => window.__gb.accounts())).signedIn === true, 8000, 'signed in');
+  // The session has NOT restored yet in the SDK (currentUser null) — the
+  // old code skipped the Firebase sign-out call in exactly this state,
+  // and the listener then re-adopted the restored user. The fix calls
+  // signOut unconditionally.
+  await page.evaluate(() => { window.__fakeAuth.currentUser = null; });
+  await page.evaluate(() => window.__gb.signOut());
+  ok((await page.evaluate(() => window.__fakeAuthCalls)).includes('signout'), 'signOut was called on the SDK even with currentUser null');
+  eq((await page.evaluate(() => window.__gb.accounts())).signedIn, false, 'signed out after signOut');
+  eq(await page.evaluate(() => localStorage.getItem('gb_auth_redirect')), null, 'pending redirect flag cleared by sign-out');
+  // A restore arriving late (after sign-out cleared persistence) must
+  // not bring the account back.
+  await page.evaluate(() => window.__fakeLateRestore());
+  await sleep(300);
+  eq((await page.evaluate(() => window.__gb.accounts())).signedIn, false, 'still signed out after a late restore');
+  eq((await page.evaluate(() => window.__gb.accounts())).provider, 'guest', 'provider is guest after sign-out');
+  await ctx.close();
+});
+
+await test('boards: Friends scope is a visible tab next to Global', async () => {
+  const { ctx, page } = await newPage();
+  await page.click('#btn-boards');
+  // The scope tabs live inside the boards overlay (display:none until it
+  // opens), so visibility is only meaningful once it is open.
+  ok(await page.locator('#board-scope-friends').isVisible(), 'Friends tab is visible');
+  ok(await page.locator('#board-scope-global').isVisible(), 'Global tab is visible');
+  await page.click('#board-scope-friends');
+  eq((await page.evaluate(() => window.__gb.boardState())).scope, 'friends', 'Friends scope selected');
+  ok(await page.locator('#board-scope-friends.on').count() === 1, 'Friends tab is marked on');
+  // Guests see the honest empty state under Friends — never sample
+  // names presented as their friends.
+  ok((await page.locator('#board-list').textContent()).includes('No friends yet'), 'guest Friends board is honestly empty');
+  await page.click('#board-scope-global');
+  eq((await page.evaluate(() => window.__gb.boardState())).scope, 'global', 'Global scope selected again');
   await ctx.close();
 });
 

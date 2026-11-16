@@ -73,6 +73,28 @@ export function validateScore(score) {
   return { ok: true };
 }
 
+// Pure head-to-head record from a list of challenge docs (as returned by
+// fetchChallenges): wins/losses/ties for myUid against friendUid,
+// counting only challenges where BOTH players have scored. A challenge
+// where only one side scored is still open — it doesn't count yet.
+export function headToHead(challenges, myUid, friendUid) {
+  let wins = 0, losses = 0, ties = 0, played = 0;
+  for (const c of challenges || []) {
+    if (c.fromUid !== myUid && c.toUid !== myUid) continue;
+    const oppUid = c.fromUid === myUid ? c.toUid : c.fromUid;
+    if (oppUid !== friendUid) continue;
+    const s = c.scores || {};
+    const myScore = s[myUid] ? s[myUid].score : null;
+    const oppScore = s[friendUid] ? s[friendUid].score : null;
+    if (myScore == null || oppScore == null) continue;
+    played++;
+    if (myScore > oppScore) wins++;
+    else if (myScore < oppScore) losses++;
+    else ties++;
+  }
+  return { wins, losses, ties, played };
+}
+
 function scoreOf(ch, uid) {
   const s = (ch.scores || {})[uid];
   return s ? s.score : null;
@@ -84,6 +106,16 @@ export const Challenges = {
     if (!ch) return null;
     if (ch.fromUid === myUid) return { uid: ch.toUid, name: ch.toName, score: scoreOf(ch, ch.toUid) };
     return { uid: ch.fromUid, name: ch.fromName, score: scoreOf(ch, ch.fromUid) };
+  },
+
+  // Head-to-head record against one friend, from their shared challenges.
+  // Null when signed out or the fetch fails — the friend row just shows
+  // no record instead of a wrong one.
+  async headToHeadAgainst(friendUid) {
+    if (!Accounts.signedIn || !Accounts.uid) return null;
+    const res = await this.fetchChallenges();
+    if (!res.ok) return null;
+    return headToHead([...res.incoming, ...res.outgoing], Accounts.uid, friendUid);
   },
 
   // Create a challenge against a friend (by uid). Signed-in only: the

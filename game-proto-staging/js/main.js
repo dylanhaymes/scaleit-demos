@@ -12,7 +12,8 @@ import { Sprites } from './sprites.js';
 import { PACKS, packBySlug, isPackUnlocked, lockText, loadCosmetics, selectedPack, setSelectedPack, toggleFavorite, recolorHex, unlockContext } from './cosmetics.js';
 import { Accounts, authErrorMessage } from './accounts.js';
 import { Leaderboards, mockBoard, sampleRank, boardKey, weekKeyFor, escapeHtml } from './leaderboards.js';
-import { Challenges, challengeRng, challengeStatus, timeLeftText } from './challenges.js';
+import { Challenges, challengeRng, challengeStatus, timeLeftText, headToHead } from './challenges.js';
+import { FriendRequests, requestTimeLeftText } from './friendRequests.js';
 import { Store } from './store.js';
 
 const $ = (id) => document.getElementById(id);
@@ -1396,9 +1397,27 @@ function refreshAccountUI() {
   setBtn('btn-sign-facebook', false, "Facebook sign-in isn't set up yet");
   const out = $('btn-sign-out');
   if (out) out.classList.toggle('hidden', !st.signedIn);
+  // Title-screen sign-in state (Firebase updateUI pattern): when signed
+  // in, a small avatar + first-name chip; when signed out, an explicit
+  // Sign in button. A greyed-out button alone is never the only state.
+  const chip = $('acct-chip'), chipInitial = $('acct-chip-initial'), chipName = $('acct-chip-name');
+  if (chip) {
+    chip.classList.toggle('hidden', !st.signedIn);
+    if (st.signedIn) {
+      if (chipInitial) chipInitial.textContent = initialOf(st.displayName);
+      if (chipName) chipName.textContent = String(st.displayName || '').split(/\s+/)[0] || st.displayName;
+    }
+  }
+  const titleSignIn = $('btn-title-signin');
+  if (titleSignIn) titleSignIn.classList.toggle('hidden', st.signedIn || !cfg);
   const msg = $('acct-msg');
   if (msg && !msg.dataset.sticky) { msg.textContent = ''; msg.classList.remove('error'); }
   refreshRankChip(); // sign-in state changes which rank path the chip uses
+}
+// First letter of a display name, for avatar circles. '?' when empty.
+function initialOf(name) {
+  const c = String(name || '').trim()[0];
+  return c ? c.toUpperCase() : '?';
 }
 function acctMsg(text, isError) {
   const msg = $('acct-msg');
@@ -1411,6 +1430,15 @@ function openAccount() {
   refreshAccountUI();
   acctMsg('');
   renderFriendList($('acct-friend-list'));
+  renderFriendRequests();
+  loadHeadToHead();
+  // Guests are told plainly why adding friends needs sign-in (friends
+  // are saved to the account) instead of meeting a bare "sign in" on
+  // submit — the Dayzle rule: say the dependency up front.
+  if (!Accounts.signedIn) {
+    const addMsg = $('acct-friend-add-msg');
+    if (addMsg) addMsg.textContent = 'Sign in with Google to add friends — friends are saved to your account.';
+  }
   // A redirect sign-in (iOS) that failed on the way back says so here
   // instead of failing silently — the player lands back in this panel.
   const st = Accounts.debugState();
@@ -1418,6 +1446,17 @@ function openAccount() {
   show('account', true);
 }
 $('btn-account').onclick = openAccount;
+// Title-screen Sign in: one tap straight into Google sign-in (same call
+// as the panel button). Failures toast on the title — the panel is not
+// open to show them — and the redirect flow says it is opening instead
+// of claiming "Signed in" before it happens.
+$('btn-title-signin').onclick = async () => {
+  const res = await Accounts.signInGoogle();
+  if (res.ok) {
+    if (res.reason === 'redirect-started') { toast('Opening Google sign-in…'); return; }
+    toast('Signed in'); refreshAccountUI();
+  } else toast(authErrorMessage(res.reason));
+};
 $('btn-set-account').onclick = () => { show('settings', false); openAccount(); };
 $('btn-acct-close').onclick = () => show('account', false);
 // Save is the one clear path to play without an account (Dylan, Nov 12):
@@ -1519,14 +1558,93 @@ function boardNoteFor(res, sample) {
   return boardTab === 'daily' ? `Daily challenge — ${boardKey('daily')}` : `Weekly classic — ${boardKey('weekly')}`;
 }
 // Renders into the boards list by default; pass the Friends-panel list
-// to render there instead. Both lists show the same friends.
+// to render there instead. Both lists show the same friends. Each row is
+// a launchpad, not a dead list: avatar initial, name, head-to-head
+// record (filled in async by loadHeadToHead), code, Challenge, remove.
 function renderFriendList(el) {
   const target = el || $('friend-list');
   if (!target) return;
   const friends = Leaderboards.friends();
   target.innerHTML = friends.length
-    ? friends.map((f) => `<div class="friend-row"><span class="board-name">${escapeHtml(f.displayName)}</span><span class="friend-code-sm">${escapeHtml(f.code)}</span><button class="btn ghost sm friend-challenge" data-uid="${escapeHtml(f.uid)}" data-name="${escapeHtml(f.displayName)}">Challenge</button><button class="friend-remove" data-uid="${escapeHtml(f.uid)}" aria-label="Remove ${escapeHtml(f.displayName)}">✕</button></div>`).join('')
+    ? friends.map((f) => `<div class="friend-row"><span class="friend-avatar">${escapeHtml(initialOf(f.displayName))}</span><span class="board-name">${escapeHtml(f.displayName)}</span><span class="friend-h2h" data-h2h="${escapeHtml(f.uid)}" title="Head-to-head record"></span><span class="friend-code-sm">${escapeHtml(f.code)}</span><button class="btn ghost sm friend-challenge" data-uid="${escapeHtml(f.uid)}" data-name="${escapeHtml(f.displayName)}">Challenge</button><button class="friend-remove" data-uid="${escapeHtml(f.uid)}" aria-label="Remove ${escapeHtml(f.displayName)}">✕</button></div>`).join('')
     : '';
+}
+// Head-to-head records for every friend, filled into the [data-h2h]
+// spans in both friend lists. Async + cached per panel open: a failed
+// fetch just leaves the spans blank instead of a wrong record.
+let h2hLoadedFor = '';
+async function loadHeadToHead() {
+  if (!Accounts.signedIn) return;
+  const key = Accounts.uid + ':' + Leaderboards.friends().map((f) => f.uid).join(',');
+  if (key === h2hLoadedFor) return;
+  const res = await Challenges.fetchChallenges();
+  if (!res.ok) return;
+  const all = [...res.incoming, ...res.outgoing];
+  h2hLoadedFor = key;
+  const records = {};
+  for (const f of Leaderboards.friends()) records[f.uid] = headToHead(all, Accounts.uid, f.uid);
+  document.querySelectorAll('[data-h2h]').forEach((el) => {
+    const r = records[el.dataset.h2h];
+    if (!r || !r.played) { el.textContent = ''; el.removeAttribute('title'); return; }
+    el.textContent = `${r.wins}–${r.losses}`;
+    el.title = `Head-to-head: you ${r.wins} — ${r.losses}${r.ties ? `, ${r.ties} tied` : ''}`;
+  });
+}
+// ---- Friend requests (replication build, Nov 15) ----
+// Incoming + outgoing requests render in both the Friends panel and the
+// boards overlay (same rows, same handler). Guests see nothing —
+// requests only exist on a signed-in account. Expired requests are
+// hidden (they are inert; sending again is allowed).
+function friendRequestRowHTML(r, dir) {
+  const name = escapeHtml(dir === 'incoming' ? r.fromName : r.toName);
+  const code = escapeHtml(r.code || '');
+  const left = escapeHtml(requestTimeLeftText(r));
+  if (dir === 'incoming') {
+    return `<div class="friend-row"><span class="friend-avatar">${escapeHtml(initialOf(r.fromName))}</span><span class="board-name">${name} <span class="small">wants to be friends · ${left}</span></span><button class="btn ghost sm" data-req-accept="${escapeHtml(r.id)}" data-req-name="${name}">Accept</button><button class="btn ghost sm" data-req-decline="${escapeHtml(r.id)}" data-req-name="${name}">Decline</button></div>`;
+  }
+  return `<div class="friend-row"><span class="friend-avatar">${escapeHtml(initialOf(r.toName))}</span><span class="board-name">${name} <span class="small">request sent · ${left}</span></span><button class="btn ghost sm" data-req-cancel="${escapeHtml(r.id)}" data-req-name="${name}">Cancel</button></div>`;
+}
+async function renderFriendRequests() {
+  const targets = [$('acct-friend-requests'), $('friend-requests')].filter(Boolean);
+  if (!targets.length) return;
+  if (!Accounts.signedIn) { targets.forEach((t) => { t.innerHTML = ''; }); return; }
+  const res = await FriendRequests.fetchRequests();
+  let html = '';
+  if (res.ok) {
+    const incoming = res.incoming.filter((r) => r.status === 'pending');
+    const outgoing = res.outgoing.filter((r) => r.status === 'pending');
+    if (incoming.length || outgoing.length) {
+      html += '<span class="acct-label">Friend requests</span>';
+      html += incoming.map((r) => friendRequestRowHTML(r, 'incoming')).join('');
+      html += outgoing.map((r) => friendRequestRowHTML(r, 'outgoing')).join('');
+    }
+    // An accepted outgoing request means we're friends now — the sync
+    // inside fetchRequests already added them; re-render the lists.
+    if (res.synced > 0) { renderFriendList(); renderFriendList($('acct-friend-list')); loadHeadToHead(); }
+  }
+  targets.forEach((t) => { t.innerHTML = html; });
+}
+async function onFriendRequestClick(e) {
+  const t = e.target.closest ? e.target.closest('[data-req-accept], [data-req-decline], [data-req-cancel]') : null;
+  if (!t) return;
+  const name = t.dataset.reqName || 'them';
+  if (t.hasAttribute('data-req-accept')) {
+    const res = await FriendRequests.acceptRequest(t.dataset.reqAccept);
+    if (res.ok) { toast(`You're friends with ${res.name || name} now!`); }
+    else toast(res.reason === 'expired' ? 'That request expired — ask them to send a fresh one.' : "Couldn't accept — try again.");
+  } else if (t.hasAttribute('data-req-decline')) {
+    const res = await FriendRequests.declineRequest(t.dataset.reqDecline);
+    if (res.ok) toast(`Declined ${name}'s request`);
+    else toast("Couldn't decline — try again.");
+  } else if (t.hasAttribute('data-req-cancel')) {
+    const res = await FriendRequests.cancelRequest(t.dataset.reqCancel);
+    if (res.ok) toast(`Request to ${name} cancelled`);
+    else toast("Couldn't cancel — try again.");
+  }
+  renderFriendRequests();
+  renderFriendList();
+  renderFriendList($('acct-friend-list'));
+  loadHeadToHead();
 }
 async function loadBoard() {
   const list = $('board-list'), note = $('board-note'), rank = $('board-rank');
@@ -1571,6 +1689,8 @@ function openBoards(board = 'daily', scope = 'global') {
   show('boards', true);
   loadBoard();
   renderChallengeList();
+  renderFriendRequests();
+  loadHeadToHead();
 }
 $('btn-boards').onclick = () => openBoards();
 $('rank-chip').onclick = () => openBoards();
@@ -1592,39 +1712,97 @@ $('btn-copy-invite').onclick = async () => {
 };
 // Add friend by code, from either entry point: the boards overlay
 // (default elements) or the Friends panel (its own controls). One shared
-// path — the input/msg/list are parameters, never hardcoded twice.
+// path — the input/msg/list/preview are parameters, never hardcoded twice.
 // Every failure is an inline message, never a crash; guests get the
-// sign-in message inline and as a toast instead of the code flow.
+// sign-in explanation inline and as a toast instead of the code flow.
 // Enter in the input submits.
-async function submitFriendCode(inputEl, msgEl, listEl) {
-  const input = inputEl || $('friend-code-input'), msg = msgEl || $('friend-add-msg');
-  if (!input) return;
-  const setMsg = (t) => { if (msg) msg.textContent = t; };
-  if (!Accounts.signedIn) { setMsg('Sign in to add friends by code'); toast('Sign in to add friends by code'); return; }
-  const res = await Leaderboards.findByCode(input.value);
+//
+// PREVIEW-BEFORE-SEND (replication build, Nov 15): a code lookup only
+// ever SHOWS who the code found — name + code + Send request / Cancel.
+// Nothing is sent and nobody is added until the player taps Send
+// request, and the other player must ACCEPT before either list gains a
+// friend. A code alone never auto-friends.
+let friendPreview = null; // { uid, code, name, input, msg, previewEl } while a preview is showing
+function hideFriendPreview(el) {
+  const target = el || $('friend-preview');
+  if (target) { target.innerHTML = ''; target.classList.add('hidden'); }
+  friendPreview = null;
+}
+function renderFriendPreview(el, found, ctx) {
+  if (!el) return;
+  el.innerHTML = `<div class="friend-preview-inner"><span class="friend-avatar">${escapeHtml(initialOf(found.name))}</span><span class="friend-preview-name">${escapeHtml(found.name)}</span><span class="friend-code-sm">${escapeHtml(found.code)}</span><button class="btn ghost sm" data-preview-send="1">Send request</button><button class="btn ghost sm" data-preview-cancel="1">Cancel</button></div>`;
+  el.classList.remove('hidden');
+  friendPreview = { uid: found.uid, code: found.code, name: found.name, ...ctx };
+  const sendBtn = el.querySelector('[data-preview-send]');
+  if (sendBtn) sendBtn.onclick = () => sendFriendPreviewRequest();
+  const cancelBtn = el.querySelector('[data-preview-cancel]');
+  if (cancelBtn) cancelBtn.onclick = () => { hideFriendPreview(el); if (ctx.msg) ctx.msg.textContent = ''; };
+}
+async function sendFriendPreviewRequest() {
+  const p = friendPreview;
+  if (!p) return;
+  const res = await FriendRequests.sendRequest({ toUid: p.uid, toName: p.name, code: p.code });
   if (res.ok) {
-    input.value = '';
-    setMsg('');
-    toast(`Added ${res.name}!`);
-    renderFriendList();
-    if (listEl) renderFriendList(listEl);
-    loadBoard();
+    if (p.input) p.input.value = '';
+    hideFriendPreview(p.previewEl);
+    if (p.msg) p.msg.textContent = '';
+    toast(`Request sent to ${p.name}`);
+    renderFriendRequests();
     return;
   }
-  setMsg(
-    res.reason === 'bad-code' ? "That doesn't look like a friend code — 6 letters and numbers."
-    : res.reason === 'own-code' ? "That's your own code."
-    : res.reason === 'not-found' ? 'No player with that code — check the code or ask them to share their invite link.'
-    : res.reason === 'lookup-unavailable' ? "Friend-code lookup isn't live yet — ask them to share their invite link instead."
-    : res.reason === 'session-not-ready' ? 'Still signing you in — try again in a moment.'
-    : "Couldn't add that friend — try again."
-  );
+  hideFriendPreview(p.previewEl);
+  if (p.msg) {
+    p.msg.textContent =
+      res.reason === 'already-friends' ? `Already friends with ${p.name}.`
+      : res.reason === 'already-pending' ? `Request already sent to ${p.name} — it expires in ${res.request ? requestTimeLeftText(res.request).replace('expires in ', '') : '7 days'}.`
+      : res.reason === 'rules-not-deployed' ? "Friend requests aren't live yet — ask them to share their invite link instead."
+      : "Couldn't send that request — try again.";
+  }
+}
+async function submitFriendCode(inputEl, msgEl, listEl, previewEl) {
+  const input = inputEl || $('friend-code-input'), msg = msgEl || $('friend-add-msg');
+  const preview = previewEl || $('friend-preview');
+  if (!input) return;
+  const setMsg = (t) => { if (msg) msg.textContent = t; };
+  if (!Accounts.signedIn) { hideFriendPreview(preview); setMsg('Sign in with Google to add friends — friends are saved to your account.'); toast('Sign in to add friends by code'); return; }
+  const res = await Leaderboards.findByCode(input.value);
+  if (!res.ok) {
+    hideFriendPreview(preview);
+    setMsg(
+      res.reason === 'bad-code' ? "That doesn't look like a friend code — 6 letters and numbers."
+      : res.reason === 'own-code' ? "That's your own code."
+      : res.reason === 'not-found' ? 'No player with that code — check the code or ask them to share their invite link.'
+      : res.reason === 'lookup-unavailable' ? "Friend-code lookup isn't live yet — ask them to share their invite link instead."
+      : res.reason === 'session-not-ready' ? 'Still signing you in — try again in a moment.'
+      : "Couldn't add that friend — try again."
+    );
+    return;
+  }
+  // Already friends? Say so instead of offering a second request.
+  if (Leaderboards.friends().some((f) => f.uid === res.uid)) {
+    hideFriendPreview(preview);
+    setMsg(`Already friends with ${res.name}.`);
+    return;
+  }
+  // Already a live request out to them? Say so (with the expiry) instead
+  // of sending a duplicate.
+  const pend = await FriendRequests.hasPendingWith(res.uid);
+  if (pend.ok && pend.pending) {
+    hideFriendPreview(preview);
+    setMsg(`Request already sent to ${res.name} — ${requestTimeLeftText(pend.request)}.`);
+    return;
+  }
+  // Preview: show who the code found and wait for the player to send.
+  setMsg('');
+  renderFriendPreview(preview, res, { input, msg, previewEl: preview });
 }
 $('btn-add-friend').onclick = () => submitFriendCode();
 $('friend-code-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); submitFriendCode(); } });
+$('friend-code-input').addEventListener('input', () => hideFriendPreview($('friend-preview')));
 // Friends panel entry point — same path, the panel's own controls.
-$('btn-acct-add-friend').onclick = () => submitFriendCode($('acct-friend-code-input'), $('acct-friend-add-msg'), $('acct-friend-list'));
-$('acct-friend-code-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); submitFriendCode($('acct-friend-code-input'), $('acct-friend-add-msg'), $('acct-friend-list')); } });
+$('btn-acct-add-friend').onclick = () => submitFriendCode($('acct-friend-code-input'), $('acct-friend-add-msg'), $('acct-friend-list'), $('acct-friend-preview'));
+$('acct-friend-code-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); submitFriendCode($('acct-friend-code-input'), $('acct-friend-add-msg'), $('acct-friend-list'), $('acct-friend-preview')); } });
+$('acct-friend-code-input').addEventListener('input', () => hideFriendPreview($('acct-friend-preview')));
 async function onFriendListClick(e) {
   const chBtn = e.target.closest ? e.target.closest('.friend-challenge') : null;
   if (chBtn) {
@@ -1646,6 +1824,9 @@ async function onFriendListClick(e) {
 // Friends panel) — one shared handler, attached to each.
 $('friend-list').onclick = onFriendListClick;
 $('acct-friend-list').onclick = onFriendListClick;
+// Friend-request Accept / Decline / Cancel, same two lists.
+$('friend-requests').onclick = onFriendRequestClick;
+$('acct-friend-requests').onclick = onFriendRequestClick;
 
 // ---- Challenges (Update 3, batch 3) ----
 function challengeRowHTML(c, opp, myScore, dir) {
@@ -2231,6 +2412,15 @@ if (new URLSearchParams(location.search).has('test')) {
   window.__gb.findByCode = (c) => Leaderboards.findByCode(c);
   window.__gb.friendsList = () => Leaderboards.friends();
   window.__gb.inviteLink = () => Leaderboards.inviteLink();
+  // Friend requests (replication build, Nov 15): send / accept / decline /
+  // cancel / list, plus the head-to-head record for a friend row.
+  window.__gb.sendFriendRequest = (o) => FriendRequests.sendRequest(o);
+  window.__gb.acceptFriendRequest = (id) => FriendRequests.acceptRequest(id);
+  window.__gb.declineFriendRequest = (id) => FriendRequests.declineRequest(id);
+  window.__gb.cancelFriendRequest = (id) => FriendRequests.cancelRequest(id);
+  window.__gb.fetchFriendRequests = () => FriendRequests.fetchRequests();
+  window.__gb.hasPendingFriendRequest = (uid) => FriendRequests.hasPendingWith(uid);
+  window.__gb.headToHeadAgainst = (uid) => Challenges.headToHeadAgainst(uid);
   window.__gb.showBoards = (b, s) => openBoards(b || 'daily', s || 'global');
   window.__gb.boardState = () => ({ board: boardTab, scope: boardScope });
   window.__gb.refreshTitle = () => { refreshTitle(); };
