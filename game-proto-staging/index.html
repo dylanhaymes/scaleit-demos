@@ -144,7 +144,7 @@
       <span class="acct-label">Your friends</span>
       <p class="small">Enter a friend's code to add them — or share your invite link.</p>
       <div class="acct-name-row">
-        <input id="friend-code-input" type="text" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Enter a friend code">
+        <input id="friend-code-input" type="text" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Friend code">
         <button id="btn-add-friend" class="btn ghost sm">Add friend</button>
       </div>
       <p id="friend-add-msg" class="small"></p>
@@ -212,13 +212,14 @@
     <span class="acct-label">Add a friend</span>
     <p class="small">Enter a friend's code — they'll show up in your friends list.</p>
     <div class="acct-name-row">
-      <input id="acct-friend-code-input" type="text" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Enter a friend code">
+      <input id="acct-friend-code-input" type="text" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Friend code">
       <button id="btn-acct-add-friend" class="btn ghost sm">Add friend</button>
     </div>
     <p id="acct-friend-add-msg" class="small"></p>
     <div id="acct-friend-list" class="friend-list"></div>
     <label class="toggle"><span>Hide me from global leaderboards</span><input type="checkbox" id="set-hide-global"></label>
     <div id="acct-signin">
+      <p id="acct-signed-in" class="small hidden"></p>
       <button id="btn-sign-google" class="btn ghost">Sign in with Google</button>
       <button id="btn-sign-facebook" class="btn ghost" disabled title="Facebook sign-in isn't set up yet">Sign in with Facebook (coming soon)</button>
       <button id="btn-sign-out" class="btn ghost hidden">Sign out</button>

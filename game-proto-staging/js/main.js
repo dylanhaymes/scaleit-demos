@@ -1369,6 +1369,27 @@ function refreshAccountUI() {
   const cfg = st.configured;
   const setBtn = (id, enabled, title) => { const b = $(id); if (!b) return; b.disabled = !enabled; if (title !== undefined) b.title = title; };
   setBtn('btn-sign-google', cfg && !st.signedIn, cfg ? '' : "Sign-in isn't set up yet — keep playing as a guest");
+  // A greyed-out "Sign in with Google" reads as broken when signed in
+  // (Dylan, Nov 15): say so on the button's face, per provider.
+  const gBtn = $('btn-sign-google');
+  if (gBtn) gBtn.textContent = st.signedIn
+    ? (st.provider === 'google' ? 'Signed in with Google ✓'
+      : st.provider === 'facebook' ? 'Signed in with Facebook ✓'
+      : 'Signed in ✓')
+    : 'Sign in with Google';
+  // Persistent proof of which account is signed in: the provider email
+  // (display-only — never written to Firestore). Hidden for guests and
+  // for anonymous/private sessions, which have no email.
+  const signedInEl = $('acct-signed-in');
+  if (signedInEl) {
+    const line = st.signedIn && st.email
+      ? (st.provider === 'google' ? `Signed in with Google as ${st.email}`
+        : st.provider === 'facebook' ? `Signed in with Facebook as ${st.email}`
+        : `Signed in as ${st.email}`)
+      : '';
+    signedInEl.textContent = line;
+    signedInEl.classList.toggle('hidden', !line);
+  }
   // Facebook is built but disabled until the provider exists in the console.
   // The button says so on its face ("coming soon") — the title tooltip
   // alone is invisible on touch screens.

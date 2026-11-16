@@ -502,6 +502,10 @@ export const Accounts = {
       hideFromGlobal: this.hideFromGlobal, signedIn: this.signedIn,
       configured: isFirebaseConfigured(), facebookEnabled: FACEBOOK_PROVIDER_ENABLED,
       hasCloud: !!this.fb, redirectError: this._redirectError || null,
+      // Display-only (never written to Firestore): the signed-in
+      // account's email, so the panel can prove which account is in.
+      // Guests and pre-load states report ''.
+      email: (this.fb && this.fb.user && this.fb.user.email) || '',
     };
   },
 };

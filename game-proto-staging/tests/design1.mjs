@@ -2295,6 +2295,9 @@ await test('accounts: title card + account panel show guest state, sign-in butto
   ok(await page.locator('#account.show').isVisible(), 'account panel opens');
   eq(await page.locator('#acct-code').textContent(), (await page.evaluate(() => window.__gb.accounts())).friendCode, 'panel shows the friend code');
   ok(await page.locator('#btn-sign-google').isEnabled(), 'Google button enabled with live config');
+  eq(await page.locator('#btn-sign-google').textContent(), 'Sign in with Google', 'Google button invites sign-in while guest');
+  eq(await page.locator('#acct-signed-in').textContent(), '', 'no signed-in line while guest');
+  ok(await page.locator('#acct-signed-in').isHidden(), 'signed-in line hidden while guest');
   eq(await page.locator('#btn-sign-anon').count(), 0, 'anonymous button removed (Dylan, Nov 12)');
   ok((await page.locator('#btn-sign-facebook').textContent()).includes('coming soon'), 'Facebook button says coming soon on its face');
   ok(!(await page.locator('#btn-sign-facebook').isEnabled()), 'Facebook button disabled');
@@ -2622,6 +2625,12 @@ await test('accounts: redirect success adopts the user even when currentUser/lis
   eq((await page.evaluate(() => window.__gb.accounts())).provider, 'google', 'provider is google');
   await page.click('#btn-account');
   ok((await page.locator('#acct-sub').textContent()).includes('Signed in with Google'), 'panel shows signed in with Google');
+  // Nov 15: the panel must prove WHICH account is signed in — a greyed
+  // "Sign in with Google" button alone reads as broken.
+  eq((await page.evaluate(() => window.__gb.accounts())).email, 'dylan@example.com', 'debug state exposes the signed-in email');
+  ok((await page.locator('#acct-signed-in').textContent()).includes('dylan@example.com'), 'panel names the signed-in Google account');
+  eq(await page.locator('#btn-sign-google').textContent(), 'Signed in with Google ✓', 'Google button says signed in');
+  ok(await page.locator('#btn-sign-google').isDisabled(), 'Google button stays disabled when signed in');
   eq(localErrors.length, 0, 'no page errors: ' + localErrors.slice(0, 3).join(' | '));
   await ctx.close();
 });
