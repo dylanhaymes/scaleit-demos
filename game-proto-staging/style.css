@@ -377,6 +377,7 @@ body.reduced-motion #countdown.pop #cd-nums,body.reduced-motion #countdown.urgen
 #acct-signin .btn{margin-top:10px}
 #acct-signin .btn:disabled{filter:saturate(.4);opacity:.6;cursor:default}
 .privacy{font-size:13px;line-height:1.5;color:var(--muted);text-align:left;margin:14px 0 4px}
+.privacy-link{font-size:13px;line-height:1.5;margin:6px 0 4px;text-align:left}.privacy-link a{color:var(--muted);text-decoration:underline}
 
 /* ---- Leaderboards (Update 3, batch 2) ---- */
 #boards .panel{text-align:left}
