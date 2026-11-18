@@ -738,7 +738,13 @@ function restoreGame(d) {
 }
 
 function place(slot, r, c) {
-  const piece = S.tray[slot]; const sh = piece.shape;
+  const piece = S.tray[slot];
+  // Test-hook safety (and defence in depth for the drag path, which
+  // already checks fits() via dropCell): a non-fitting placement, an
+  // empty slot, or out-of-board coordinates return false instead of
+  // throwing on S.board[r+dr] or silently overwriting filled cells.
+  if (!piece || !fits(S.board, piece.shape, r, c)) return false;
+  const sh = piece.shape;
   for (const [dr, dc] of sh.cells) { S.board[r + dr][c + dc] = piece.color; fx.placedFlash.push({ r: r + dr, c: c + dc, t: 0 }); fx.squash.push({ r: r + dr, c: c + dc, t: 0 }); }
   S.tray[slot] = null; S.placed++;
   let gained = sh.cells.length;
@@ -829,6 +835,7 @@ function place(slot, r, c) {
   renderPowerups(); // keep the 10-line progress rings current after every placement
   checkGameOver();
   saveGame();
+  return true;
 }
 function wouldClearNow() {
   const rows = [], cols = [];

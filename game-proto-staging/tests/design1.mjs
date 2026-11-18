@@ -1504,6 +1504,36 @@ await test('tray: random placements never lose an unplaced piece or re-deal earl
   await page.close();
 });
 
+await test('tray: __gb.place returns false (no throw, no overwrite) for a non-fitting piece', async () => {
+  const { page } = await newPage();
+  await startClassic(page);
+  // Board with exactly one empty cell, tray holding a 3-wide piece: the
+  // piece can only overlap filled cells or run off the board.
+  await page.evaluate(() => {
+    const rows = Array(8).fill('########');
+    rows[7] = '#######.';
+    window.__gb.setBoard(rows);
+    window.__gb.setTray([3, 0, 0]); // slot 0: '###', slots 1-2: single cells
+  });
+  await sleep(150);
+  const before = await page.evaluate(() => window.__gb.state());
+  eq(await page.evaluate(() => window.__gb.place(0, 0, 0)), false, '3-wide piece overlapping filled cells refuses');
+  eq(await page.evaluate(() => window.__gb.place(0, 7, 6)), false, 'piece straddling the last empty cell refuses');
+  eq(await page.evaluate(() => window.__gb.place(0, 7, 7)), false, 'piece running off the right edge refuses');
+  eq(await page.evaluate(() => window.__gb.place(0, 0, 8)), false, 'piece starting off the board refuses');
+  // An empty slot refuses instead of throwing on piece.shape.
+  await page.evaluate(() => window.__gb.setTray([null, 0, 0]));
+  eq(await page.evaluate(() => window.__gb.place(0, 0, 0)), false, 'empty slot refuses');
+  const after = await page.evaluate(() => window.__gb.state());
+  eq(JSON.stringify(after.board), JSON.stringify(before.board), 'board untouched by refused placements');
+  eq(after.score, before.score, 'score untouched by refused placements');
+  eq(after.running, true, 'game still running after refused placements');
+  // A fitting placement still works and returns true.
+  await page.evaluate(() => window.__gb.setTray([0, 0, 0]));
+  eq(await page.evaluate(() => window.__gb.place(0, 7, 7)), true, 'single cell into the last empty cell places');
+  await page.close();
+});
+
 // ---------- Timer bar (Dylan, Nov 12 ~3:21 PM): full at game start ----------
 await test('timer: bar reads 100% at game start and stays full above 120s', async () => {
   const { page } = await newPage();

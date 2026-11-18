@@ -336,11 +336,14 @@ body.reduced-motion #countdown.pop #cd-nums,body.reduced-motion #countdown.urgen
 
 /* ---- Account & sign-in (Update 3) ---- */
 /* Title-screen account card: same white card treatment as #player-card. */
-#acct-card{display:flex;align-items:center;gap:10px;background:#fff;border:2px solid #f5c86b;border-radius:18px;padding:10px 12px;margin:0 0 6px;box-shadow:0 4px 0 #d9a441,0 6px 14px rgba(122,60,0,.18)}
-.acct-info{flex:1;text-align:left;min-width:0}
+#acct-card{display:flex;align-items:center;gap:10px;background:#fff;border:2px solid #f5c86b;border-radius:18px;padding:10px 12px;margin:0 0 6px;box-shadow:0 4px 0 #d9a441,0 6px 14px rgba(122,60,0,.18);flex-wrap:wrap}
+.acct-info{flex:1 1 100%;text-align:left;min-width:0}
 #acct-name{display:block;font-family:var(--display);font-weight:800;font-size:15px;color:#7a3c00;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #acct-sub{display:block}
-#acct-card .btn{margin-top:0;flex:none}
+#acct-card .btn{margin-top:0;flex:1}
+/* Guest text used to squeeze into a ~90px column beside the two buttons
+   ("Progress / saved on / this / device / only", 5 lines): the info now
+   takes its own full-width row and the buttons share the row below. */
 /* "Your rank" teaser chip (Update 3, #5): same white card language as
    #acct-card; a button so it opens the boards. Never claims a live rank
    it doesn't have — the sub-line always says Sample or Live. */
@@ -447,3 +450,34 @@ body.reduced-motion #countdown.pop #cd-nums,body.reduced-motion #countdown.urgen
 .skin-fav:disabled{opacity:.35;cursor:default}
 #skins-fav-wrap .skin-card{margin-bottom:6px}
 .skins-empty{text-align:center;color:var(--muted);font-weight:700;padding:10px 0}
+
+/* ---- Short viewports: compact the tall panels so they fit ---- */
+/* The title panel is ~1037px tall at 390x844 (Store cut, Skins/Settings
+   below the fold) and Settings' Done sits half below its panel fold.
+   Below 1020px of height: tighter paddings/gaps, and the title's four
+   nav buttons become a 2x2 grid (.title-nav is display:contents on tall
+   screens, so the single-column list is unchanged there).
+   NOTE: this block MUST stay at the end of the file — several rules it
+   overrides (.logo, .tag, h2, .toggle, .privacy, .acct-label, the cards)
+   are defined later than the panel section, and at equal specificity the
+   later rule wins. (First placed after .panel.scroll, the toggle/logo/
+   tag rules silently lost and Settings only shrank 36px instead of 72.) */
+.title-nav{display:contents}
+@media (max-height:1020px){
+  .overlay{padding:16px}
+  .panel{padding:20px 22px 14px}
+  .logo{width:232px}
+  .tag{margin:2px 0 6px}
+  #title .btn{margin-top:5px}
+  .title-nav{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+  #title .title-nav .btn{margin-top:0;padding:14px 10px;font-size:21px}
+  #title p.small{margin:4px 0}
+  #player-card,#acct-card,.rank-chip{padding:7px 12px}
+  h2{margin-bottom:6px}
+  .toggle{padding:8px 4px}
+  .privacy{margin:8px 0 4px}
+  .acct-label{margin:6px 0 3px}
+  .panel.scroll{max-height:92vh}
+  .panel.scroll .btn{margin-top:6px}
+  .panel.scroll .btn.big{padding:16px}
+}
